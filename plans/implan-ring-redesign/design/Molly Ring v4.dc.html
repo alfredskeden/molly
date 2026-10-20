@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet">
+<style>:root,[data-theme="classic-day"]{--fd:Nunito,system-ui,sans-serif;--fdw:900;--fb:Nunito,system-ui,sans-serif;--ls:1;--rc:20px;--rb:14px;--rs:12px;--rsh:28px;--bw:1px;--bg:oklch(0.97 0.01 75);--surface:oklch(0.995 0.004 75);--ink:oklch(0.27 0.02 55);--muted:oklch(0.50 0.02 55);--line:oklch(0.91 0.012 70);--scrim:oklch(0.27 0.02 55 / .35);--danger:oklch(0.52 0.15 28);--sleep-bg:oklch(0.92 0.045 285);--sleep-mid:oklch(0.76 0.09 285);--sleep-ink:oklch(0.40 0.10 285);--feed-bg:oklch(0.92 0.045 50);--feed-mid:oklch(0.76 0.09 50);--feed-ink:oklch(0.43 0.10 50);--diaper-bg:oklch(0.92 0.045 165);--diaper-mid:oklch(0.76 0.09 165);--diaper-ink:oklch(0.40 0.08 165);--med-bg:oklch(0.94 0.06 95);--med-mid:oklch(0.84 0.12 92);--med-ink:oklch(0.44 0.09 80);--edge:var(--line);--sh:none;--shb:none;--art:none;}
+[data-theme="classic-night"]{--fd:Nunito,system-ui,sans-serif;--fdw:900;--fb:Nunito,system-ui,sans-serif;--ls:1;--rc:20px;--rb:14px;--rs:12px;--rsh:28px;--bw:1px;--bg:oklch(0.19 0.012 55);--surface:oklch(0.235 0.013 55);--ink:oklch(0.92 0.012 75);--muted:oklch(0.70 0.015 70);--line:oklch(0.31 0.012 60);--scrim:oklch(0 0 0 / .5);--danger:oklch(0.72 0.12 28);--sleep-bg:oklch(0.31 0.05 285);--sleep-mid:oklch(0.60 0.09 285);--sleep-ink:oklch(0.86 0.07 285);--feed-bg:oklch(0.31 0.05 50);--feed-mid:oklch(0.62 0.09 50);--feed-ink:oklch(0.87 0.07 50);--diaper-bg:oklch(0.31 0.05 165);--diaper-mid:oklch(0.60 0.08 165);--diaper-ink:oklch(0.86 0.07 165);--med-bg:oklch(0.31 0.05 95);--med-mid:oklch(0.70 0.11 92);--med-ink:oklch(0.88 0.08 95);--edge:var(--line);--sh:none;--shb:none;--art:none;}
+body{margin:0}a{color:inherit}a:hover{opacity:.8}</style>
+</helmet>
+<div data-theme="{{ themeKey }}" style="width:412px;height:892px;border-radius:36px;overflow:hidden;position:relative;background:var(--bg);color:var(--ink);font-family:Nunito,system-ui,sans-serif;display:flex;flex-direction:column">
+<div style="height:36px;flex-shrink:0;padding:0 24px;display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums"><span>{{ nowTxt }}</span><span style="width:22px;height:11px;border-radius:3px;border:1.5px solid currentColor;box-sizing:border-box"></span></div>
+
+<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 22px 0">
+<div style="display:flex;flex-direction:column"><span style="font-size:28px;font-weight:900;letter-spacing:-0.5px">Molly</span><span style="font-size:14px;font-weight:700;color:var(--muted);white-space:nowrap">{{ dateTxt }}</span></div>
+<div style="display:flex;gap:8px">
+<div onClick="{{ openSheet }}" aria-label="{{ statsTitle }}" style="width:48px;height:48px;border-radius:14px;background:var(--surface);border:1px solid var(--line);box-sizing:border-box;display:flex;align-items:center;justify-content:center;cursor:pointer"><span style="font-family:'Material Symbols Rounded';font-size:22px">history</span></div>
+<div onClick="{{ openAdd }}" style="width:48px;height:48px;border-radius:14px;background:var(--ink);color:var(--bg);display:flex;align-items:center;justify-content:center;cursor:pointer"><span style="font-family:'Material Symbols Rounded';font-size:26px;">add</span></div>
+<div onClick="{{ openSettings }}" style="width:48px;height:48px;border-radius:14px;background:var(--surface);border:1px solid var(--line);box-sizing:border-box;display:flex;align-items:center;justify-content:center;cursor:pointer"><span style="font-family:'Material Symbols Rounded';font-size:22px">settings</span></div>
+</div>
+</div>
+
+<div style="flex:1;display:flex;align-items:center;justify-content:center;min-height:0">
+<div style="position:relative;width:400px;height:400px;flex-shrink:0;user-select:none">
+{{ ringSvg }}
+<div onClick="{{ ringTap }}" aria-label="Switch day and night" style="position:absolute;left:50%;top:{{ capY }}px;width:52px;height:52px;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;cursor:pointer" style-active="transform:translate(-50%,-50%) scale(0.92)">
+<div style="width:40px;height:40px;border-radius:50%;background:{{ capBg }};color:{{ capInk }};display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;font-variation-settings:'FILL' 1">{{ capIcon }}</span></div>
+</div>
+<sc-if value="{{ hasStart }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:230px;top:{{ capY }}px;transform:translateY(-50%);font-size:13px;font-weight:900;color:{{ capInk }};white-space:nowrap;font-variant-numeric:tabular-nums;pointer-events:none">{{ startLbl }}</span></sc-if>
+<sc-for list="{{ marks }}" as="b" hint-placeholder-count="0">
+<div onClick="{{ b.onClick }}" style="position:absolute;left:{{ b.x }}px;top:{{ b.y }}px;width:44px;height:44px;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:{{ b.op }}">
+<div style="width:34px;height:34px;border-radius:50%;background:{{ b.bg }};color:{{ b.ink }};box-shadow:{{ b.ring }};display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:20px;font-variation-settings:'FILL' 1">{{ b.icon }}</span></div>
+</div>
+</sc-for>
+<sc-for list="{{ pills }}" as="w" hint-placeholder-count="0"><span style="position:absolute;left:{{ w.x }}px;top:{{ w.y }}px;transform:translate(-50%,-50%);color:{{ w.ink }};opacity:{{ w.op }};font-size:13px;font-weight:900;white-space:nowrap;font-variant-numeric:tabular-nums;pointer-events:none">{{ w.text }}</span></sc-for>
+<div style="position:absolute;left:138px;right:138px;top:140px;bottom:140px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none">
+<span style="font-size:14px;font-weight:800;color:{{ cColor }}">{{ cLabel }}</span>
+<span style="font-size:34px;line-height:40px;font-weight:900;letter-spacing:-0.8px;font-variant-numeric:tabular-nums;white-space:nowrap">{{ cBig }}</span>
+<span style="font-size:13px;font-weight:700;color:var(--muted)">{{ cSub }}</span>
+</div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:12px;padding:0 16px 28px">
+<sc-if value="{{ isPast }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ backToNow }}" style="align-self:center;height:48px;padding:0 20px 0 14px;border-radius:14px;background:var(--ink);color:var(--bg);display:flex;align-items:center;gap:6px;font-size:15px;font-weight:900;cursor:pointer" style-active="transform:scale(0.97)"><span style="font-family:'Material Symbols Rounded';font-size:20px">undo</span>Back to now</div>
+</sc-if>
+
+<sc-if value="{{ showWindow }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;align-items:center;gap:10px;min-height:36px;padding:0 6px">
+<div style="width:14px;height:14px;border-radius:7px;box-sizing:border-box;border:2px dashed var(--sleep-mid);background:var(--sleep-bg);flex-shrink:0"></div>
+<span style="font-size:15px;font-weight:800;flex:1">{{ winTitle }}</span>
+<span style="font-size:15px;font-weight:800;font-variant-numeric:tabular-nums">{{ winTxt }}</span>
+<span style="font-size:13px;font-weight:700;color:var(--muted);min-width:72px;text-align:right">{{ winSub }}</span>
+</div>
+<div style="display:flex;flex-direction:column;gap:2px;padding:0 6px 0 30px;margin-top:-10px">
+<sc-if value="{{ hasThen }}" hint-placeholder-val="{{ true }}"><span style="font-size:13px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums">{{ thenTxt }}</span></sc-if>
+<span style="font-size:12px;font-weight:700;color:var(--muted)">Estimate · not medical advice</span>
+</div>
+<div style="height:2px"></div>
+</sc-if>
+
+<sc-if value="{{ pIdle }}" hint-placeholder-val="{{ true }}">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+<sc-for list="{{ tiles }}" as="t" hint-placeholder-count="4">
+<div onClick="{{ t.onClick }}" style="height:76px;border-radius:20px;background:{{ t.bg }};color:{{ t.ink }};opacity:{{ t.op }};padding:0 14px;display:flex;align-items:center;gap:12px;cursor:pointer" style-active="transform:scale(0.97)">
+<span style="font-family:'Material Symbols Rounded';font-size:30px;font-variation-settings:'FILL' 1">{{ t.icon }}</span>
+<div style="display:flex;flex-direction:column;min-width:0"><span style="font-size:17px;font-weight:900">{{ t.name }}</span><span style="font-size:13px;font-weight:700;opacity:.85;font-variant-numeric:tabular-nums">{{ t.sub }}</span></div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ pPick }}" hint-placeholder-val="{{ false }}">
+<div style="background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:12px 16px 16px;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:17px;font-weight:900;color:{{ pk.ink }}">{{ pk.title }}</span><div onClick="{{ close }}" style="width:48px;height:48px;margin-right:-10px;display:flex;align-items:center;justify-content:center;cursor:pointer"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:var(--muted)">close</span></div></div>
+<div style="display:grid;grid-template-columns:repeat({{ pk.cols }},minmax(0,1fr));gap:8px">
+<sc-for list="{{ pk.opts }}" as="o" hint-placeholder-count="4">
+<div onClick="{{ o.onClick }}" style="height:60px;border-radius:14px;background:{{ pk.ink }};color:{{ pk.bg }};display:flex;align-items:center;justify-content:center;gap:8px;font-size:16px;font-weight:900;cursor:pointer" style-active="transform:scale(0.97)"><span style="font-family:'Material Symbols Rounded';font-size:22px;font-variation-settings:'FILL' 1">{{ o.icon }}</span>{{ o.label }}</div>
+</sc-for>
+</div>
+<sc-if value="{{ pk.hasCancel }}" hint-placeholder-val="{{ false }}"><div onClick="{{ pk.onCancel }}" style="align-self:center;height:48px;padding:0 16px;display:flex;align-items:center;font-size:15px;font-weight:800;color:var(--muted);cursor:pointer">{{ pk.cancel }}</div></sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ pEdit }}" hint-placeholder-val="{{ false }}">
+<div style="background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:14px 16px 16px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:center;gap:12px">
+<div style="width:48px;height:48px;border-radius:14px;background:{{ ed.bg }};color:{{ ed.ink }};display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:26px;font-variation-settings:'FILL' 1">{{ ed.icon }}</span></div>
+<div style="display:flex;flex-direction:column;flex:1"><span style="font-size:18px;font-weight:900">{{ ed.title }}</span><span style="font-size:13px;font-weight:700;color:var(--muted)">{{ ed.sub }}</span></div>
+<div onClick="{{ close }}" style="width:48px;height:48px;margin-right:-8px;display:flex;align-items:center;justify-content:center;cursor:pointer"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:var(--muted)">close</span></div>
+</div>
+<sc-for list="{{ ed.rows }}" as="r" hint-placeholder-count="2">
+<div style="display:flex;align-items:center;gap:8px">
+<span style="font-size:14px;font-weight:800;color:var(--muted);width:52px">{{ r.label }}</span>
+<span style="font-size:28px;font-weight:900;letter-spacing:-0.5px;font-variant-numeric:tabular-nums;flex:1">{{ r.value }}</span>
+<div onClick="{{ r.minus }}" style="width:60px;height:48px;border-radius:12px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;cursor:pointer" style-active="transform:scale(0.95)">−5</div>
+<div onClick="{{ r.plus }}" style="width:60px;height:48px;border-radius:12px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;cursor:pointer" style-active="transform:scale(0.95)">+5</div>
+</div>
+</sc-for>
+<sc-if value="{{ ed.hasKinds }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;padding:4px;gap:4px;border-radius:14px;background:var(--bg)">
+<sc-for list="{{ ed.kinds }}" as="k" hint-placeholder-count="3"><div onClick="{{ k.onClick }}" style="flex:1;height:44px;border-radius:10px;background:{{ k.bg }};color:{{ k.ink }};display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;cursor:pointer">{{ k.label }}</div></sc-for>
+</div>
+</sc-if>
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+<div onClick="{{ ed.onDelete }}" style="height:48px;padding:0 8px;display:flex;align-items:center;gap:6px;font-size:15px;font-weight:800;color:var(--danger);cursor:pointer"><span style="font-family:'Material Symbols Rounded';font-size:20px">delete</span>Delete</div>
+<div onClick="{{ close }}" style="height:48px;padding:0 28px;border-radius:14px;background:var(--ink);color:var(--bg);display:flex;align-items:center;font-size:16px;font-weight:900;cursor:pointer" style-active="transform:scale(0.97)">Done</div>
+</div>
+</div>
+</sc-if>
+
+</div>
+
+<sc-if value="{{ sheetOpen }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:var(--scrim)"></div>
+<div style="position:absolute;left:0;right:0;bottom:0;max-height:82%;background:var(--surface);border-radius:28px 28px 0 0;display:flex;flex-direction:column">
+<div style="display:flex;flex-direction:column;align-items:center;padding:10px 16px 0">
+<div style="width:40px;height:5px;border-radius:3px;background:var(--line)"></div>
+<div style="align-self:stretch;display:flex;align-items:center;justify-content:space-between;padding-top:6px"><span style="font-size:22px;font-weight:900;padding-left:4px">{{ statsTitle }}</span><div onClick="{{ closeSheet }}" style="width:48px;height:48px;margin-right:-6px;display:flex;align-items:center;justify-content:center;cursor:pointer"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:var(--muted)">close</span></div></div>
+</div>
+<div style="overflow-y:auto;scrollbar-width:none;display:flex;flex-direction:column">
+<div style="display:flex;flex-direction:column;gap:10px;padding:6px 16px 0">
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px">
+<sc-for list="{{ stats }}" as="s" hint-placeholder-count="4">
+<div style="background:var(--bg);border-radius:16px;padding:10px 10px 12px;display:flex;flex-direction:column;gap:2px">
+<span style="font-family:'Material Symbols Rounded';font-size:20px;color:{{ s.ink }};font-variation-settings:'FILL' 1">{{ s.icon }}</span>
+<span style="font-size:19px;font-weight:900;font-variant-numeric:tabular-nums;white-space:nowrap">{{ s.value }}</span>
+<span style="font-size:12px;font-weight:700;color:var(--muted)">{{ s.label }}</span>
+</div>
+</sc-for>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;padding:22px 16px 32px">
+<span style="font-size:15px;font-weight:900;color:var(--muted);padding:0 4px 4px">Recent · tap to edit</span>
+<sc-for list="{{ recent }}" as="r" hint-placeholder-count="5">
+<div onClick="{{ r.onClick }}" style="min-height:60px;display:flex;align-items:center;gap:12px;padding:0 4px;border-bottom:1px solid var(--line);cursor:pointer" style-active="opacity:.7">
+<div style="width:40px;height:40px;border-radius:12px;background:{{ r.bg }};color:{{ r.ink }};display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="font-family:'Material Symbols Rounded';font-size:22px;font-variation-settings:'FILL' 1">{{ r.icon }}</span></div>
+<div style="display:flex;flex-direction:column;flex:1;min-width:0"><span style="font-size:15px;font-weight:800">{{ r.title }}</span><span style="font-size:13px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums">{{ r.time }}</span></div>
+<span style="font-size:14px;font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums">{{ r.dur }}</span>
+<span style="font-family:'Material Symbols Rounded';font-size:20px;color:var(--muted)">chevron_right</span>
+</div>
+</sc-for>
+</div>
+<div style="display:flex;flex-direction:column;padding:0 16px 32px">
+<div onClick="{{ openHistory }}" style="min-height:64px;display:flex;align-items:center;gap:12px;padding:0 4px;cursor:pointer" style-active="opacity:.7">
+<div style="width:40px;height:40px;border-radius:12px;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="font-family:'Material Symbols Rounded';font-size:22px">calendar_month</span></div>
+<div style="display:flex;flex-direction:column;flex:1"><span style="font-size:15px;font-weight:800">Recent days</span><span style="font-size:13px;font-weight:700;color:var(--muted)">Every day and night as a clock</span></div>
+<span style="font-family:'Material Symbols Rounded';font-size:20px;color:var(--muted)">chevron_right</span>
+</div>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;background:var(--bg);display:flex;flex-direction:column;overflow-y:auto;scrollbar-width:none">
+<div style="height:36px;flex-shrink:0;padding:0 24px;display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums"><span>{{ nowTxt }}</span><span style="width:22px;height:11px;border-radius:3px;border:1.5px solid currentColor;box-sizing:border-box"></span></div>
+<div style="padding:6px 12px 0;display:flex"><div onClick="{{ closeSettings }}" style="height:48px;padding:0 14px 0 4px;display:flex;align-items:center;gap:2px;font-size:16px;font-weight:800;cursor:pointer"><span style="font-family:'Material Symbols Rounded';font-size:28px">chevron_left</span>Back</div></div>
+<span style="padding:4px 22px 16px;font-size:28px;font-weight:900;letter-spacing:-0.5px">Settings</span>
+<div style="display:flex;flex-direction:column;gap:14px;padding:0 16px 32px">
+<span style="font-size:14px;font-weight:900;color:var(--muted);padding:0 4px;margin-bottom:-6px">Children</span>
+<div style="background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:0 16px;display:flex;flex-direction:column">
+<sc-for list="{{ kids }}" as="c" hint-placeholder-count="2">
+<div onClick="{{ c.onClick }}" style="min-height:72px;display:flex;align-items:center;gap:14px;border-bottom:{{ c.border }};cursor:pointer">
+<div style="width:48px;height:48px;border-radius:15px;background:{{ c.bg }};color:{{ c.ink }};display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900">{{ c.initial }}</div>
+<div style="display:flex;flex-direction:column;flex:1"><span style="font-size:17px;font-weight:900">{{ c.name }}</span><span style="font-size:13px;font-weight:700;color:var(--muted)">{{ c.sub }}</span></div>
+<span style="font-family:'Material Symbols Rounded';font-size:22px;color:var(--muted)">chevron_right</span>
+</div>
+</sc-for>
+</div>
+<span style="font-size:14px;font-weight:900;color:var(--muted);padding:0 4px;margin:4px 0 -6px">For everyone</span>
+<div style="background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:14px 16px 16px;display:flex;flex-direction:column;gap:10px">
+<span style="font-size:16px;font-weight:900">Colours</span>
+<div style="display:flex;padding:4px;gap:4px;border-radius:14px;background:var(--bg)">
+<sc-for list="{{ colourOpts }}" as="o" hint-placeholder-count="3"><div onClick="{{ o.onClick }}" style="flex:1;height:44px;border-radius:10px;background:{{ o.bg }};color:{{ o.ink }};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;cursor:pointer">{{ o.label }}</div></sc-for>
+</div>
+</div>
+<div style="background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:0 16px;display:flex;flex-direction:column">
+<sc-for list="{{ toggles }}" as="t" hint-placeholder-count="2">
+<div onClick="{{ t.onClick }}" style="min-height:68px;display:flex;align-items:center;gap:12px;border-bottom:{{ t.border }};cursor:pointer">
+<div style="display:flex;flex-direction:column;flex:1"><span style="font-size:16px;font-weight:800">{{ t.title }}</span><span style="font-size:13px;font-weight:700;color:var(--muted)">{{ t.sub }}</span></div>
+<div style="width:52px;height:32px;border-radius:16px;background:{{ t.track }};position:relative;flex-shrink:0"><div style="position:absolute;top:3px;left:{{ t.knob }}px;width:26px;height:26px;border-radius:13px;background:var(--surface)"></div></div>
+</div>
+</sc-for>
+</div>
+<div style="background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:0 16px;display:flex;flex-direction:column">
+<div onClick="{{ openThemes }}" style="min-height:68px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--line);cursor:pointer">
+<div style="display:flex;flex-direction:column;flex:1"><span style="font-size:16px;font-weight:800">Theme</span><span style="font-size:13px;font-weight:700;color:var(--muted)">Changes at once</span></div>
+<span style="font-size:15px;font-weight:800;color:var(--muted)">{{ themeName }}</span><span style="font-family:'Material Symbols Rounded';font-size:20px;color:var(--muted)">chevron_right</span>
+</div>
+<div style="min-height:68px;display:flex;align-items:center;gap:12px;cursor:pointer">
+<div style="display:flex;flex-direction:column;flex:1"><span style="font-size:16px;font-weight:800">Baby Buddy</span><span style="font-size:13px;font-weight:700;color:var(--muted)">Server and your API key</span></div>
+<span style="font-size:15px;font-weight:800;color:var(--diaper-ink)">Connected</span><span style="font-family:'Material Symbols Rounded';font-size:20px;color:var(--muted)">chevron_right</span>
+</div>
+</div>
+</div>
+<div style="position:sticky;bottom:0;margin-top:auto;padding:12px 16px 24px;background:var(--bg);border-top:1px solid var(--line)"><div onClick="{{ saveSettings }}" style="height:56px;border-radius:14px;background:{{ svBg }};color:{{ svInk }};display:flex;align-items:center;justify-content:center;gap:8px;font-size:17px;font-weight:900;cursor:pointer" style-active="transform:scale(0.98)"><span style="font-family:'Material Symbols Rounded';font-size:22px">check</span>{{ svTxt }}</div></div>
+</div>
+</sc-if>
+<sc-if value="{{ isHistory }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;background:var(--bg);display:flex;flex-direction:column;overflow-y:auto;scrollbar-width:none">
+<div style="height:36px;flex-shrink:0;padding:0 24px;display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums"><span>{{ nowTxt }}</span><span style="width:22px;height:11px;border-radius:3px;border:1.5px solid currentColor;box-sizing:border-box"></span></div>
+<div style="padding:6px 12px 0;display:flex"><div onClick="{{ closeHistory }}" style="height:48px;padding:0 14px 0 4px;display:flex;align-items:center;gap:2px;font-size:16px;font-weight:800;cursor:pointer"><span style="font-family:'Material Symbols Rounded';font-size:28px">chevron_left</span>Back</div></div>
+<span style="padding:4px 22px 14px;font-size:28px;font-weight:900;letter-spacing:-0.5px">Recent days</span>
+<div style="display:flex;flex-direction:column;gap:12px;padding:0 16px 32px">
+<sc-for list="{{ hist }}" as="h" hint-placeholder-count="3">
+<div style="background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:14px 12px 12px;display:flex;flex-direction:column;gap:6px">
+<div style="display:flex;align-items:baseline;justify-content:space-between;padding:0 6px"><span style="font-size:17px;font-weight:900">{{ h.title }}</span><span style="font-size:13px;font-weight:700;color:var(--muted)">{{ h.date }}</span></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
+<sc-for list="{{ h.rings }}" as="r" hint-placeholder-count="2">
+<div onClick="{{ r.onClick }}" style="display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;border-radius:16px;padding:4px 0 8px" style-active="background:var(--bg)">
+<div style="position:relative;width:168px;height:168px">{{ r.svg }}
+<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none"><span style="font-family:'Material Symbols Rounded';font-size:18px;color:{{ r.ink }};font-variation-settings:'FILL' 1">{{ r.icon }}</span><span style="font-size:17px;font-weight:900;font-variant-numeric:tabular-nums">{{ r.big }}</span><span style="font-size:11px;font-weight:700;color:var(--muted)">{{ r.small }}</span></div>
+</div>
+<span style="font-size:13px;font-weight:800;color:var(--muted)">{{ r.label }}</span>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-for>
+<sc-if value="{{ canMore }}" hint-placeholder-val="{{ true }}"><div onClick="{{ loadMore }}" style="height:52px;border-radius:14px;border:1px solid var(--line);background:var(--surface);display:flex;align-items:center;justify-content:center;gap:6px;font-size:15px;font-weight:800;cursor:pointer" style-active="transform:scale(0.98)"><span style="font-family:'Material Symbols Rounded';font-size:20px">expand_more</span>Load 3 more days</div></sc-if>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ addOpen }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ closeAdd }}" style="position:absolute;inset:0;background:var(--scrim)"></div>
+<div style="position:absolute;left:0;right:0;bottom:0;background:var(--surface);border-radius:28px 28px 0 0;padding:10px 16px 28px;display:flex;flex-direction:column;gap:14px">
+<div style="align-self:center;width:40px;height:5px;border-radius:3px;background:var(--line)"></div>
+<div style="display:flex;align-items:center;justify-content:space-between;margin-top:-6px"><span style="font-size:22px;font-weight:900;padding-left:4px">Add entry</span><div onClick="{{ closeAdd }}" style="width:48px;height:48px;margin-right:-6px;display:flex;align-items:center;justify-content:center;cursor:pointer"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:var(--muted)">close</span></div></div>
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px">
+<sc-for list="{{ ad.types }}" as="t" hint-placeholder-count="4">
+<div onClick="{{ t.onClick }}" style="height:72px;border-radius:16px;background:{{ t.bg }};color:{{ t.ink }};border:2px solid {{ t.edge }};box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer"><span style="font-family:'Material Symbols Rounded';font-size:26px;font-variation-settings:'FILL' 1">{{ t.icon }}</span><span style="font-size:13px;font-weight:800">{{ t.label }}</span></div>
+</sc-for>
+</div>
+<div style="display:flex;align-items:center;gap:8px">
+<span style="font-size:14px;font-weight:800;color:var(--muted);width:44px">{{ ad.sLabel }}</span>
+<input type="time" value="{{ ad.sTxt }}" onChange="{{ ad.onS }}" style="flex:1;min-width:0;height:52px;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--ink);font-family:Nunito,sans-serif;font-size:26px;font-weight:900;padding:0 10px;box-sizing:border-box">
+<div onClick="{{ ad.sMinus }}" style="width:52px;height:52px;border-radius:12px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;cursor:pointer">−5</div>
+<div onClick="{{ ad.sPlus }}" style="width:52px;height:52px;border-radius:12px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;cursor:pointer">+5</div>
+</div>
+<sc-if value="{{ ad.isRange }}" hint-placeholder-val="{{ true }}">
+<sc-if value="{{ ad.hasEnd }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;align-items:center;gap:8px">
+<span style="font-size:14px;font-weight:800;color:var(--muted);width:44px">End</span>
+<input type="time" value="{{ ad.eTxt }}" onChange="{{ ad.onE }}" style="flex:1;min-width:0;height:52px;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--ink);font-family:Nunito,sans-serif;font-size:26px;font-weight:900;padding:0 10px;box-sizing:border-box">
+<div onClick="{{ ad.removeEnd }}" style="width:112px;height:52px;border-radius:12px;background:var(--bg);display:flex;align-items:center;justify-content:center;gap:4px;font-size:14px;font-weight:800;color:var(--muted);cursor:pointer"><span style="font-family:'Material Symbols Rounded';font-size:18px;">close</span>No end</div>
+</div>
+</sc-if>
+<sc-if value="{{ ad.noEnd }}" hint-placeholder-val="{{ true }}">
+<div onClick="{{ ad.addEnd }}" style="height:52px;border-radius:12px;border:2px dashed var(--line);display:flex;align-items:center;justify-content:center;gap:6px;font-size:15px;font-weight:800;color:var(--muted);cursor:pointer"><span style="font-family:'Material Symbols Rounded';font-size:20px;">add</span>Add end time</div>
+</sc-if>
+</sc-if>
+<sc-if value="{{ ad.hasKinds }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;padding:4px;gap:4px;border-radius:14px;background:var(--bg)">
+<sc-for list="{{ ad.kinds }}" as="k" hint-placeholder-count="3"><div onClick="{{ k.onClick }}" style="flex:1;height:44px;border-radius:10px;background:{{ k.bg }};color:{{ k.ink }};display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;cursor:pointer">{{ k.label }}</div></sc-for>
+</div>
+</sc-if>
+<sc-if value="{{ ad.isMed }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:6px">
+<span style="font-size:14px;font-weight:800;color:var(--muted);padding:0 4px">{{ ad.medLabel }}</span>
+<input type="text" value="{{ ad.medNote }}" onChange="{{ ad.onMedNote }}" placeholder="{{ ad.medPh }}" style="height:52px;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--ink);font-family:Nunito,sans-serif;font-size:17px;font-weight:700;padding:0 14px;box-sizing:border-box;outline-color:var(--med-mid)">
+</div>
+</sc-if>
+<span style="font-size:13px;font-weight:700;color:{{ ad.noteInk }};padding:0 4px;text-wrap:pretty">{{ ad.note }}</span>
+<div onClick="{{ ad.onSave }}" style="height:58px;border-radius:14px;background:{{ ad.btnBg }};color:{{ ad.btnInk }};opacity:{{ ad.btnOp }};display:flex;align-items:center;justify-content:center;gap:8px;font-size:17px;font-weight:900;cursor:pointer" style-active="transform:scale(0.98)"><span style="font-family:'Material Symbols Rounded';font-size:22px;font-variation-settings:'FILL' 1">{{ ad.btnIcon }}</span>{{ ad.btn }}</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isChild }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;background:var(--bg);display:flex;flex-direction:column;overflow-y:auto;scrollbar-width:none">
+<div style="height:36px;flex-shrink:0;padding:0 24px;display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums"><span>{{ nowTxt }}</span><span style="width:22px;height:11px;border-radius:3px;border:1.5px solid currentColor;box-sizing:border-box"></span></div>
+<div style="padding:6px 12px 0;display:flex"><div onClick="{{ closeChild }}" style="height:48px;padding:0 14px 0 4px;display:flex;align-items:center;gap:2px;font-size:16px;font-weight:800;cursor:pointer"><span style="font-family:'Material Symbols Rounded';font-size:28px;">chevron_left</span>Settings</div></div>
+<div style="display:flex;align-items:center;gap:14px;padding:4px 22px 18px">
+<div style="width:60px;height:60px;border-radius:18px;background:{{ ch.bg }};color:{{ ch.ink }};display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900">{{ ch.initial }}</div>
+<div style="display:flex;flex-direction:column"><span style="font-size:28px;font-weight:900;letter-spacing:-0.5px">{{ ch.name }}</span><span style="font-size:14px;font-weight:700;color:var(--muted)">{{ ch.age }} · born {{ ch.born }}</span></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:14px;padding:0 16px 32px">
+<div style="background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:0 16px">
+<div onClick="{{ ch.toggleShown }}" style="min-height:68px;display:flex;align-items:center;gap:12px;cursor:pointer">
+<div style="display:flex;flex-direction:column;flex:1"><span style="font-size:16px;font-weight:800">Show in Molly</span><span style="font-size:13px;font-weight:700;color:var(--muted)">Hidden children stay in Baby Buddy</span></div>
+<div style="width:52px;height:32px;border-radius:16px;background:{{ ch.shownTrack }};position:relative;flex-shrink:0"><div style="position:absolute;top:3px;left:{{ ch.shownKnob }}px;width:26px;height:26px;border-radius:13px;background:var(--surface)"></div></div>
+</div>
+</div>
+<div style="background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:14px 16px 16px;display:flex;flex-direction:column;gap:12px">
+<span style="font-size:16px;font-weight:900">Colour</span>
+<div style="display:flex;gap:10px">
+<sc-for list="{{ ch.hues }}" as="h" hint-placeholder-count="5"><div onClick="{{ h.onClick }}" style="width:48px;height:48px;border-radius:24px;background:{{ h.c }};box-shadow:{{ h.ring }};cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--ink)"><span style="font-family:'Material Symbols Rounded';font-size:22px">{{ h.check }}</span></div></sc-for>
+</div>
+</div>
+<div style="background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:14px 16px 16px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;flex-direction:column"><span style="font-size:16px;font-weight:900">Day and night</span><span style="font-size:13px;font-weight:700;color:var(--muted);text-wrap:pretty">Naps start in the day. The day starts at the wake-up closest to the start time.</span></div>
+<sc-for list="{{ ch.hours }}" as="r" hint-placeholder-count="2">
+<div style="display:flex;align-items:center;gap:8px">
+<span style="font-size:14px;font-weight:800;color:var(--muted);width:76px">{{ r.label }}</span>
+<span style="font-size:26px;font-weight:900;flex:1;font-variant-numeric:tabular-nums">{{ r.value }}</span>
+<div onClick="{{ r.minus }}" style="width:60px;height:48px;border-radius:12px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;cursor:pointer">−15</div>
+<div onClick="{{ r.plus }}" style="width:60px;height:48px;border-radius:12px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;cursor:pointer">+15</div>
+</div>
+</sc-for>
+</div>
+<div style="background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:14px 16px 16px;display:flex;flex-direction:column;gap:12px">
+<span style="font-size:16px;font-weight:900">Bottle</span>
+<div style="display:flex;padding:4px;gap:4px;border-radius:14px;background:var(--bg)">
+<sc-for list="{{ ch.bottles }}" as="o" hint-placeholder-count="2"><div onClick="{{ o.onClick }}" style="flex:1;height:44px;border-radius:10px;background:{{ o.bg }};color:{{ o.ink }};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;cursor:pointer">{{ o.label }}</div></sc-for>
+</div>
+<div style="display:flex;align-items:center;gap:8px">
+<span style="font-size:14px;font-weight:800;color:var(--muted);width:76px">Amount</span>
+<span style="font-size:26px;font-weight:900;flex:1;font-variant-numeric:tabular-nums">{{ ch.amount }} ml</span>
+<div onClick="{{ ch.amtMinus }}" style="width:60px;height:48px;border-radius:12px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;cursor:pointer">−10</div>
+<div onClick="{{ ch.amtPlus }}" style="width:60px;height:48px;border-radius:12px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;cursor:pointer">+10</div>
+</div>
+</div>
+<div style="background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:0 16px">
+<div onClick="{{ ch.toggleVitd }}" style="min-height:68px;display:flex;align-items:center;gap:12px;cursor:pointer">
+<div style="display:flex;flex-direction:column;flex:1"><span style="font-size:16px;font-weight:800">Vitamin D reminder</span><span style="font-size:13px;font-weight:700;color:var(--muted)">Once a day, if not logged by 10:00</span></div>
+<div style="width:52px;height:32px;border-radius:16px;background:{{ ch.vitdTrack }};position:relative;flex-shrink:0"><div style="position:absolute;top:3px;left:{{ ch.vitdKnob }}px;width:26px;height:26px;border-radius:13px;background:var(--surface)"></div></div>
+</div>
+</div>
+</div>
+<div style="position:sticky;bottom:0;margin-top:auto;padding:12px 16px 24px;background:var(--bg);border-top:1px solid var(--line)"><div onClick="{{ saveChild }}" style="height:56px;border-radius:14px;background:{{ cvBg }};color:{{ cvInk }};display:flex;align-items:center;justify-content:center;gap:8px;font-size:17px;font-weight:900;cursor:pointer" style-active="transform:scale(0.98)"><span style="font-family:'Material Symbols Rounded';font-size:22px">check</span>{{ cvTxt }}</div></div>
+</div>
+</sc-if>
+<sc-if value="{{ themeSheet }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ closeThemes }}" style="position:absolute;inset:0;background:var(--scrim)"></div>
+<div style="position:absolute;left:0;right:0;bottom:0;max-height:84%;background:var(--surface);border-radius:28px 28px 0 0;display:flex;flex-direction:column">
+<div style="display:flex;flex-direction:column;align-items:center;padding:10px 16px 6px">
+<div style="width:40px;height:5px;border-radius:3px;background:var(--line)"></div>
+<div style="align-self:stretch;display:flex;align-items:center;justify-content:space-between;padding-top:6px"><span style="font-size:22px;font-weight:900;padding-left:4px">Theme</span><div onClick="{{ closeThemes }}" style="width:48px;height:48px;margin-right:-6px;display:flex;align-items:center;justify-content:center;cursor:pointer"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:var(--muted)">close</span></div></div>
+<span style="align-self:stretch;padding:0 4px;font-size:14px;font-weight:700;color:var(--muted);text-wrap:pretty">Tap one to use it right away. Every theme has a day and a night look and follows the Colours setting.</span>
+</div>
+<div style="overflow-y:auto;scrollbar-width:none;padding:8px 16px 28px;display:flex;flex-direction:column;gap:8px">
+<sc-for list="{{ themeList }}" as="t" hint-placeholder-count="6">
+<div onClick="{{ t.onClick }}" style="min-height:84px;padding:12px;border-radius:18px;background:var(--bg);border:2px solid {{ t.edge }};box-sizing:border-box;display:flex;align-items:center;gap:14px;cursor:pointer" style-active="transform:scale(0.98)">
+<div style="display:flex;gap:4px;flex-shrink:0">
+<div style="width:30px;height:56px;border-radius:10px 4px 4px 10px;background:{{ t.dayBg }};box-shadow:inset 0 0 0 1px var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px"><div style="width:10px;height:10px;border-radius:5px;background:{{ t.ds }}"></div><div style="width:10px;height:10px;border-radius:5px;background:{{ t.df }}"></div><div style="width:10px;height:10px;border-radius:5px;background:{{ t.dd }}"></div></div>
+<div style="width:30px;height:56px;border-radius:4px 10px 10px 4px;background:{{ t.nightBg }};box-shadow:inset 0 0 0 1px var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px"><div style="width:10px;height:10px;border-radius:5px;background:{{ t.ns }}"></div><div style="width:10px;height:10px;border-radius:5px;background:{{ t.nf }}"></div><div style="width:10px;height:10px;border-radius:5px;background:{{ t.nd }}"></div></div>
+</div>
+<div style="display:flex;flex-direction:column;flex:1;min-width:0"><span style="font-size:16px;font-weight:900">{{ t.name }}</span><span style="font-size:13px;font-weight:700;color:var(--muted);text-wrap:pretty">{{ t.tagline }}</span></div>
+<div style="width:28px;height:28px;border-radius:14px;flex-shrink:0;box-sizing:border-box;border:2px solid {{ t.radio }};background:{{ t.radioFill }};color:var(--bg);display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:18px;font-weight:700">{{ t.check }}</span></div>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;left:16px;right:16px;bottom:96px;z-index:10;min-height:52px;padding:0 16px;border-radius:16px;background:var(--ink);color:var(--bg);display:flex;align-items:center;gap:10px;font-size:15px;font-weight:800;pointer-events:none"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:var(--diaper-mid);font-variation-settings:'FILL' 1">check_circle</span>{{ toast }}</div></sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:412,&quot;height&quot;:892},&quot;mode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;day&quot;,&quot;night&quot;],&quot;default&quot;:&quot;day&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;scenario&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;day&quot;,&quot;night&quot;],&quot;default&quot;:&quot;day&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;open&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;none&quot;,&quot;edit&quot;,&quot;feed&quot;,&quot;today&quot;,&quot;lastnight&quot;,&quot;yesterday&quot;,&quot;settings&quot;,&quot;child&quot;,&quot;add&quot;,&quot;history&quot;,&quot;theme&quot;],&quot;default&quot;:&quot;none&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;openId&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;n1&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+const fmt = m => { m = ((Math.round(m) % 1440) + 1440) % 1440; return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); };
+const H = m => { m = Math.max(0, Math.round(m)); const h = Math.floor(m / 60), r = m % 60; return h ? `${h}h ${r}m` : `${r}m`; };
+const mmss = ms => { const s = Math.max(0, Math.floor(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+const col = c => ({ bg: `var(--${c}-bg)`, mid: `var(--${c}-mid)`, ink: `var(--${c}-ink)` });
+const ICON = { sleep: 'bedtime', feed: 'breastfeeding', diaper: 'baby_changing_station', med: 'medication' };
+const NAME = { sleep: 'Sleep', feed: 'Feed', diaper: 'Diaper', med: 'Medicine' };
+const THEMES = [{"k":"classic","n":"Classic","tg":"Warm and calm. The default.","day":{"bg":"oklch(0.97 0.01 75)","ink":"oklch(0.27 0.02 55)","s":"oklch(0.76 0.09 285)","f":"oklch(0.76 0.09 50)","d":"oklch(0.76 0.09 165)","m":"oklch(0.84 0.12 92)","r":"20px"},"night":{"bg":"oklch(0.19 0.012 55)","ink":"oklch(0.92 0.012 75)","s":"oklch(0.60 0.09 285)","f":"oklch(0.62 0.09 50)","d":"oklch(0.60 0.08 165)","m":"oklch(0.70 0.11 92)","r":"20px"}},{"k":"arcade","n":"Arcade","tg":"Pixel type, square corners, bold colours.","day":{"bg":"oklch(0.95 0.035 95)","ink":"oklch(0.22 0.06 285)","s":"oklch(0.72 0.17 305)","f":"oklch(0.72 0.17 55)","d":"oklch(0.72 0.17 145)","m":"oklch(0.72 0.17 225)","r":"4px"},"night":{"bg":"oklch(0.16 0.05 285)","ink":"oklch(0.95 0.03 95)","s":"oklch(0.72 0.18 305)","f":"oklch(0.72 0.18 55)","d":"oklch(0.72 0.18 145)","m":"oklch(0.72 0.18 225)","r":"4px"}},{"k":"space","n":"Mission Control","tg":"Cool blues and a starfield.","day":{"bg":"oklch(0.95 0.015 240)","ink":"oklch(0.24 0.05 260)","s":"oklch(0.72 0.13 275)","f":"oklch(0.72 0.13 45)","d":"oklch(0.72 0.13 195)","m":"oklch(0.72 0.13 100)","r":"14px"},"night":{"bg":"oklch(0.15 0.035 265)","ink":"oklch(0.94 0.02 240)","s":"oklch(0.66 0.13 275)","f":"oklch(0.66 0.13 45)","d":"oklch(0.66 0.13 195)","m":"oklch(0.66 0.13 100)","r":"14px"}},{"k":"score","n":"Match Day","tg":"Team colours and pitch stripes.","day":{"bg":"oklch(0.97 0.005 150)","ink":"oklch(0.18 0.01 150)","s":"oklch(0.66 0.17 255)","f":"oklch(0.66 0.17 27)","d":"oklch(0.66 0.17 150)","m":"oklch(0.66 0.17 85)","r":"6px"},"night":{"bg":"oklch(0.17 0.025 155)","ink":"oklch(0.96 0.01 110)","s":"oklch(0.68 0.16 255)","f":"oklch(0.68 0.16 27)","d":"oklch(0.68 0.16 150)","m":"oklch(0.68 0.16 85)","r":"6px"}},{"k":"term","n":"Terminal","tg":"Green screen at night.","day":{"bg":"oklch(0.97 0.01 130)","ink":"oklch(0.25 0.05 150)","s":"oklch(0.7 0.14 290)","f":"oklch(0.7 0.14 60)","d":"oklch(0.7 0.14 150)","m":"oklch(0.7 0.14 200)","r":"2px"},"night":{"bg":"oklch(0.14 0.02 150)","ink":"oklch(0.88 0.18 145)","s":"oklch(0.7 0.15 290)","f":"oklch(0.7 0.15 60)","d":"oklch(0.7 0.15 150)","m":"oklch(0.7 0.15 200)","r":"2px"}},{"k":"safari","n":"Safari","tg":"Picture buttons and soft shapes.","day":{"bg":"oklch(0.96 0.03 100)","ink":"oklch(0.27 0.05 140)","s":"oklch(0.74 0.15 300)","f":"oklch(0.74 0.15 60)","d":"oklch(0.74 0.15 140)","m":"oklch(0.74 0.15 220)","r":"24px"},"night":{"bg":"oklch(0.19 0.04 140)","ink":"oklch(0.95 0.03 100)","s":"oklch(0.72 0.14 300)","f":"oklch(0.72 0.14 60)","d":"oklch(0.72 0.14 140)","m":"oklch(0.72 0.14 220)","r":"24px"}}];
+const FEED_ICON = { Left: 'arrow_back', Right: 'arrow_forward', Both: 'swap_horiz', Bottle: 'water_full' };
+const KIND_ICON = { Wet: 'water_drop', Dirty: 'sentiment_stressed', Both: 'star', Left: 'arrow_back', Right: 'arrow_forward', Bottle: 'water_full', 'Vitamin D': 'medication' };
+// Day ring 07:00–19:00, night ring 19:00–07:00 (minutes from the day's midnight; night runs past 1440)
+const SCN = {
+  day: { now: 700, rs: 420, re: 1140, date: 'Thursday 24 September', window: [776, 806], windows: [{ name: 'Nap 2', s: 776, e: 806 }, { name: 'Nap 3', s: 920, e: 950 }, { name: 'Bedtime', s: 1110, e: 1140 }], events: [
+    { id: 'n0', cat: 'sleep', s: 215, e: 433 }, { id: 'd1', cat: 'diaper', s: 440, e: 440, kind: 'Wet' }, { id: 'f1', cat: 'feed', s: 445, e: 465, kind: 'Right' },
+    { id: 'n1', cat: 'sleep', s: 572, e: 641 }, { id: 'm1', cat: 'med', s: 610, e: 610, kind: 'Vitamin D' }, { id: 'f2', cat: 'feed', s: 645, e: 663, kind: 'Left' },
+    { id: 'd2', cat: 'diaper', s: 670, e: 670, kind: 'Dirty' }] },
+  night: { now: 1570, rs: 1140, re: 1860, date: 'Thursday night', window: null, events: [
+    { id: 'z0', cat: 'sleep', s: 1100, e: 1130 }, { id: 'b2', cat: 'feed', s: 1135, e: 1150, kind: 'Right' }, { id: 'b3', cat: 'sleep', s: 1155, e: 1455 },
+    { id: 'b4', cat: 'feed', s: 1460, e: 1480, kind: 'Left' }, { id: 'b5', cat: 'diaper', s: 1485, e: 1485, kind: 'Wet' }],
+    ongoing: { cat: 'sleep', s: 1490 } },
+};
+const isRange = e => e.cat === 'sleep' || e.cat === 'feed';
+const WDN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const dname = d => WDN[(((4 + d) % 7) + 7) % 7];
+const ddate = d => `${dname(d).slice(0, 3)} ${24 + d} Sep`;
+const DAYP = { sleep: [[150, 205], [370, 450], [590, 630]], feed: [[25, 43], [235, 252], [455, 472], [660, 676]], diaper: [[30, 'Wet'], [245, 'Dirty'], [480, 'Wet']], med: [200] };
+const NIGHTP = { sleep: [[10, 248], [262, 500], [512, 733]], feed: [[250, 262], [500, 512]], diaper: [[505, 'Wet']], med: [] };
+const genWin = (rs, kind, k) => { const P = kind === 'day' ? DAYP : NIGHTP, j = ((Math.abs(k) * 37) % 21) - 10, out = []; let side = k % 2 ? 'Left' : 'Right';
+  P.sleep.forEach(([a, b], i) => out.push({ id: `g${k}s${i}`, cat: 'sleep', s: rs + a + j, e: rs + b + j }));
+  P.feed.forEach(([a, b], i) => { side = side === 'Left' ? 'Right' : 'Left'; out.push({ id: `g${k}f${i}`, cat: 'feed', s: rs + a + j, e: rs + b + j, kind: side }); });
+  P.diaper.forEach(([a, kd], i) => out.push({ id: `g${k}d${i}`, cat: 'diaper', s: rs + a + j, e: rs + a + j, kind: kd }));
+  P.med.forEach((a, i) => out.push({ id: `g${k}m${i}`, cat: 'med', s: rs + a + j, e: rs + a + j, kind: 'Vitamin D' }));
+  return out; };
+const overlaps = (a, b) => a.cat === b.cat && a.s < b.e && b.s < a.e;
+const pl = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+class Component extends DCLogic {
+  constructor(p) {
+    super(p); p = p || {};
+    const sc = SCN[p.scenario || 'day'] || SCN.day;
+    let ongoing = sc.ongoing ? { ...sc.ongoing } : null, pick = null;
+    if (p.open === 'feed') { ongoing = { cat: 'feed', s: sc.now - 4, real: Date.now() - 252000 }; pick = 'stopFeed'; }
+    const nightLive = (p.scenario || 'day') === 'night', base = sc.events.map(e => ({ ...e }));
+    let hist = [];
+    for (let k = -1; k >= -27; k--) { const kind = ((k % 2 === 0) === !nightLive) ? 'day' : 'night'; hist = hist.concat(genWin(sc.rs + k * 720, kind, k)); }
+    hist = hist.filter(h => !base.some(b => overlaps(h, b)) && h.e <= sc.now);
+    const view = p.open === 'lastnight' ? -1 : p.open === 'yesterday' ? (nightLive ? -3 : -2) : 0;
+    this.state = { events: [...hist, ...base], ongoing, sheet: p.open === 'today', sel: p.open === 'edit' ? (p.openId || 'n1') : null, pick, view, screen: p.open === 'settings' || p.open === 'theme' ? 'settings' : 'home', colour: 'system', notif: true, haptic: true, histN: 3, history: p.open === 'history', theme: 'classic', themeSheet: p.open === 'theme', add: p.open === 'add' ? { cat: 'sleep', s: sc.now - 50, e: null, kind: null } : null,
+      child: p.open === 'child' ? 'molly' : null, kids: { molly: { shown: true, hue: 285, from: 420, to: 1140, bottle: 'Breast milk', amount: 120, vitd: true }, otto: { shown: true, hue: 210, from: 660, to: 870, bottle: 'Formula', amount: 150, vitd: false } } };
+    if (p.open === 'child') this.state.screen = 'settings';
+  }
+  miniRing(events, w, now) {
+    const C = 200, RS = 132, WS = 34, RF = 84, WF = 26, A0 = 16, SPAN = 328, el = React.createElement, k = [];
+    const ang = t => A0 + SPAN * Math.max(0, Math.min(1, (t - w.rs) / (w.re - w.rs)));
+    const pt = (a, r) => [C + r * Math.sin(a * Math.PI / 180), C - r * Math.cos(a * Math.PI / 180)];
+    const arc = (a1, a2, r) => { if (a2 - a1 < 0.5) a2 = a1 + 0.5; const [x1, y1] = pt(a1, r), [x2, y2] = pt(a2, r); return `M${x1.toFixed(1)} ${y1.toFixed(1)} A${r} ${r} 0 ${a2 - a1 > 180 ? 1 : 0} 1 ${x2.toFixed(1)} ${y2.toFixed(1)}`; };
+    const P = (key, d, o) => k.push(el('path', { key, d, fill: 'none', strokeLinecap: 'round', ...o }));
+    P('ts', arc(A0, A0 + SPAN, RS), { stroke: 'var(--line)', strokeWidth: WS });
+    const inW = e => e.e > w.rs && e.s < Math.min(w.re, now);
+    events.filter(e => e.cat === 'sleep' && inW(e)).forEach(e => P(e.id, arc(ang(e.s), ang(Math.min(e.e, now)), e.cat === 'sleep' ? RS : RF), { stroke: `var(--${e.cat}-mid)`, strokeWidth: e.cat === 'sleep' ? WS : WF }));
+    const o = this.state.ongoing; if (o && w.live && o.cat === 'sleep') P('on', arc(ang(o.s), ang(now), o.cat === 'sleep' ? RS : RF), { stroke: `var(--${o.cat}-ink)`, strokeWidth: o.cat === 'sleep' ? WS : WF });
+    events.filter(e => e.cat !== 'sleep' && e.s >= w.rs && e.s < w.re).forEach(e => { const [x, y] = pt(ang(e.s), RS + WS / 2 + 22); k.push(el('circle', { key: e.id, cx: x, cy: y, r: 11, fill: `var(--${e.cat}-mid)` })); });
+    const [cx, cy] = pt(0, RS + WS / 2 + 22); k.push(el('circle', { key: 'cap', cx, cy, r: 14, fill: w.kind === 'night' ? 'var(--sleep-mid)' : 'var(--med-mid)' }));
+    return el('svg', { width: 168, height: 168, viewBox: '-10 -10 420 420', style: { position: 'absolute', inset: 0, overflow: 'visible', pointerEvents: 'none' } }, k);
+  }
+  histVals(events, winOf, titleOf2, now) {
+    if (!this.state.history) return { isHistory: false, hist: [], canMore: false, loadMore: () => {} };
+    const n = this.state.histN, days = [];
+    for (let d = 0; d > -n; d--) {
+      const rings = [];
+      for (let x = 0; x >= -27; x--) { const w = winOf(x); if (Math.floor(w.rs / 1440) !== d || w.rs > now) continue;
+        const st = this.statsFor(events, w, now);
+        rings.push({ order: w.kind === 'day' ? 0 : 1, svg: this.miniRing(events, w, now), icon: w.kind === 'night' ? 'bedtime' : 'wb_sunny', ink: w.kind === 'night' ? 'var(--sleep-ink)' : 'var(--med-ink)',
+          big: H(st.slept), small: w.kind === 'night' ? pl(st.feeds, 'feed') : pl(st.naps, 'nap'), label: w.kind === 'night' ? (w.live ? 'Tonight' : 'Night') : (w.live ? 'Today so far' : 'Day'),
+          onClick: () => this.setState({ view: x, history: false, sel: null, pick: null }) }); }
+      rings.sort((a, b) => a.order - b.order);
+      if (rings.length) days.push({ title: d === 0 ? 'Today' : d === -1 ? 'Yesterday' : dname(d), date: ddate(d), rings });
+    }
+    return { isHistory: true, hist: days, canMore: n < 13, loadMore: () => this.setState(s => ({ histN: Math.min(13, s.histN + 3) })) };
+  }
+  toast(t) { clearTimeout(this.tt); this.setState({ toast: t }); this.tt = setTimeout(() => this.setState({ toast: null }), 2600); }
+  kidVals() {
+    const S = this.state, INFO = { molly: { name: 'Molly', initial: 'M', age: '7 months', born: '24 February 2026' }, otto: { name: 'Otto', initial: 'O', age: '2 years 4 months', born: '12 May 2024' } };
+    const tint = h => ({ bg: `oklch(0.90 0.05 ${h})`, ink: `oklch(0.40 0.10 ${h})` });
+    const setK = (id, patch) => this.setState(s => ({ kdraft: { ...(s.kdraft || s.kids[id]), ...patch } }));
+    const kids = Object.keys(INFO).map((id, i, a) => { const k = S.kids[id]; return { ...INFO[id], ...tint(k.hue), sub: `${INFO[id].age}${k.shown ? '' : ' · hidden'}`, border: i < a.length - 1 ? '1px solid var(--line)' : 'none', onClick: () => this.setState({ child: id, kdraft: null }) }; });
+    let ch = {};
+    let cDirty = false;
+    if (S.child) { const id = S.child, k = S.kdraft || S.kids[id], t = tint(k.hue); cDirty = !!S.kdraft && Object.keys(k).some(x => k[x] !== S.kids[id][x]);
+      const hr = (f, lbl) => ({ label: lbl, value: fmt(k[f]), minus: () => setK(id, { [f]: k[f] - 15 }), plus: () => setK(id, { [f]: k[f] + 15 }) });
+      ch = { ...INFO[id], ...t, shownTrack: k.shown ? 'var(--diaper-ink)' : 'var(--line)', shownKnob: k.shown ? 23 : 3, toggleShown: () => setK(id, { shown: !k.shown }),
+        vitdTrack: k.vitd ? 'var(--diaper-ink)' : 'var(--line)', vitdKnob: k.vitd ? 23 : 3, toggleVitd: () => setK(id, { vitd: !k.vitd }),
+        hues: [285, 350, 210, 165, 60].map(h => ({ c: tint(h).bg, ring: h === k.hue ? '0 0 0 3px var(--ink)' : 'none', check: h === k.hue ? 'check' : '', onClick: () => setK(id, { hue: h }) })),
+        hours: [hr('from', 'Day starts'), hr('to', 'Day ends')],
+        bottles: ['Breast milk', 'Formula'].map(b => ({ label: b, bg: k.bottle === b ? 'var(--surface)' : 'transparent', ink: k.bottle === b ? 'var(--ink)' : 'var(--muted)', onClick: () => setK(id, { bottle: b }) })),
+        amount: k.amount, amtMinus: () => setK(id, { amount: Math.max(0, k.amount - 10) }), amtPlus: () => setK(id, { amount: k.amount + 10 }) }; }
+    return { kids, ch, isChild: !!S.child,
+      closeChild: () => { if (cDirty) this.toast('Changes not saved'); this.setState({ child: null, kdraft: null }); },
+      saveChild: () => { if (!cDirty) return; const id = S.child; this.setState(s => ({ kids: { ...s.kids, [id]: { ...s.kdraft } }, kdraft: null })); this.toast(`${INFO[id].name}'s settings saved`); },
+      cvBg: cDirty ? 'var(--ink)' : 'var(--line)', cvInk: cDirty ? 'var(--bg)' : 'var(--muted)', cvTxt: cDirty ? 'Save changes' : 'Saved' };
+  }
+  addVals(now, night) {
+    const a = this.state.add; if (!a) return { addOpen: false, ad: {}, openAdd: () => this.setState({ add: { cat: 'sleep', s: now, e: null, kind: null }, sel: null, pick: null, sheet: false }) };
+    const set = patch => this.setState(s => ({ add: { ...s.add, ...patch } }));
+    const parse = v => { if (!v) return null; const [h, m] = v.split(':').map(Number); let t = Math.floor(now / 1440) * 1440 + h * 60 + m; if (t > now) t -= 1440; return t; };
+    const rg = a.cat === 'sleep' || a.cat === 'feed', hasEnd = rg && a.e !== null;
+    const kinds = a.cat === 'feed' && hasEnd ? ['Left', 'Right', 'Both', 'Bottle'] : a.cat === 'diaper' ? ['Wet', 'Dirty', 'Both'] : a.cat === 'med' ? ['Vitamin D', 'Other'] : [];
+    const kind = a.kind || kinds[0] || null;
+    const medNote = a.note || '', other = a.cat === 'med' && kind === 'Other';
+    const bad = other && !medNote.trim() ? 'Write what was given' : a.s > now ? 'Start is in the future' : hasEnd && a.e <= a.s ? 'End must be after start' : hasEnd && a.e > now ? 'End is in the future' : '';
+    const nm = a.cat === 'sleep' ? 'sleep' : a.cat === 'feed' ? 'feed' : a.cat === 'diaper' ? 'diaper' : 'medicine';
+    const willTimer = rg && !hasEnd;
+    const note = bad || (willTimer ? `No end time, so a ${nm} timer starts from ${fmt(a.s)}. Add an end to save it as finished.` : rg ? `Saved as a finished ${nm}, ${H(a.e - a.s)}. No timer.` : a.cat === 'med' ? `Saved at ${fmt(a.s)}${!other && medNote.trim() ? ' with your note' : ''}.` : `Saved at ${fmt(a.s)}.`);
+    const c = col(a.cat);
+    const save = () => { if (bad) return;
+      if (willTimer) { this.setState(s => { const o = s.ongoing, evs = o ? [...s.events, { id: 'x' + Date.now(), cat: o.cat, s: o.s, e: o.real ? o.s + Math.max(1, Math.round((Date.now() - o.real) / 60000)) : now }] : s.events;
+        return { events: evs, ongoing: { cat: a.cat, s: a.s, real: Date.now() - (now - a.s) * 60000 }, add: null, view: 0 }; }); return; }
+      this.setState(s => ({ events: [...s.events, { id: 'x' + Date.now(), cat: a.cat, s: a.s, e: rg ? a.e : a.s, kind: other ? medNote.trim() : (kind || undefined), note: a.cat === 'med' && !other ? medNote.trim() : undefined }], add: null, view: 0 })); };
+    return { addOpen: true, openAdd: () => {}, closeAdd: () => this.setState({ add: null }), ad: {
+      types: ['sleep', 'feed', 'diaper', 'med'].map(t => ({ icon: ICON[t], label: NAME[t], bg: a.cat === t ? col(t).bg : 'var(--bg)', ink: a.cat === t ? col(t).ink : 'var(--ink)', edge: a.cat === t ? col(t).mid : 'transparent', onClick: () => set({ cat: t, kind: null, note: '', e: (t === 'sleep' || t === 'feed') ? a.e : null }) })),
+      sLabel: rg ? 'Start' : 'Time', sTxt: fmt(a.s), onS: e => { const t = parse(e.target.value); if (t !== null) set({ s: t }); }, sMinus: () => set({ s: a.s - 5 }), sPlus: () => set({ s: a.s + 5 }),
+      isRange: rg, hasEnd, noEnd: rg && !hasEnd, eTxt: hasEnd ? fmt(a.e) : '', onE: e => { const t = parse(e.target.value); if (t !== null) set({ e: t }); },
+      addEnd: () => set({ e: Math.min(now, a.s + 30) }), removeEnd: () => set({ e: null }),
+      hasKinds: kinds.length > 1, kinds: kinds.map(x => ({ label: x, bg: kind === x ? 'var(--surface)' : 'transparent', ink: kind === x ? c.ink : 'var(--muted)', onClick: () => set({ kind: x }) })),
+      isMed: a.cat === 'med', medNote, onMedNote: e => set({ note: e.target.value }), medLabel: other ? 'What was given' : 'Note (optional)', medPh: other ? 'e.g. Paracetamol 2.5 ml' : 'e.g. given with the morning feed',
+      note, noteInk: bad ? 'var(--danger)' : 'var(--muted)', btn: willTimer ? `Start ${nm} timer` : `Save ${nm}`, btnIcon: willTimer ? 'play_arrow' : 'check',
+      btnBg: c.ink, btnInk: c.bg, btnOp: bad ? 0.4 : 1, onSave: save } };
+  }
+  statsFor(events, w, now) { const up = Math.min(w.re, now), inW = e => e.s >= w.rs && e.s < up;
+    const sl = events.filter(e => e.cat === 'sleep' && e.e > w.rs && e.s < up);
+    return { slept: sl.reduce((a, e) => a + Math.max(0, Math.min(e.e, up) - Math.max(e.s, w.rs)), 0), naps: sl.filter(e => e.s >= w.rs).length,
+      feeds: events.filter(e => e.cat === 'feed' && inW(e)).length, diapers: events.filter(e => e.cat === 'diaper' && inW(e)).length }; }
+  componentDidMount() { this.iv = setInterval(() => { const o = this.state.ongoing; if (o && o.real) this.forceUpdate(); }, 1000); }
+  componentWillUnmount() { clearInterval(this.iv); }
+  renderVals() {
+    const p = this.props || {}, scKey = p.scenario || 'day', sc = SCN[scKey] || SCN.day, night = scKey === 'night';
+    const themeKey = `classic-${p.mode || (night ? 'night' : 'day')}`;
+    const { events, sel, pick, view } = this.state, now = sc.now;
+    const winOf = kk => { const rs = sc.rs + kk * 720; return { k: kk, rs, re: rs + 720, kind: ((kk % 2 === 0) === !night) ? 'day' : 'night', live: kk === 0 }; };
+    const titleOf2 = w => { const d = Math.floor(w.rs / 1440); if (w.kind === 'day') return d === 0 ? 'Today' : d === -1 ? 'Yesterday' : dname(d);
+      return w.live ? 'Tonight' : (!night && w.k === -1) ? 'Last night' : `${dname(d)} night`; };
+    const Wv = winOf(view), live = Wv.live, vNight = Wv.kind === 'night';
+    const ongoing = live ? this.state.ongoing : null, ongoingAll = this.state.ongoing;
+    const sc0 = sc; const scv = { ...sc, rs: Wv.rs, re: Wv.re };
+    const C = 200, RS = 132, WS = 30, RF = 86, WF = 22, RM = 178, A0 = 16, SPAN = 328;
+    const ang = t => A0 + SPAN * Math.max(0, Math.min(1, (t - scv.rs) / (scv.re - scv.rs)));
+    const pt = (a, r) => [C + r * Math.sin(a * Math.PI / 180), C - r * Math.cos(a * Math.PI / 180)];
+    const arc = (a1, a2, r) => { if (a2 - a1 < 0.5) a2 = a1 + 0.5; const [x1, y1] = pt(a1, r), [x2, y2] = pt(a2, r); return `M${x1.toFixed(1)} ${y1.toFixed(1)} A${r} ${r} 0 ${a2 - a1 > 180 ? 1 : 0} 1 ${x2.toFixed(1)} ${y2.toFixed(1)}`; };
+    const el = React.createElement, k = [];
+    const P = (key, d, o) => k.push(el('path', { key, d, fill: 'none', strokeLinecap: 'round', ...o }));
+    const pickEv = id => e => { if (e && e.stopPropagation) e.stopPropagation(); this.setState({ sel: id, pick: null }); };
+    const op = ev => (sel ? (sel === ev.id ? 1 : 0.25) : 1);
+    const inRing = ev => ev.e > scv.rs && ev.s < scv.re;
+
+    P('ts', arc(A0, A0 + SPAN, RS), { stroke: 'var(--line)', strokeWidth: WS });
+    for (let h = 1; h < 12; h++) { const a = A0 + SPAN * h / 12;
+      { const [x1, y1] = pt(a, RS - WS / 2 - 8), [x2, y2] = pt(a, RS - WS / 2 - 3); k.push(el('line', { key: 'h' + h, x1, y1, x2, y2, stroke: 'var(--line)', strokeWidth: 2, strokeLinecap: 'round' })); } }
+    const wins = live && !ongoing && sc.windows ? sc.windows.filter(w => w.e > now) : [];
+    wins.forEach((w, i) => {
+      const a1 = ang(w.s), a2 = ang(w.e), next = i === 0, o = sel ? 0.3 : 1;
+      if (next) P('w' + i, arc(a1, a2, RS), { stroke: 'var(--sleep-bg)', strokeWidth: WS, strokeLinecap: 'butt', opacity: o });
+      [RS - WS / 2 + 1, RS + WS / 2 - 1].forEach((r, j) => P('we' + i + j, arc(a1, a2, r), { stroke: 'var(--sleep-mid)', strokeWidth: 2, strokeDasharray: '4 4', strokeLinecap: 'butt', opacity: next ? o : o * 0.7 }));
+      [a1, a2].forEach((a, j) => { const [x1, y1] = pt(a, RS - WS / 2), [x2, y2] = pt(a, RS + WS / 2); k.push(el('line', { key: 'wc' + i + j, x1, y1, x2, y2, stroke: 'var(--sleep-mid)', strokeWidth: 2, strokeDasharray: '4 4', opacity: next ? o : o * 0.7 })); });
+    });
+    events.filter(e => e.cat === 'sleep' && inRing(e)).forEach(ev => {
+      const a1 = ang(ev.s), a2 = ang(ev.e), r = ev.cat === 'sleep' ? RS : RF, w = ev.cat === 'sleep' ? WS : WF, on = pickEv(ev.id);
+      P(ev.id, arc(a1, a2, r), { stroke: `var(--${ev.cat}-mid)`, strokeWidth: w, opacity: op(ev), pointerEvents: 'none' });
+      P(ev.id + 'hit', arc(a1, a2, r), { stroke: 'transparent', strokeWidth: 44, pointerEvents: 'stroke', onClick: on, style: { cursor: 'pointer' } });
+    });
+    if (ongoing && ongoing.cat === 'sleep') { const r = RS, w = ongoing.cat === 'sleep' ? WS : WF;
+      P('on', arc(ang(ongoing.s), ang(now), r), { stroke: `var(--${ongoing.cat}-ink)`, strokeWidth: w, opacity: sel ? 0.25 : 1 }); }
+    let startT = null;
+    if (vNight) { const c = events.filter(e => e.cat === 'sleep' && Math.abs(e.s - Wv.rs) <= 120).sort((a, b) => Math.abs(a.s - Wv.rs) - Math.abs(b.s - Wv.rs))[0]; if (c) startT = c.s; }
+    else { const c = events.filter(e => e.cat === 'sleep' && Math.abs(e.e - Wv.rs) <= 120 && e.e <= now).sort((a, b) => Math.abs(a.e - Wv.rs) - Math.abs(b.e - Wv.rs))[0]; if (c) startT = c.e; }
+    if (startT !== null) { const a = ang(startT), [x1, y1] = pt(a, RS - WS / 2 - 4), [x2, y2] = pt(a, RS + WS / 2 + 10);
+      k.push(el('line', { key: 'ds', x1, y1, x2, y2, stroke: vNight ? 'var(--sleep-ink)' : 'var(--med-ink)', strokeWidth: 3, strokeLinecap: 'round', pointerEvents: 'none' })); }
+    if (live) { const na = ang(now), [hx1, hy1] = pt(na, RS - WS / 2 - 26), [hx2, hy2] = pt(na, RS + WS / 2 + 4);
+    k.push(el('line', { key: 'hand', x1: hx1, y1: hy1, x2: hx2, y2: hy2, stroke: 'var(--ink)', strokeWidth: 3, strokeLinecap: 'round', pointerEvents: 'none' }));
+    k.push(el('circle', { key: 'hd', cx: hx1, cy: hy1, r: 5, fill: 'var(--ink)', pointerEvents: 'none' })); }
+    const ringSvg = el('svg', { width: 400, height: 400, viewBox: '0 0 400 400', style: { position: 'absolute', inset: 0, overflow: 'visible' } }, k);
+
+    let prev = A0 + 10;
+    const markEvs = events.filter(e => e.cat !== 'sleep' && e.s >= scv.rs && e.s < scv.re);
+    if (ongoing && ongoing.cat === 'feed') markEvs.push({ id: 'ongoingFeed', cat: 'feed', s: ongoing.s, e: now, live: true });
+    const marks = markEvs.sort((a, b) => a.s - b.s).map(ev => {
+      const a = Math.max(ang(ev.s), prev + 15, A0 + 26); prev = a; const [x, y] = pt(a, RM), c = col(ev.cat);
+      if (ev.live) return { x, y, icon: 'breastfeeding', bg: c.ink, ink: c.bg, op: sel ? 0.25 : 1, ring: '0 0 0 3px var(--feed-mid)', onClick: e => { e && e.stopPropagation && e.stopPropagation(); this.setState({ pick: 'stopFeed' }); } };
+      return { x, y, icon: ev.cat === 'diaper' ? KIND_ICON[ev.kind] : ev.cat === 'feed' ? (FEED_ICON[ev.kind] || 'breastfeeding') : ICON.med, bg: c.bg, ink: c.ink, op: op(ev), ring: sel === ev.id ? '0 0 0 3px var(--ink)' : 'none', onClick: pickEv(ev.id) };
+    });
+
+    const lastOf = c => events.filter(x => x.cat === c && x.s <= now).sort((a, b) => b.e - a.e)[0];
+    const lastSleep = lastOf('sleep');
+    let cLabel, cBig, cSub, cColor = 'var(--muted)';
+    if (ongoing) {
+      cLabel = ongoing.cat === 'sleep' ? 'Sleeping' : 'Feeding'; cColor = `var(--${ongoing.cat}-ink)`;
+      cBig = ongoing.real ? mmss(Date.now() - ongoing.real) : H(now - ongoing.s); cSub = `since ${fmt(ongoing.s)}`;
+    } else if (!live) {
+      const st = this.statsFor(events, Wv, now); cLabel = 'Slept'; cBig = H(st.slept);
+      cSub = vNight ? `${pl(st.feeds, 'feed')} · ${pl(st.diapers, 'diaper')}` : `${pl(st.naps, 'nap')} · ${pl(st.feeds, 'feed')}`;
+    } else { cLabel = 'Awake'; cBig = H(now - (lastSleep ? lastSleep.e : now)); cSub = `since ${fmt(lastSleep ? lastSleep.e : now)}`; }
+
+    const addEv = ev => this.setState(s => ({ events: [...s.events, { id: 'x' + Date.now(), ...ev }], pick: null }));
+    const endOngoing = kind => this.setState(s => { const o = s.ongoing; if (!o) return null;
+      const e = o.real ? o.s + Math.max(1, Math.round((Date.now() - o.real) / 60000)) : now;
+      return { ongoing: null, pick: null, events: [...s.events, { id: 'x' + Date.now(), cat: o.cat, s: o.s, e, kind }] }; });
+    const startTimer = cat => this.setState(s => { const o = s.ongoing, evs = o ? [...s.events, { id: 'x' + Date.now(), cat: o.cat, s: o.s, e: o.real ? o.s + Math.max(1, Math.round((Date.now() - o.real) / 60000)) : now }] : s.events;
+      return { events: evs, ongoing: { cat, s: now, real: Date.now() }, sel: null, pick: null, view: 0 }; });
+    const tiles = ['sleep', 'feed', 'diaper', 'med'].map(c => {
+      const ongoing = ongoingAll, cc = col(c), act = !!(ongoing && ongoing.cat === c), L = lastOf(c);
+      const busy = false;
+      return { icon: act ? 'stop_circle' : ICON[c], name: act ? `Stop ${c}` : NAME[c], op: busy ? 0.45 : 1,
+        sub: act ? (ongoing.real ? mmss(Date.now() - ongoing.real) : H(now - ongoing.s)) : busy ? `stop ${ongoing.cat} first` : (L ? `${H(now - L.e)} ago${L.kind && c === 'feed' ? ' · ' + L.kind : ''}` : 'not yet'),
+        bg: act ? cc.ink : cc.bg, ink: act ? cc.bg : cc.ink,
+        onClick: act ? (c === 'sleep' ? () => endOngoing() : () => this.setState({ pick: 'stopFeed', view: 0 })) : busy ? undefined
+          : c === 'sleep' || c === 'feed' ? () => startTimer(c) : () => this.setState({ pick: c, sel: null }) };
+    });
+
+    let pk = {};
+    if (pick === 'stopFeed') { pk = { ...col('feed'), title: 'Stop and save as', cols: 2, hasCancel: true, cancel: 'Cancel feed', onCancel: () => this.setState({ ongoing: null, pick: null }),
+      opts: ['Left', 'Right', 'Both', 'Bottle'].map(x => ({ label: x, icon: FEED_ICON[x], onClick: () => endOngoing(x) })) }; }
+    if (pick === 'diaper') { pk = { ...col('diaper'), title: 'Diaper', cols: 3, hasCancel: false,
+      opts: ['Wet', 'Dirty', 'Both'].map(x => ({ label: x, icon: KIND_ICON[x], onClick: () => addEv({ cat: 'diaper', s: now, e: now, kind: x }) })) }; }
+    if (pick === 'med') { pk = { ...col('med'), title: 'Medicine', cols: 1, hasCancel: false,
+      opts: [{ label: 'Vitamin D', icon: 'medication', onClick: () => addEv({ cat: 'med', s: now, e: now, kind: 'Vitamin D' }) }] }; }
+
+    let ed = {};
+    const ev = sel && events.find(x => x.id === sel);
+    if (ev) {
+      const c = col(ev.cat), rg = isRange(ev);
+      const shift = (f, d) => () => this.setState(s => ({ events: s.events.map(x => { if (x.id !== ev.id) return x;
+        if (!rg) return { ...x, s: x.s + d, e: x.e + d }; const n = { ...x, [f]: x[f] + d }; return n.e - n.s >= 1 && n.e <= now ? n : x; }) }));
+      const kinds = ev.cat === 'feed' ? ['Left', 'Right', 'Both', 'Bottle'] : ev.cat === 'diaper' ? ['Wet', 'Dirty', 'Both'] : [];
+      ed = { ...c, icon: ICON[ev.cat],
+        title: ev.cat === 'sleep' ? (((ev.s % 1440) + 1440) % 1440 >= 420 && ((ev.s % 1440) + 1440) % 1440 < 1140 ? 'Nap' : 'Night sleep') : ev.cat === 'feed' ? 'Feed' : ev.cat === 'diaper' ? 'Diaper' : ev.kind,
+        sub: rg ? `${H(ev.e - ev.s)}` + (now - ev.e < 720 ? ` · ended ${H(now - ev.e)} ago` : ` · ${titleOf2(winOf(Math.floor((ev.s - sc.rs) / 720)))}`) : (now - ev.s < 720 ? `${H(now - ev.s)} ago` : titleOf2(winOf(Math.floor((ev.s - sc.rs) / 720)))),
+        rows: rg ? [{ label: 'Start', value: fmt(ev.s), minus: shift('s', -5), plus: shift('s', 5) }, { label: 'End', value: fmt(ev.e), minus: shift('e', -5), plus: shift('e', 5) }]
+          : [{ label: 'Time', value: fmt(ev.s), minus: shift('s', -5), plus: shift('s', 5) }],
+        hasKinds: kinds.length > 0,
+        kinds: kinds.map(x => ({ label: x, bg: ev.kind === x ? 'var(--surface)' : 'transparent', ink: ev.kind === x ? c.ink : 'var(--muted)',
+          onClick: () => this.setState(s => ({ events: s.events.map(y => y.id === ev.id ? { ...y, kind: x } : y) })) })),
+        onDelete: () => this.setState(s => ({ events: s.events.filter(y => y.id !== ev.id), sel: null })) };
+    }
+    const pEdit = !!ev, pPick = !pEdit && !!pick && !!pk.opts, pIdle = !pEdit && !pPick;
+    const showWindow = pIdle && live && !!sc.window && !ongoing;
+    const W0 = sc.window ? sc.window[0] : 0, W1 = sc.window ? sc.window[1] : 0;
+    const winState = now < W0 ? 'before' : now <= W1 ? 'in' : 'after';
+    const winTitle = sc.windows ? `${sc.windows.find(w => w.e > now)?.name || 'Nap'} likely` : 'Nap likely';
+    const wokeAt = lastSleep ? lastSleep.e : now;
+    const winWhy = `2h 15m–2h 45m after she woke at ${fmt(wokeAt)}`;
+    const winSub2 = winState === 'before' ? `in ${H(W0 - now)}` : winState === 'in' ? `${H(W1 - now)} left` : `${H(now - W1)} ago`;
+    const pills = [];
+    wins.forEach((w, i) => { const ink = i === 0 ? 'var(--sleep-ink)' : 'var(--muted)', op = sel ? 0.3 : 1;
+      [[w.s, ang(w.s) - 3], [w.e, ang(w.e) + 3]].forEach(([t, a], j) => { if (j === 1 && w.e >= sc.re - 5) return; const [x, y] = pt(a, RS + WS / 2 + 17); pills.push({ x, y, text: fmt(t), ink, op }); }); });
+    const nextW = wins[0], laterW = wins.slice(1);
+    const thenTxt = laterW.length ? 'Then ' + laterW.map(w => `${w.name.toLowerCase()} ${fmt(w.s)}–${fmt(w.e)}`).join(' · ') : '';
+    const inR = e => e.s >= sc.rs && e.s <= now;
+    const sleeps = events.filter(e => e.cat === 'sleep' && e.e > sc.rs);
+    const slept = sleeps.reduce((a, e) => a + Math.min(e.e, now) - Math.max(e.s, sc.rs), 0) + (ongoing && ongoing.cat === 'sleep' && !ongoing.real ? now - ongoing.s : 0);
+    const nNaps = sleeps.filter(e => e.s >= sc.rs).length + (ongoing && ongoing.cat === 'sleep' ? 1 : 0);
+    const nFeeds = events.filter(e => e.cat === 'feed' && inR(e)).length, nDia = events.filter(e => e.cat === 'diaper' && inR(e)).length;
+    const stats = [
+      { icon: 'bedtime', ink: 'var(--sleep-ink)', value: H(slept), label: night ? 'slept tonight' : 'slept today' },
+      { icon: night ? 'bedtime' : 'partly_cloudy_day', ink: 'var(--sleep-ink)', value: String(nNaps), label: night ? 'sleeps' : (nNaps === 1 ? 'nap' : 'naps') },
+      { icon: 'breastfeeding', ink: 'var(--feed-ink)', value: String(nFeeds), label: nFeeds === 1 ? 'feed' : 'feeds' },
+      { icon: 'baby_changing_station', ink: 'var(--diaper-ink)', value: String(nDia), label: nDia === 1 ? 'diaper' : 'diapers' } ];
+    const titleOf = e => e.cat === 'sleep' ? (e.e - e.s > 300 || night ? 'Sleep' : 'Nap') : e.cat === 'feed' ? `Feed · ${e.kind}` : e.cat === 'diaper' ? `Diaper · ${e.kind}` : e.kind;
+    const recent = events.filter(e => e.s <= now).sort((a, b) => b.s - a.s).slice(0, 6).map(e => { const c = col(e.cat), rg = isRange(e);
+      return { icon: e.cat === 'diaper' ? KIND_ICON[e.kind] : e.cat === 'feed' ? (FEED_ICON[e.kind] || ICON.feed) : ICON[e.cat], bg: c.bg, ink: c.ink, title: titleOf(e), time: rg ? `${fmt(e.s)} – ${fmt(e.e)}` : fmt(e.s), dur: rg ? H(e.e - e.s) : '', onClick: () => this.setState({ sel: e.id, pick: null, sheet: false }) }; });
+    const pairK = view % 2 === 0 ? view - 1 : view + 1, Wp = winOf(pairK);
+    const go = kk => { if (kk > 0 || kk < -27) return; this.setState({ view: kk, sel: null, pick: null }); };
+    const earlier = [];
+    for (let d = -1; d >= -5; d--) { let kk = null; for (let x = 0; x >= -7; x--) { const w = winOf(x); if (w.kind === 'day' && Math.floor(w.rs / 1440) === d) kk = x; }
+      if (kk === null) continue; const st = this.statsFor(events, winOf(kk), now);
+      const wd = winOf(kk), pc = t => (Math.max(0, Math.min(1, (t - wd.rs) / 720)) * 100).toFixed(1) + '%';
+      earlier.push({ sleeps: events.filter(e => e.cat === 'sleep' && e.e > wd.rs && e.s < wd.re).map(e => ({ l: pc(e.s), w: `calc(${pc(e.e)} - ${pc(e.s)})` })), feeds: events.filter(e => e.cat === 'feed' && e.s >= wd.rs && e.s < wd.re).map(e => ({ l: pc(e.s) })),
+        title: `${d === -1 ? 'Yesterday' : dname(d)} · ${ddate(d)}`, sub: `${pl(st.naps, 'nap')} · ${H(st.slept)}`, onClick: () => this.setState({ view: kk, sheet: false, sel: null, pick: null }) }); }
+    const SD = this.state.sdraft || { colour: this.state.colour, notif: this.state.notif, haptic: this.state.haptic };
+    const sDirty = !!this.state.sdraft && ['colour', 'notif', 'haptic'].some(x => this.state.sdraft[x] !== this.state[x]);
+    const setSD = patch => this.setState(s => ({ sdraft: { ...(s.sdraft || { colour: s.colour, notif: s.notif, haptic: s.haptic }), ...patch } }));
+    const cm = this.state.colour, cmD = SD.colour, modeNow = cm === 'system' ? (p.mode || (night ? 'night' : 'day')) : cm;
+    const colourOpts = [['system', 'Follow the phone'], ['day', 'Day'], ['night', 'Night']].map(([v, label]) => ({ label, bg: cmD === v ? 'var(--surface)' : 'transparent', ink: cmD === v ? 'var(--ink)' : 'var(--muted)', onClick: () => setSD({ colour: v }) }));
+    const tg = (key, title, sub, last) => ({ title, sub, track: SD[key] ? 'var(--diaper-ink)' : 'var(--line)', knob: SD[key] ? 23 : 3, border: last ? 'none' : '1px solid var(--line)', onClick: () => setSD({ [key]: !SD[key] }) });
+    return { themeKey: `classic-${modeNow}`, nowTxt: fmt(now), dateTxt: `${titleOf2(Wv)} · ${ddate(Math.floor(Wv.rs / 1440))}`, ringSvg, marks,
+      isPast: !live, backToNow: () => go(0), goPrev: () => go(view - 2), goNext: () => go(view + 2 > 0 ? (view === -1 ? 0 : view + 2) : view + 2), nextOp: view === 0 ? 0.3 : 1,
+      toggleKind: () => go(pairK), pairTitle: titleOf2(Wp), pairIcon: Wp.kind === 'night' ? 'bedtime' : 'wb_sunny', pairInk: Wp.kind === 'night' ? 'var(--sleep-ink)' : 'var(--med-ink)',
+      onDown: e => { this.down = { x: e.clientX, y: e.clientY }; },
+      onUp: e => { const d0 = this.down; this.down = null; if (!d0) return; const dx = e.clientX - d0.x, dy = e.clientY - d0.y;
+        if (Math.max(Math.abs(dx), Math.abs(dy)) < 40) return; this.swiped = true; setTimeout(() => { this.swiped = false; }, 50);
+        if (Math.abs(dy) > Math.abs(dx)) go(pairK); else go(dx > 0 ? view - 2 : (view === -1 ? 0 : view + 2)); },
+      earlier, isSettings: this.state.screen === 'settings', openSettings: () => this.setState({ screen: 'settings', sheet: false, sdraft: null }), closeSettings: () => { if (sDirty) this.toast('Changes not saved'); this.setState({ screen: 'home', sdraft: null }); },
+      saveSettings: () => { if (!sDirty) return; this.setState(s => ({ ...s.sdraft, sdraft: null })); this.toast('Settings saved'); },
+      svBg: sDirty ? 'var(--ink)' : 'var(--line)', svInk: sDirty ? 'var(--bg)' : 'var(--muted)', svTxt: sDirty ? 'Save changes' : 'Saved',
+      themeName: (THEMES.find(x => x.k === this.state.theme) || THEMES[0]).n, themeSheet: !!this.state.themeSheet,
+      openThemes: () => this.setState({ themeSheet: true }), closeThemes: () => this.setState({ themeSheet: false }),
+      themeList: THEMES.map(t => { const on = t.k === this.state.theme; return { name: t.n, tagline: t.tg, dayBg: t.day.bg, nightBg: t.night.bg, ds: t.day.s, df: t.day.f, dd: t.day.d, ns: t.night.s, nf: t.night.f, nd: t.night.d,
+        edge: on ? 'var(--ink)' : 'transparent', radio: on ? 'var(--ink)' : 'var(--line)', radioFill: on ? 'var(--ink)' : 'transparent', check: on ? 'check' : '',
+        onClick: () => { if (on) return; this.setState({ theme: t.k }); this.toast(`Theme changed to ${t.n}`); } }; }),
+      hasToast: !!this.state.toast, toast: this.state.toast || '',
+      colourOpts, toggles: [tg('notif', 'Notifications', 'Lock-screen timer while a sleep or feed runs', false), tg('haptic', 'Haptics', 'A tap you can feel for every action', true)],
+      ringTap: () => go(pairK), ...this.histVals(events, winOf, titleOf2, now), openHistory: () => this.setState({ history: true, sheet: false }), closeHistory: () => this.setState({ history: false }), pairLower: titleOf2(Wp).replace(/^(Today|Tonight|Yesterday|Last night)$/, m => m.toLowerCase()),
+      hasStart: startT !== null, startLbl: startT === null ? '' : (vNight ? `Bedtime ${fmt(startT)}` : `Day started ${fmt(startT)}`),
+      ...this.kidVals(), ...this.addVals(now, night),
+      capY: C - RS - WS / 2 - 24, capIcon: vNight ? 'bedtime' : 'wb_sunny', capBg: vNight ? 'var(--sleep-bg)' : 'var(--med-bg)', capInk: vNight ? 'var(--sleep-ink)' : 'var(--med-ink)',
+      startTxt: fmt(sc.re), endTxt: fmt(sc.rs),
+      cLabel, cBig, cSub, cColor, showWindow, winTxt: sc.window ? `${fmt(W0)}–${fmt(W1)}` : '', winSub: winSub2, winTitle, winWhy, pills, thenTxt, hasThen: !!thenTxt,
+      statsTitle: night ? 'Tonight' : 'Today', stats, recent, sheetOpen: !!this.state.sheet, openSheet: () => this.setState({ sheet: true, sel: null, pick: null }), closeSheet: () => this.setState({ sheet: false }),
+      tiles, pIdle, pPick, pEdit, pk, ed, close: () => this.setState({ sel: null, pick: null }) };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+{
+  "name": "molly-notify",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Lock-screen notification for Molly's running timers, with headless actions (Android only)"
+}

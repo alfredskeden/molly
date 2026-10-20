@@ -1,0 +1,6 @@
+{
+  "platforms": ["android"],
+  "android": {
+    "modules": ["se.skedeback.molly.notify.MollyNotifyModule"]
+  }
+}

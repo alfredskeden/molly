@@ -1,0 +1,50 @@
+diff --git a/android/src/main/java/com/reactnativeandroidwidget/RNWidget.java b/android/src/main/java/com/reactnativeandroidwidget/RNWidget.java
+index 5650d1e4b9abaa30a2e1ab2a5fddefc9057d4e25..010c39953dcc9cf8c607134a4f228c0cf0401c94 100644
+--- a/android/src/main/java/com/reactnativeandroidwidget/RNWidget.java
++++ b/android/src/main/java/com/reactnativeandroidwidget/RNWidget.java
+@@ -32,8 +32,15 @@ import com.reactnativeandroidwidget.builder.WidgetWithViews;
+ import java.io.ByteArrayOutputStream;
+ import java.util.ArrayList;
+ import java.util.List;
++import java.util.concurrent.atomic.AtomicInteger;
+ 
+ public class RNWidget {
++    // Every clickable gets its own request code. PendingIntents differ only in extras, which don't count
++    // when matching, so two buttons drawn in the same millisecond shared a code and FLAG_CANCEL_CURRENT made
++    // the later one cancel the earlier: a dead button. Seeded from the clock once, so codes from an earlier
++    // process don't line up with this one's.
++    private static final AtomicInteger REQUEST_CODES = new AtomicInteger((int) System.currentTimeMillis());
++
+     private final ReactApplicationContext appContext;
+     private final ReadableMap config;
+     private final String widgetName;
+@@ -207,7 +214,7 @@ public class RNWidget {
+         intent.putExtra("clickActionData", Arguments.toBundle(clickableView.getClickActionData()));
+         PendingIntent pendingIntent = PendingIntent.getBroadcast(
+             appContext,
+-            (int) System.currentTimeMillis(),
++            REQUEST_CODES.incrementAndGet(),
+             intent,
+             PendingIntent.FLAG_CANCEL_CURRENT
+                 | PendingIntent.FLAG_MUTABLE
+diff --git a/android/src/main/java/com/reactnativeandroidwidget/RNWidgetProvider.java b/android/src/main/java/com/reactnativeandroidwidget/RNWidgetProvider.java
+index 647d8f43d744d1e4b6a9c66de2d6a7f6861cbe04..98e61e9084b5b52b8c12b12ec729b189586b69e5 100644
+--- a/android/src/main/java/com/reactnativeandroidwidget/RNWidgetProvider.java
++++ b/android/src/main/java/com/reactnativeandroidwidget/RNWidgetProvider.java
+@@ -144,9 +144,15 @@ public class RNWidgetProvider extends AppWidgetProvider {
+ 
+         if (incomingIntent.hasExtra("clickAction")) {
+             Bundle clickActionData = incomingIntent.getBundleExtra("clickActionData");
++            JSONObject clickActionJson = new JSONObject(Arguments.fromBundle(clickActionData).toHashMap());
++            // When the tap arrived here, so JS can tell how long WorkManager and its own start took.
++            try {
++                clickActionJson.put("receivedAt", System.currentTimeMillis());
++            } catch (org.json.JSONException ignored) {
++            }
+             additionalData = new Data.Builder()
+                 .putString("clickAction", incomingIntent.getStringExtra("clickAction"))
+-                .putString("clickActionData", new JSONObject(Arguments.fromBundle(clickActionData).toHashMap()).toString())
++                .putString("clickActionData", clickActionJson.toString())
+                 .build();
+         }
+ 

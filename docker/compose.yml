@@ -1,0 +1,12 @@
+# Molly web. Next to this file, create .env with:
+#   BABY_BUDDY_ORIGIN=https://baby.example.com   (Baby Buddy's origin, the only address Molly may call)
+#   MOLLY_PORT=8080                              (optional)
+# On the Mac: pnpm web:up. On the Pi: docker load < molly-web-arm64.tar, then docker compose up -d.
+services:
+  molly-web:
+    image: molly-web:local
+    restart: unless-stopped
+    ports:
+      - "${MOLLY_PORT:-8080}:80"
+    environment:
+      BABY_BUDDY_ORIGIN: ${BABY_BUDDY_ORIGIN:?set BABY_BUDDY_ORIGIN in .env}

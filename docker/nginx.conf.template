@@ -1,0 +1,30 @@
+# Rendered by the nginx image's entrypoint (envsubst) into conf.d/default.conf.
+# Only defined environment variables are substituted, so nginx's own $uri stays as is.
+
+server {
+    listen 80;
+    server_name _;
+    root /usr/share/nginx/html;
+    server_tokens off;
+
+    # An add_header inside a location replaces all of these there, so the hashed-assets block repeats
+    # what it needs. connect-src is the one Baby Buddy origin Molly may call; style-src allows the inline styles
+    # react-native-web injects.
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src ${BABY_BUDDY_ORIGIN}; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
+    add_header X-Content-Type-Options nosniff always;
+    add_header Referrer-Policy no-referrer always;
+
+    # File names carry a content hash.
+    location ~ ^/(_expo/static|assets)/ {
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        add_header Content-Security-Policy "default-src 'none'" always;
+        add_header X-Content-Type-Options nosniff always;
+        try_files $uri =404;
+    }
+
+    # Single-page app: every other path gets index.html, which must never be cached.
+    location / {
+        expires -1;
+        try_files $uri /index.html;
+    }
+}

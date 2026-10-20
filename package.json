@@ -1,0 +1,33 @@
+{
+  "name": "molly-workspace",
+  "private": true,
+  "license": "MIT",
+  "packageManager": "pnpm@10.12.1",
+  "scripts": {
+    "test": "pnpm -r --if-present test",
+    "typecheck": "pnpm -r --if-present typecheck && tsc -p e2e --noEmit",
+    "bb:up": "docker compose -f e2e/docker-compose.yml up -d --wait",
+    "bb:seed": "e2e/seed.sh",
+    "bb:down": "docker compose -f e2e/docker-compose.yml down",
+    "e2e": "playwright test -c e2e/playwright.config.ts",
+    "lint": "pnpm --filter @molly/app lint",
+    "check:boundaries": "node scripts/check-boundaries.mjs",
+    "check:web-bundle": "pnpm --filter @molly/app export:web && node scripts/check-web-bundle.mjs",
+    "check": "pnpm check:boundaries && pnpm typecheck && pnpm lint && pnpm test && pnpm check:web-bundle",
+    "web:up": "scripts/build-web-image.sh local && docker compose -f docker/compose.yml up -d",
+    "web:down": "docker compose -f docker/compose.yml down",
+    "web:image:pi": "scripts/build-web-image.sh pi",
+    "android:release": "scripts/android-release.sh",
+    "brand:export": "node scripts/export-brand.mjs",
+    "replay:naps": "tsx scripts/replay-naps.ts",
+    "check:sources": "tsx scripts/check-sources.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@resvg/resvg-js": "^2.6.2",
+    "serve": "^14.2.6",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.1"
+  }
+}

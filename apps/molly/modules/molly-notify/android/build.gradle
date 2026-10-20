@@ -1,0 +1,23 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'se.skedeback.molly'
+version = '1.0.0'
+
+android {
+  namespace "se.skedeback.molly.notify"
+  defaultConfig {
+    versionCode 1
+    versionName '1.0.0'
+  }
+}
+
+dependencies {
+  // ReactHost and HeadlessJsTaskContext for the headless action task; the version comes from the app.
+  implementation 'com.facebook.react:react-android'
+  // Same versions react-native-android-widget already pulls in for its headless worker.
+  implementation 'androidx.work:work-runtime:2.8.1'
+  implementation 'androidx.concurrent:concurrent-futures:1.1.0'
+}

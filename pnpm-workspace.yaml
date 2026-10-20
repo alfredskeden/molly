@@ -1,0 +1,6 @@
+packages:
+  - apps/*
+  - packages/*
+
+patchedDependencies:
+  react-native-android-widget@0.22.1: patches/react-native-android-widget@0.22.1.patch

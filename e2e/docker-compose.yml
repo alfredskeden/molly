@@ -1,0 +1,33 @@
+# Disposable Baby Buddy for integration and e2e tests. Data lives in tmpfs: `down` wipes it.
+# Seed it with `pnpm bb:seed` after `pnpm bb:up`. molly-web is the production image, started by Playwright.
+name: molly-test
+
+services:
+  babybuddy:
+    image: lscr.io/linuxserver/babybuddy:v2.11.0-ls251
+    ports:
+      - "4778:8000"
+    environment:
+      TZ: UTC
+      PUID: "1000"
+      PGID: "1000"
+      # Expo web dev server, then the nginx web image.
+      CORS_ALLOWED_ORIGINS: http://localhost:8081,http://localhost:8080
+    tmpfs:
+      - /config
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "8000"]
+      interval: 2s
+      timeout: 2s
+      retries: 60
+
+  molly-web:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: molly-web:e2e
+    profiles: [web]
+    ports:
+      - "8080:80"
+    environment:
+      BABY_BUDDY_ORIGIN: http://localhost:4778
