@@ -28,6 +28,14 @@
   - Historical plan notes get a pointer, not a rewrite.
 - Nothing else found: no copy entries, assets, deps or flags tied to the old span.
 
+## Implementation (2026-10-21)
+
+- `cardSpan` / `cardStats` in `features/days/recent.ts`; `TodayStats` moved there and gained `night` (the span holds a night → `sleep`/`sleeps`). The dashboard builds the card in `todaySheetTotals` (`index.tsx`) with `windowsBefore(loaded, napWindow, now, 1, running)`.
+- The ml line sits inside the boxes' accessible group, so TalkBack reads it once, after the diapers.
+- Look (web): `13h 17m` was cut to `13h 1…` in a quarter-width box. The slept box is now `flex-[1.25]`, and its value and the labels wrap instead of truncating. 1.4 left `diapers` too narrow at 320 px (broke as `diaper/s`). At 412 px everything fits on one line. At 320 px slept wraps to `13h` / `17m` and `slept` / `today`.
+- Web look review: Today sheet screenshots by day and night, Classic and Ribbon, day and night schemes, 412 and 320 px.
+- Found while reviewing, not from this plan: on the web build, `className` on the Sheet's Reanimated `Animated.View`s (`absolute bottom-0…`, `rounded-t-sheet bg-surface`) is missing from the DOM, so in headless Chromium the sheet has no surface and covers the full height. `develop` is the same. Worth its own issue.
+
 ## Open
 
 - None.

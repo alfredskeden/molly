@@ -61,8 +61,9 @@ export function TodaySheet({
 }) {
   const title = night ? 'Tonight' : 'Today';
   const sleepWord = stats.night ? 'sleep' : 'nap';
-  const boxes: { icon: FilledSymbol; ink: 'sleep-ink' | 'feed-ink' | 'diaper-ink'; value: string; label: string }[] = [
-    { icon: 'bedtime', ink: 'sleep-ink', value: durationText(stats.sleptMs), label: night ? 'slept tonight' : 'slept today' },
+  // Slept gets more room: last night and today together run to `13h 17m`. Narrow screens and large fonts wrap.
+  const boxes: { icon: FilledSymbol; ink: 'sleep-ink' | 'feed-ink' | 'diaper-ink'; value: string; label: string; wide?: boolean }[] = [
+    { icon: 'bedtime', ink: 'sleep-ink', value: durationText(stats.sleptMs), label: night ? 'slept tonight' : 'slept today', wide: true },
     {
       icon: night ? 'bedtime' : 'partly_cloudy_day',
       ink: 'sleep-ink',
@@ -82,12 +83,12 @@ export function TodaySheet({
       >
         <View className="flex-row gap-2">
           {boxes.map((box) => (
-            <View key={box.label} className="flex-1 gap-0.5 rounded-box bg-bg px-2.5 pb-3 pt-2.5">
+            <View key={box.label} className={`${box.wide ? 'flex-[1.25]' : 'flex-1'} gap-0.5 rounded-box bg-bg px-2.5 pb-3 pt-2.5`}>
               <TrackerIcon name={box.icon} size={20} ribbonSize={26} color={box.ink} light="bg" />
-              <Text numberOfLines={1} className="text-[19px] font-display tabular-nums">
+              <Text className="text-[19px] font-display tabular-nums">
                 {box.value}
               </Text>
-              <Text numberOfLines={1} className="text-xs font-bold text-muted">
+              <Text className="text-xs font-bold text-muted">
                 {box.label}
               </Text>
             </View>
