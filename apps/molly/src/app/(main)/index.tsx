@@ -9,6 +9,8 @@ import {
   dayPlan,
   dayWindow,
   diaperFor,
+  drank,
+  drankText,
   entrySavedFromTimer,
   feedingForStop,
   lastOfEach,
@@ -23,7 +25,6 @@ import {
   skipNote,
   sleepContext,
   startLabel,
-  todaysTotals,
   totalsBetween,
   UNDONE_SKIP_TAG,
   windowDate,
@@ -35,6 +36,7 @@ import {
   type EntriesByKind,
   type FeedingStopButton,
   type LikelySlot,
+  type NapWindow,
   type PlannedSleep,
   type Skip,
 } from '@molly/core';
@@ -71,6 +73,7 @@ import { LockScreenSheet } from '@/features/dashboard/LockScreenSheet';
 import { useOptimistic } from '@/features/dashboard/optimistic';
 import { BottlePanel } from '@/features/feed/BottlePanel';
 import { mergeDays, useDays } from '@/features/days/queries';
+import { cardSpan, cardStats, recentDays } from '@/features/days/recent';
 import { failureToast, outcomeToast, skipRefusedToast, staleStopToast, type Source } from '@/features/dashboard/outcome-messages';
 import { Picker, type PickerOption } from '@/features/dashboard/Picker';
 import { disclaimer, skipToast, spokenPrediction } from '@/features/dashboard/prediction-text';
@@ -90,7 +93,7 @@ import {
 } from '@/features/dashboard/queries';
 import { LoadingAnnouncement, useSkeleton } from '@/features/dashboard/Skeleton';
 import { Tiles, type TileState } from '@/features/dashboard/Tiles';
-import { TodaySheet, type TodayStats } from '@/features/dashboard/TodaySheet';
+import { TodaySheet } from '@/features/dashboard/TodaySheet';
 import { holdPolls } from '@/features/dashboard/writes';
 import { METHOD_LABELS } from '@/features/dashboard/timeline-text';
 import { UnreachableBanner } from '@/features/dashboard/Unreachable';
@@ -1164,7 +1167,7 @@ export default function Dashboard() {
         <TodaySheet
           night={liveWindow.kind === 'night'}
           now={now}
-          stats={todayStats(loaded, liveWindow, sleepRunning, now)}
+          {...todaySheetTotals(loaded, liveWindow, sleepRunning, napWindow, bottle.amount, now)}
           entries={loaded}
           onEdit={(item) => {
             setAskingToday(false);
@@ -1194,11 +1197,21 @@ export default function Dashboard() {
   );
 }
 
-/** The Today sheet's boxes: the live window so far, with the running sleep. */
-function todayStats(entries: EntriesByKind, window: DayWindow, running: Timer | null, now: Date): TodayStats {
-  const totals = todaysTotals(entries, window.start, running, now);
-  const started = entries.sleep.filter((entry) => Date.parse(entry.start) >= window.start.getTime()).length;
-  return { sleptMs: totals.sleepMs, sleeps: started + (running ? 1 : 0), feeds: totals.feedings, diapers: totals.changes };
+/**
+ * The Today sheet's boxes and ml line: Recent days' top card so far (last night and today, or tonight),
+ * with the running sleep. `defaultMl` stands in for feeds with no ml, as on Recent days.
+ */
+function todaySheetTotals(
+  entries: EntriesByKind,
+  live: DayWindow,
+  running: Timer | null,
+  napWindow: NapWindow,
+  defaultMl: number | undefined,
+  now: Date,
+) {
+  const [card] = recentDays(live, windowsBefore(entries, napWindow, now, 1, running));
+  const { from, to } = cardSpan(card, now);
+  return { stats: cardStats(card, entries, running, now), drank: drankText(drank(entries.feeding, from, to, defaultMl)) };
 }
 
 /** The latest medicine logged, for its tile. */
