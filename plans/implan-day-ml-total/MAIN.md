@@ -49,7 +49,7 @@ Plain words in every theme: no `copy.ts` entry unless a theme already renames Re
 - **Default bottle as the breastfeed estimate**: Baby Buddy has no ml for breastfeeds; the bottle default is the parent's own idea of a full feed, so it's an upper guess. Always marked `≈` so it never reads as measured.
 - **Today's default, on this device**: Molly never stored the default a feed was saved with. Accept that changing the default changes past estimates.
 - **No default → count, don't guess**: no hidden 120 ml fallback; the parent sees how many feeds weren't measured.
-- **Recent days only**: not on the Today sheet, feed tile, widgets or notifications.
+- **Recent days only**: not on the Today sheet, feed tile, widgets or notifications. Since [`implan-today-sheet-card`](../implan-today-sheet-card/MAIN.md) the Today sheet shows the top card's line too; the feed tile, widgets and notifications still don't.
 
 ## Boundaries
 
