@@ -79,11 +79,10 @@ The Android app id is `se.skedeback.molly`, the original author's. Android lets 
 
 ## Publishing a release
 
-Ready-made APKs are attached to GitHub releases. For each one:
+Ready-made APKs are attached to GitHub releases. A release is cut from `main` after the release pull request is merged and tagged; the whole flow (version bump, pull request, tag) is in [`releasing.md`](releasing.md). The APK part, on a checkout of the tag:
 
-1. Raise `expo.version` (shown in Settings) and `expo.android.versionCode` (a whole number, one higher than the last release; Android refuses an update with a lower one) in `apps/molly/app.json`, and commit.
-2. `pnpm android:release`, then rebuild for 64-bit ARM phones only, which cuts the APK from about 140 MB to about 60 MB: `(cd apps/molly/android && ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a)`. Check that the certificate's SHA-256 matches the last release's (`apksigner verify --print-certs`).
-3. Copy the APK to `molly-<version>.apk` and `gh release create v<version> molly-<version>.apk --title "Molly <version>" --notes-file <notes>`. If the upload times out (`HTTP 408`), create the release as a draft (`gh api -X POST repos/<owner>/molly/releases -F draft=true …`), upload the APK with `curl --data-binary` to the release's `uploads.github.com/…/assets?name=molly-<version>.apk`, then publish the draft.
+1. `pnpm android:release`, then rebuild for 64-bit ARM phones only, which cuts the APK from about 140 MB to about 60 MB: `(cd apps/molly/android && ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a)`. Check that the certificate's SHA-256 matches the last release's (`apksigner verify --print-certs`).
+2. Copy the APK to `molly-<version>.apk` and `gh release create v<version> molly-<version>.apk --verify-tag --title "Molly <version>" --notes-file <notes>`. If the upload times out (`HTTP 408`), create the release as a draft (`gh api -X POST repos/<owner>/molly/releases -F draft=true …`), upload the APK with `curl --data-binary` to the release's `uploads.github.com/…/assets?name=molly-<version>.apk`, then publish the draft.
 
 ## Patched widget library
 
