@@ -64,7 +64,7 @@ The labels `slept today` / `slept tonight` and the titles `Today` / `Tonight` st
 2. [x] `cardStats` in `recent.ts` (TDD, see `TEST_STRATEGY.md`).
 3. [x] Wire the sheet: remove `todayStats` from `index.tsx`, pass `cardStats` and the ml line, add the line and its spoken text in `TodaySheet.tsx`, and update the doc comments in both files.
 4. [x] Playwright in `e2e/tests/recent-days.spec.ts`: update `1e` and the running-nap case to the new totals, and add the ml and night cases (see `TEST_STRATEGY.md`).
-5. [ ] Docs: in `plans/implan-day-ml-total/MAIN.md` and `NOTES.md`, change "Recent days only / not on the Today sheet" to point here. In `plans/implan-ring-redesign/MAIN.md` (Today sheet section), say the boxes count the current card, pointing here. Add this plan to `plans/README.md`.
+5. [x] Docs: in `plans/implan-day-ml-total/MAIN.md` and `NOTES.md`, change "Recent days only / not on the Today sheet" to point here. In `plans/implan-ring-redesign/MAIN.md` (Today sheet section), say the boxes count the current card, pointing here. Add this plan to `plans/README.md`.
 6. [ ] Look review (web and emulator-5554, a plain and a decorated theme, day and night, largest font).
 
 ## Assumptions

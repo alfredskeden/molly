@@ -51,7 +51,7 @@ Put the ring's pure logic in core, unit-tested, no React: angle of a time in a w
 
 ### Today sheet (`1e`)
 
-Bottom sheet over a scrim (`components/sheet.tsx` restyled), title `Today` / `Tonight`, four stat boxes (slept, naps or sleeps, feeds, diapers), `Recent · tap to edit` with the last six entries (tap opens the editor on the dashboard for that entry and shows its window), then a `Recent days` row. Replaces the Recent list and `See all`.
+Bottom sheet over a scrim (`components/sheet.tsx` restyled), title `Today` / `Tonight`, four stat boxes (slept, naps or sleeps, feeds, diapers; since [`implan-today-sheet-card`](../implan-today-sheet-card/MAIN.md) they count Recent days' top card, last night and today so far, with the ml line under them), `Recent · tap to edit` with the last six entries (tap opens the editor on the dashboard for that entry and shows its window), then a `Recent days` row. Replaces the Recent list and `See all`.
 
 ### Recent days (`1k`)
 
