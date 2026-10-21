@@ -12,6 +12,10 @@ When picking up a plan, read its step list first. Mark a step `[x]` only when it
 
 Committed files never hold personal details: no real children, real logs, home addresses, devices or private accounts. Use made-up examples and documentation addresses (`baby.example.com`, `192.0.2.10`).
 
+## Branches and releases
+
+Work goes on a branch from `develop` and into `develop` through a pull request, always opened with `gh pr create --base develop` and a written description (what changed and why, how it was tested); the GitHub default branch is `main`, so always pass `--base`. PRs into `develop` are squash-merged, and the squash commit's message is the PR title and description. `main` only moves through a release pull request `develop` → `main`, merged with a merge commit (never squash), then tagged `v<version>` with the APK built from the tag. Steps, version bump and hotfixes: [`docs/releasing.md`](docs/releasing.md).
+
 ## Commands
 
 From the repo root (pnpm workspace, `node-linker=hoisted`):
