@@ -28,9 +28,9 @@
 
 ## Look review (manual: web and emulator-5554, Molly Classic and one decorated theme, day and night, largest font)
 
-- [x] The ml line sits centred under the boxes and doesn't push the Recent list oddly. (web; emulator still open)
-- [x] Long values (`12h 40m`, `150 ml + 3 feeds without ml`) fit or wrap cleanly at the largest font. (web, 412 and 320 px; emulator at the largest font still open)
-- [ ] TalkBack reads the boxes and then "about … millilitres".
+- [x] The ml line sits centred under the boxes and doesn't push the Recent list oddly. (web; emulator-5554 day and night)
+- [x] Long values (`12h 40m`, `150 ml + 3 feeds without ml`) fit or wrap cleanly at the largest font. (web 412/320 px; emulator-5554 at font scale 2.0, Classic day and Ribbon night)
+- [x] TalkBack reads the boxes and then "about … millilitres". (emulator-5554 accessibility tree: `Today: 13h 17m slept, 2 sleeps, 3 feeds, 2 diapers, about 390 millilitres`; spoken TalkBack not listened to)
 
 ## Wrap-up
 

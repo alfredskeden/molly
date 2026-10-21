@@ -61,7 +61,7 @@ export function TodaySheet({
 }) {
   const title = night ? 'Tonight' : 'Today';
   const sleepWord = stats.night ? 'sleep' : 'nap';
-  // Slept gets more room: last night and today together run to `13h 17m`. Narrow screens and large fonts wrap.
+  // Slept gets more room: last night and today together run to `13h 17m`. Narrow screens and large fonts wrap its value.
   const boxes: { icon: FilledSymbol; ink: 'sleep-ink' | 'feed-ink' | 'diaper-ink'; value: string; label: string; wide?: boolean }[] = [
     { icon: 'bedtime', ink: 'sleep-ink', value: durationText(stats.sleptMs), label: night ? 'slept tonight' : 'slept today', wide: true },
     {
@@ -88,7 +88,8 @@ export function TodaySheet({
               <Text className="text-[19px] font-display tabular-nums">
                 {box.value}
               </Text>
-              <Text className="text-xs font-bold text-muted">
+              {/* One word shrinks to fit rather than break mid-word; `slept today` wraps between its words. */}
+              <Text numberOfLines={box.wide ? undefined : 1} adjustsFontSizeToFit={!box.wide} className="text-xs font-bold text-muted">
                 {box.label}
               </Text>
             </View>
