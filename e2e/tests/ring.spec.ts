@@ -20,6 +20,15 @@ const yesterday = (hours: number, minutes = 0, dayOffset = 0) => {
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const dateOf = (day: Date) => `${WEEKDAYS[day.getDay()]} ${day.getDate()} ${MONTHS[day.getMonth()]}`;
+const LONG_WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+/** The weekday `dayOffset` days before the seeded day. */
+const weekday = (dayOffset: number) => LONG_WEEKDAYS[yesterday(12, 0, dayOffset).getDay()]!;
+
+/** A past ring's pager: the title as a heading, over the date the window starts on. */
+async function expectPager(page: Page, title: string, start: Date) {
+  await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible();
+  await expect(page.getByText(dateOf(start), { exact: true })).toBeVisible();
+}
 
 const post = (path: string, body: object) =>
   adminFetch(path, { method: 'POST', body: JSON.stringify({ child: testEnv.childId, ...body }) });
@@ -70,6 +79,8 @@ test('1a: by day the ring shows the day so far, the next nap and the tiles', asy
   await expect(button(page, 'Vitamin D 10:10')).toBeVisible();
   await expect(button(page, 'Switch to last night')).toBeVisible();
   for (const tile of ['Start sleep', 'Feed', 'Diaper', 'Medicine']) await expect(button(page, tile)).toBeVisible();
+  for (const action of ['Today', 'Add entry', 'Settings']) await expect(button(page, action)).toBeVisible();
+  await expect(button(page, /^(Previous|Next):/)).toHaveCount(0);
 });
 
 test('1d: at night with the sleep running, the ring shows bedtime and the sleep ticking', async ({ page }) => {
@@ -98,7 +109,7 @@ test('1f: the sun shows last night, and tapping again comes back to today', asyn
   await button(page, 'Switch to last night').click();
 
   // Then
-  await expect(page.getByText(`Last night · ${dateOf(yesterday(0, 0, -1))}`, { exact: true })).toBeVisible();
+  await expectPager(page, 'Last night', yesterday(0, 0, -1));
   await expect(page.getByText('Bedtime 19:05', { exact: true })).toBeVisible();
   await expect(page.getByLabel('Slept 11h 55m, 1 feed · 1 diaper', { exact: true })).toBeVisible();
   await expect(button(page, 'Back to now')).toBeVisible();
@@ -121,7 +132,7 @@ test('from Tonight the moon shows the day that just ended', async ({ page }) => 
   await button(page, 'Switch to today').click();
 
   // Then
-  await expect(page.getByText(`Today · ${dateOf(yesterday(0))}`, { exact: true })).toBeVisible();
+  await expectPager(page, 'Today', yesterday(0));
   await expect(page.getByLabel('Slept 2h 29m, 2 naps · 3 feeds', { exact: true })).toBeVisible();
 });
 
@@ -227,4 +238,140 @@ test("a sleep's time labels don't block a tap on its arc", async ({ page }) => {
 
   // Then
   await expect(page.getByLabel('Edit Nap', { exact: true })).toBeVisible();
+});
+
+test('a past ring has the pager instead of the header: the window before, and the live ring next', async ({ page }) => {
+  // Given
+  await seedDay();
+  await clockAt(page, yesterday(11, 40));
+  await signInAs(page, testEnv.parentB);
+
+  // When
+  await button(page, 'Switch to last night').click();
+
+  // Then
+  await expectPager(page, 'Last night', yesterday(0, 0, -1));
+  await expect(button(page, 'Previous: Yesterday')).toBeEnabled();
+  await expect(button(page, 'Next: Today')).toHaveText('Today');
+  for (const action of ['Add entry', 'Settings']) await expect(button(page, action)).toBeHidden();
+
+  // When
+  await button(page, 'Next: Today').click();
+
+  // Then
+  await expect(page.getByText(`Today · ${dateOf(yesterday(0))}`, { exact: true })).toBeVisible();
+  await expect(button(page, 'Settings')).toBeVisible();
+  await expect(button(page, /^(Previous|Next):/)).toHaveCount(0);
+});
+
+test('‹ steps back through days and nights in turn, and › steps forward again', async ({ page }) => {
+  // Given
+  await seedDay();
+  await clockAt(page, yesterday(11, 40));
+  await signInAs(page, testEnv.parentB);
+  await button(page, 'Switch to last night').click();
+
+  // When
+  await button(page, 'Previous: Yesterday').click();
+
+  // Then
+  await expectPager(page, 'Yesterday', yesterday(0, 0, -1));
+  await expect(button(page, 'Next: Last night')).toBeVisible();
+
+  // When
+  await button(page, `Previous: ${weekday(-2)} night`).click();
+
+  // Then
+  await expectPager(page, `${weekday(-2)} night`, yesterday(0, 0, -2));
+
+  // When
+  await button(page, 'Next: Yesterday').click();
+
+  // Then
+  await expectPager(page, 'Yesterday', yesterday(0, 0, -1));
+});
+
+test('‹ goes on past the days the dashboard loads, and stops once nothing older is logged', async ({ page }) => {
+  // Given
+  await seedDay();
+  await post('feedings/', { start: iso(12, 0, -4), end: iso(12, 20, -4), type: 'breast milk', method: 'left breast' });
+  await clockAt(page, yesterday(11, 40));
+  await signInAs(page, testEnv.parentB);
+  await button(page, 'Switch to last night').click();
+
+  // When
+  for (let step = 0; step < 7; step++) await button(page, /^Previous: /).click();
+
+  // Then
+  await expectPager(page, weekday(-4), yesterday(0, 0, -4));
+  await expect(page.getByLabel(`${weekday(-4)}: 0m slept, 0 naps, 1 feed, 0 diapers`, { exact: true })).toBeVisible();
+  await expect(button(page, `Previous: ${weekday(-5)} night`)).toBeDisabled();
+});
+
+test('before the first entry ever logged, ‹ is unavailable and does nothing', async ({ page }) => {
+  // Given
+  await seedDay();
+  await clockAt(page, yesterday(11, 40));
+  await signInAs(page, testEnv.parentB);
+  await button(page, 'Switch to last night').click();
+  await button(page, 'Previous: Yesterday').click();
+  await button(page, `Previous: ${weekday(-2)} night`).click();
+  const previous = button(page, `Previous: ${weekday(-2)}`);
+  await expect(previous).toBeDisabled();
+
+  // When
+  await previous.click({ force: true });
+
+  // Then
+  await expectPager(page, `${weekday(-2)} night`, yesterday(0, 0, -2));
+});
+
+test('a past night shows slept, feeds, diapers and medicine in place of the tiles', async ({ page }) => {
+  // Given
+  await seedDay();
+  await clockAt(page, yesterday(11, 40));
+  await signInAs(page, testEnv.parentB);
+
+  // When
+  await button(page, 'Switch to last night').click();
+
+  // Then
+  await expect(page.getByLabel('Last night: 11h 55m slept, 1 feed, 1 diaper, 0 medicine', { exact: true })).toBeVisible();
+  for (const tile of ['Start sleep', 'Feed', 'Diaper', 'Medicine']) await expect(button(page, tile)).toBeHidden();
+});
+
+test("tapping an entry on a past ring opens the editor in place of the boxes", async ({ page }) => {
+  // Given
+  await seedDay();
+  await clockAt(page, yesterday(11, 40));
+  await signInAs(page, testEnv.parentB);
+  await button(page, 'Switch to last night').click();
+
+  // When
+  await button(page, 'Feed 22:30, Left, 20 minutes').click();
+
+  // Then
+  await expect(page.getByLabel('Edit Feed', { exact: true })).toBeVisible();
+  await expect(page.getByLabel(/^Last night: /)).toBeHidden();
+});
+
+test('the cap and Back to now still work from a ring paged to', async ({ page }) => {
+  // Given
+  await seedDay();
+  await clockAt(page, yesterday(11, 40));
+  await signInAs(page, testEnv.parentB);
+  await button(page, 'Switch to last night').click();
+  await button(page, 'Previous: Yesterday').click();
+
+  // When: the cap pairs windows counting back from now, so yesterday pairs with the night before it
+  await button(page, `Switch to ${weekday(-2).toLowerCase()} night`).click();
+
+  // Then
+  await expectPager(page, `${weekday(-2)} night`, yesterday(0, 0, -2));
+
+  // When
+  await button(page, 'Back to now').click();
+
+  // Then
+  await expect(page.getByLabel('Awake 59m, since the nap', { exact: true })).toBeVisible();
 });

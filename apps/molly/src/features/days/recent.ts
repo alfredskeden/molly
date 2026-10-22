@@ -1,4 +1,4 @@
-import { windowDate, windowTitle, type DayWindow } from '@molly/core';
+import { todaysTotals, windowDate, windowTitle, type DayWindow, type EntriesByKind } from '@molly/core';
 
 export type RecentSlot = { window: DayWindow; live: boolean; label: string };
 
@@ -42,4 +42,34 @@ export function recentDays(live: DayWindow, past: DayWindow[]): RecentDay[] {
     cards.set(key, card);
   }
   return [...cards.values()].sort((a, b) => b.key.localeCompare(a.key));
+}
+
+/**
+ * What a card covers, for its totals: from its night's start (its day's, without a night) to its day's end
+ * (its night's, without a day), capped at `now`, so the live card ends now.
+ */
+export function cardSpan(card: RecentDay, now: Date): { from: Date; to: Date } {
+  const from = (card.night ?? card.day)?.window.start ?? now;
+  const end = (card.day ?? card.night)?.window.end ?? now;
+  return { from, to: new Date(Math.min(end.getTime(), now.getTime())) };
+}
+
+/** The Today sheet's boxes. `night` when the span holds a night, so its sleeps aren't all naps. */
+export type TodayStats = { sleptMs: number; sleeps: number; feeds: number; diapers: number; night: boolean };
+
+/** The live card so far (`running` is the sleep timer): what the Today sheet's boxes count. */
+export function cardStats(card: RecentDay, entries: EntriesByKind, running: { start: string } | null, now: Date): TodayStats {
+  const { from, to } = cardSpan(card, now);
+  const totals = todaysTotals(entries, from, running, now);
+  const started = entries.sleep.filter((entry) => {
+    const start = Date.parse(entry.start);
+    return start >= from.getTime() && start < to.getTime();
+  }).length;
+  return {
+    sleptMs: totals.sleepMs,
+    sleeps: started + (running ? 1 : 0),
+    feeds: totals.feedings,
+    diapers: totals.changes,
+    night: !!card.night,
+  };
 }

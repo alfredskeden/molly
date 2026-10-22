@@ -2,7 +2,7 @@
 
 ## Outcome
 
-Each Recent days card shows roughly how much the baby drank over that card: the night that ended that morning plus the day after it. Bottles add what was saved; breastfeeds add the child's default bottle amount, as the most the baby probably drank.
+Each Recent days card shows roughly how much the baby drank over that card: the night that ended that morning plus the day after it. Bottles add what was saved; breastfeeds add the child's default bottle amount, as the most the baby probably drank. Since [`implan-half-side-feeds`](../implan-half-side-feeds/MAIN.md) a feed from one breast adds half of it.
 
 ```
 ┌ Yesterday ─────────── Tue 13 Oct ┐
@@ -21,7 +21,7 @@ A pure function in `packages/core` (new `packages/core/src/drank.ts`, exported f
 - Feedings count when they **start** in `[from, to)`, the same rule as `totalsBetween`.
 - Only methods `bottle`, `left breast`, `right breast`, `both breasts`. `parent fed` / `self fed` are skipped.
 - Bottle with `amount` → that amount. Not an estimate.
-- Breastfeed, or bottle with `amount` null → `defaultMl` when it's set, and `estimated` becomes true.
+- Breastfeed, or bottle with `amount` null → `defaultMl` when it's set, and `estimated` becomes true. Since [`implan-half-side-feeds`](../implan-half-side-feeds/MAIN.md) `left breast` / `right breast` add half of it, and the total is rounded once.
 - When `defaultMl` is undefined those feeds add nothing and are counted in `unmeasured` (and `unmeasuredBreast` when they're breastfeeds), so the line can name them.
 
 The words come from a second pure function (same file): `drankText(result) → { text, spoken } | null`
@@ -46,10 +46,10 @@ Plain words in every theme: no `copy.ts` entry unless a theme already renames Re
 ## Decisions and why
 
 - **Per card, not per half or calendar day**: a card is "one morning to the next", which is how a parent thinks of a day's drinking.
-- **Default bottle as the breastfeed estimate**: Baby Buddy has no ml for breastfeeds; the bottle default is the parent's own idea of a full feed, so it's an upper guess. Always marked `≈` so it never reads as measured.
+- **Default bottle as the breastfeed estimate**: Baby Buddy has no ml for breastfeeds; the bottle default is the parent's own idea of a full feed, so it's an upper guess. Always marked `≈` so it never reads as measured. Since [`implan-half-side-feeds`](../implan-half-side-feeds/MAIN.md) a feed from one breast counts half the default; `both breasts` still counts it all.
 - **Today's default, on this device**: Molly never stored the default a feed was saved with. Accept that changing the default changes past estimates.
 - **No default → count, don't guess**: no hidden 120 ml fallback; the parent sees how many feeds weren't measured.
-- **Recent days only**: not on the Today sheet, feed tile, widgets or notifications.
+- **Recent days only**: not on the Today sheet, feed tile, widgets or notifications. Since [`implan-today-sheet-card`](../implan-today-sheet-card/MAIN.md) the Today sheet shows the top card's line too; the feed tile, widgets and notifications still don't.
 
 ## Boundaries
 

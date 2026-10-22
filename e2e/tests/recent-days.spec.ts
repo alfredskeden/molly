@@ -48,7 +48,7 @@ async function openAt(page: Page, hours = 11, minutes = 40) {
   await signInAs(page, testEnv.parentB);
 }
 
-test('1e: the history button opens Today with its totals and the latest six entries, newest first', async ({ page }) => {
+test('1e: the history button opens Today with last night and today\'s totals and the latest six entries, newest first', async ({ page }) => {
   // Given
   await seedToday();
   await openAt(page);
@@ -59,7 +59,9 @@ test('1e: the history button opens Today with its totals and the latest six entr
   // Then
   const sheet = page.getByLabel('Today', { exact: true });
   await expect(sheet.getByRole('heading', { name: 'Today' })).toBeVisible();
-  await expect(sheet.getByLabel('Today: 1h 9m slept, 1 nap, 2 feeds, 2 diapers', { exact: true })).toBeVisible();
+  await expect(
+    sheet.getByLabel('Today: 13h 17m slept, 2 sleeps, 2 feeds, 2 diapers, about 120 millilitres', { exact: true }),
+  ).toBeVisible();
   await expect(sheet.getByRole('button', { name: /\. Edit\.$/ })).toHaveText([
     /Diaper · Dirty/,
     /Feed · Left/,
@@ -96,7 +98,8 @@ test("an entry of last night in the Today sheet opens on last night's ring", asy
   await button(page, /^Feed at 22:30, Left, 20 minutes\. Edit\.$/).click();
 
   // Then
-  await expect(page.getByText(`Last night · ${dateOf(-1)}`, { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Last night', exact: true })).toBeVisible();
+  await expect(page.getByText(dateOf(-1), { exact: true }).filter({ visible: true })).toBeVisible();
   await expect(page.getByLabel('Edit Feed', { exact: true })).toBeVisible();
   await expect(button(page, 'Back to now')).toBeVisible();
 });
@@ -127,7 +130,7 @@ test('1k: Recent days shows today, yesterday and the day before, each with the n
   await expect(yesterdays.nth(1)).toHaveAccessibleName(/^Yesterday, Day: /);
 });
 
-test('each card says about how much the baby drank over its night and day, a breastfeed counted as the default bottle', async ({
+test('each card says about how much the baby drank over its night and day, a feed from one breast counted as half the default bottle', async ({
   page,
 }) => {
   // Given: the default bottle is 120 ml
@@ -142,8 +145,8 @@ test('each card says about how much the baby drank over its night and day, a bre
   await page.goto('/recent-days');
 
   // Then
-  await expect(page.getByLabel('about 210 millilitres', { exact: true })).toHaveText('≈ 210 ml');
-  await expect(page.getByLabel('about 240 millilitres', { exact: true })).toHaveText('≈ 240 ml');
+  await expect(page.getByLabel('about 150 millilitres', { exact: true })).toHaveText('≈ 150 ml');
+  await expect(page.getByLabel('about 120 millilitres', { exact: true })).toHaveText('≈ 120 ml');
   await expect(page.getByText(/ ml$/)).toHaveCount(2);
   await expect(button(page, new RegExp(`^${weekday(-2)}, Day: `))).toBeVisible();
 });
@@ -154,7 +157,7 @@ test('a ring on a card with an ml line still opens its window', async ({ page })
   await seedToday();
   await openAt(page);
   await page.goto('/recent-days');
-  await expect(page.getByText('≈ 120 ml', { exact: true })).toBeVisible();
+  await expect(page.getByText('≈ 60 ml', { exact: true })).toBeVisible();
 
   // When
   await button(page, /^Yesterday, Night: /).click();
@@ -191,18 +194,24 @@ test('1g: a mini ring opens that window on the dashboard, with Back to now', asy
   await button(page, /^Yesterday, Day: /).click();
 
   // Then
-  await expect(page.getByText(`Yesterday · ${dateOf(-1)}`, { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Yesterday', exact: true })).toBeVisible();
+  await expect(page.getByText(dateOf(-1), { exact: true }).filter({ visible: true })).toBeVisible();
   await expect(page.getByLabel('Slept 1h 0m, 1 nap · 1 feed', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Yesterday: 1h 0m slept, 1 nap, 1 feed, 0 diapers', { exact: true })).toBeVisible();
+  await expect(button(page, `Previous: ${weekday(-2)} night`)).toBeVisible();
+  await expect(button(page, 'Next: Last night')).toBeVisible();
+  for (const action of ['Today', 'Add entry', 'Settings']) await expect(button(page, action)).toBeHidden();
   await expect(button(page, 'Back to now')).toBeVisible();
 
   // When: the cap pairs windows counting back from now, so yesterday's day pairs with the night before it
   await button(page, `Switch to ${weekday(-2).toLowerCase()} night`).click();
 
   // Then
-  await expect(page.getByText(`${weekday(-2)} night · ${dateOf(-2)}`, { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: `${weekday(-2)} night`, exact: true })).toBeVisible();
+  await expect(page.getByText(dateOf(-2), { exact: true }).filter({ visible: true })).toBeVisible();
 });
 
-test('a nap in progress counts in the Today sheet, added to the finished ones', async ({ page }) => {
+test('a nap in progress counts in the Today sheet, added to last night and the finished nap', async ({ page }) => {
   // Given
   await seedToday();
   await post('timers/', { name: 'molly:sleep', start: iso(11, 20) });
@@ -212,5 +221,59 @@ test('a nap in progress counts in the Today sheet, added to the finished ones', 
   await button(page, 'Today').click();
 
   // Then
-  await expect(page.getByLabel('Today: 1h 29m slept, 2 naps, 2 feeds, 2 diapers', { exact: true })).toBeVisible();
+  await expect(
+    page.getByLabel('Today: 13h 37m slept, 3 sleeps, 2 feeds, 2 diapers, about 120 millilitres', { exact: true }),
+  ).toBeVisible();
+});
+
+test('the Today sheet says about how much the baby drank since last night, a feed from one breast counted as half the default bottle', async ({
+  page,
+}) => {
+  // Given: the default bottle is 120 ml
+  await post('sleep/', { start: iso(19, 5, -1), end: iso(7, 13), nap: false });
+  await post('feedings/', { start: iso(2, 0), end: iso(2, 15), type: 'formula', method: 'bottle', amount: 90 });
+  await post('feedings/', { start: iso(7, 30), end: iso(7, 50), type: 'breast milk', method: 'right breast' });
+  await post('feedings/', { start: iso(10, 0), end: iso(10, 20), type: 'breast milk', method: 'both breasts' });
+  await openAt(page);
+
+  // When
+  await button(page, 'Today').click();
+
+  // Then
+  const sheet = page.getByLabel('Today', { exact: true });
+  await expect(sheet.getByText('≈ 270 ml', { exact: true })).toBeVisible();
+  await expect(sheet.getByLabel('Today: 12h 8m slept, 1 sleep, 3 feeds, 0 diapers, about 270 millilitres', { exact: true })).toBeVisible();
+});
+
+test('the Today sheet has no ml line when nothing was drunk', async ({ page }) => {
+  // Given
+  await post('sleep/', { start: iso(19, 5, -1), end: iso(7, 13), nap: false });
+  await post('changes/', { time: iso(7, 25), wet: true, solid: false });
+  await openAt(page);
+
+  // When
+  await button(page, 'Today').click();
+
+  // Then
+  const sheet = page.getByLabel('Today', { exact: true });
+  await expect(sheet.getByLabel('Today: 12h 8m slept, 1 sleep, 0 feeds, 1 diaper', { exact: true })).toBeVisible();
+  await expect(sheet.getByText(/ ml$/)).toHaveCount(0);
+});
+
+test('at night the sheet is Tonight and counts only tonight', async ({ page }) => {
+  // Given
+  await seedToday();
+  await post('sleep/', { start: iso(19, 25), end: iso(22, 30), nap: false });
+  await post('feedings/', { start: iso(22, 40), end: iso(22, 55), type: 'breast milk', method: 'right breast' });
+  await openAt(page, 23, 10);
+
+  // When
+  await button(page, 'Tonight').click();
+
+  // Then
+  const sheet = page.getByLabel('Tonight', { exact: true });
+  await expect(sheet.getByRole('heading', { name: 'Tonight' })).toBeVisible();
+  await expect(
+    sheet.getByLabel('Tonight: 3h 5m slept, 1 sleep, 1 feed, 0 diapers, about 60 millilitres', { exact: true }),
+  ).toBeVisible();
 });

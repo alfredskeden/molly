@@ -92,21 +92,8 @@ export function useOptimistic() {
         current ? { ...current, change: [change, ...current.change] } : current,
       );
     },
-    /** An instant feed (`logFeed`): a minute long, ending now. */
-    fed: ({ type, method, amount }: Pick<Feeding, 'type' | 'method' | 'amount'>) => {
-      const now = Date.now();
-      const feeding: Feeding = {
-        id: -now,
-        child: childId,
-        start: new Date(now - 60_000).toISOString(),
-        end: new Date(now).toISOString(),
-        duration: '00:01:00',
-        type,
-        method,
-        amount,
-        notes: null,
-        tags: [],
-      };
+    fed: (fields: GuessedFeed) => {
+      const feeding = instantFeeding(fields, childId, new Date());
       return guess<EntriesByKind>(['entries', childId], (current) =>
         current ? { ...current, feeding: [feeding, ...current.feeding] } : current,
       );
@@ -124,5 +111,23 @@ export function useOptimistic() {
         current ? { ...current, medication: [medication, ...current.medication] } : current,
       );
     },
+  };
+}
+
+export type GuessedFeed = Pick<Feeding, 'type' | 'method' | 'amount'> & { notes?: string };
+
+/** An instant feed's guess (`logFeed`): a minute long, ending `now`, with a meal's food as its notes. */
+export function instantFeeding({ type, method, amount, notes }: GuessedFeed, child: number, now: Date): Feeding {
+  return {
+    id: -now.getTime(),
+    child,
+    start: new Date(now.getTime() - 60_000).toISOString(),
+    end: now.toISOString(),
+    duration: '00:01:00',
+    type,
+    method,
+    amount,
+    notes: notes ?? null,
+    tags: [],
   };
 }

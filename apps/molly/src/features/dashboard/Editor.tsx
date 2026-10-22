@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { AccessibilityInfo, View } from 'react-native';
 
 import { CloseButton, InkButton, Panel, QuietButton, Segment, StepperRow, Text, type Tone } from '@/components/ui';
+import { FoodField } from '@/features/feed/FoodField';
 import { HAPTICS } from '@/haptics/model';
 import { useHaptic } from '@/haptics/use-haptic';
 import { TrackerIcon } from '@/theme/TrackerIcon';
@@ -36,6 +37,7 @@ export function Editor({
   onNudge,
   kinds,
   amount,
+  food,
   deleteLabel,
   onDelete,
   sending,
@@ -48,9 +50,12 @@ export function Editor({
   sub: string;
   rows: { label: string; value: string; field: DraftField }[];
   onNudge: (field: DraftField, minutes: number) => void;
-  kinds?: { label: string; options: { value: string; label: string }[]; value: string; onChange: (value: string) => void };
+  /** `small`: the design's 14 px labels, so five kinds fit. */
+  kinds?: { label: string; options: { value: string; label: string }[]; value: string; onChange: (value: string) => void; small?: boolean };
   /** A bottle's amount, in ml. */
   amount?: { value: number; onStep: (ml: number) => void };
+  /** A meal's food, in place of the amount: `label` is `What she ate`. */
+  food?: { label: string; value: string; onChange: (text: string) => void };
   /** `Delete`, or `Cancel sleep` for the running sleep. */
   deleteLabel: string;
   onDelete: () => void;
@@ -107,7 +112,17 @@ export function Editor({
           onPlus={() => amount.onStep(10)}
         />
       )}
-      {kinds && <Segment label={kinds.label} options={kinds.options} value={kinds.value} onChange={kinds.onChange} tone={tone as Tone} />}
+      {food && (
+        <View className="gap-1.5">
+          <Text aria-hidden className="px-1 text-label font-bold text-muted">
+            {food.label}
+          </Text>
+          <FoodField label={food.label} value={food.value} onChange={food.onChange} />
+        </View>
+      )}
+      {kinds && (
+        <Segment label={kinds.label} options={kinds.options} value={kinds.value} onChange={kinds.onChange} tone={tone as Tone} small={kinds.small} />
+      )}
       <View className="flex-row items-center justify-between gap-3">
         <QuietButton
           danger

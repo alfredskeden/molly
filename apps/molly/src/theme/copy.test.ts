@@ -25,6 +25,7 @@ const TODAY = {
   wet: 'Wet',
   dirty: 'Dirty',
   both: 'Both',
+  solids: 'Solids',
   settings: 'Settings',
   likelyNap: 'Nap {n} likely',
   likelyBedtime: 'Bedtime likely',
@@ -151,6 +152,23 @@ describe('theme copy', () => {
 
     // Then
     expect(copy).toMatchObject({ sleeping: 'Game paused', startSleep: 'Pause game', both: 'Combo', settings: 'Options' });
+  });
+
+  it.each([
+    ['classic', 'Solids'],
+    ['arcade', 'Bonus snack'],
+    ['space', 'Space food'],
+    ['score', 'Half-time snack'],
+    ['term', 'solids'],
+    ['safari', 'Nibbles'],
+    ['ribbon', 'Solids'],
+    ['sim', 'Meal'],
+  ] as const)('names Solids in %s as %s', (look, words) => {
+    // When
+    const copy = copyFor(look, true);
+
+    // Then
+    expect(copy.solids).toBe(words);
   });
 
   it("is today's wording in Arcade with playful labels off", () => {

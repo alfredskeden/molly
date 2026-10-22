@@ -13,7 +13,7 @@ pnpm check                   # boundaries, typecheck, lint, every Vitest suite, 
 pnpm bb:down
 ```
 
-`pnpm check` must pass before a pull request. `packages/api`'s tests run against the test Baby Buddy, so it has to be up.
+Pull requests go against **`develop`**, not `main`, with a description of what changed, why and how it was tested; they're squash-merged: `main` only moves when a release is made ([`docs/releasing.md`](docs/releasing.md)). `pnpm check` must pass before a pull request. `packages/api`'s tests run against the test Baby Buddy, so it has to be up.
 
 ## How the code is tested
 

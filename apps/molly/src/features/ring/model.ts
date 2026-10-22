@@ -1,10 +1,10 @@
 import type { Change, Feeding, FeedingMethod, Medication, Sleep, Timer } from '@molly/api';
-import { clockText, type DayWindow, type EntriesByKind, type LikelySlot, type RingGhost } from '@molly/core';
+import { clockText, isSolidFeed, type DayWindow, type EntriesByKind, type LikelySlot, type RingGhost } from '@molly/core';
 
 import { spokenDuration } from '@/lib/time';
 import type { FilledSymbol } from '@/theme/symbols';
 
-import { diaperLabel, METHOD_LABELS } from '../dashboard/timeline-text';
+import { diaperLabel, foodOf, METHOD_LABELS } from '../dashboard/timeline-text';
 
 /** What a tap on the ring selects: a logged entry, the running sleep / feed, or a likely sleep of the plan. */
 export type RingKey =
@@ -57,7 +57,9 @@ export function diaperIcon({ wet, solid }: { wet: boolean; solid: boolean }): Fi
   return wet && solid ? 'star' : solid ? 'sentiment_stressed' : 'water_drop';
 }
 
-export const feedIcon = (method: FeedingMethod): FilledSymbol => FEED_ICONS[method] ?? 'breastfeeding';
+/** A side's arrow, the bottle, a meal's knife and fork. */
+export const feedIcon = (method: FeedingMethod): FilledSymbol =>
+  isSolidFeed({ method }) ? 'restaurant' : (FEED_ICONS[method] ?? 'breastfeeding');
 
 const overlaps = (window: DayWindow, start: number, end: number) => end > window.start.getTime() && start < window.end.getTime();
 const inside = (window: DayWindow, time: number) => time >= window.start.getTime() && time < window.end.getTime();
@@ -103,11 +105,13 @@ export function ringMarks(window: DayWindow, entries: EntriesByKind, runningFeed
         at: new Date(entry.start),
         icon: feedIcon(entry.method),
         live: false,
-        spoken: [
-          `Feed ${clockText(new Date(entry.start))}`,
-          METHOD_LABELS[entry.method],
-          entry.method === 'bottle' && entry.amount !== null ? `${entry.amount} ml` : took(entry.start, entry.end),
-        ].join(', '),
+        spoken: isSolidFeed(entry)
+          ? `${METHOD_LABELS[entry.method]} ${clockText(new Date(entry.start))}, ${foodOf(entry)}`
+          : [
+              `Feed ${clockText(new Date(entry.start))}`,
+              METHOD_LABELS[entry.method],
+              entry.method === 'bottle' && entry.amount !== null ? `${entry.amount} ml` : took(entry.start, entry.end),
+            ].join(', '),
       }),
     );
   const changes = entries.change

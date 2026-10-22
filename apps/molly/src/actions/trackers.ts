@@ -101,7 +101,7 @@ export async function addEntry(
         const button = FEED_BUTTONS[draft.feed];
         const amount = draft.amount ?? bottle.amount;
         const chosen = { type: bottle.type, ...(amount !== undefined && { amount }) };
-        const entry = await client.logFeeding({ child, start, end: end!, ...feedingForStop(button, chosen) });
+        const entry = await client.logFeeding({ child, start, end: end!, ...feedingForStop(button, chosen, draft.food) });
         return { type: 'stopped', created: { kind: 'feeding', entry } };
       }
       case 'diaper': {
@@ -123,7 +123,7 @@ export async function addEntry(
   });
 }
 
-const FEED_BUTTONS = { Left: 'left', Right: 'right', Both: 'both', Bottle: 'bottle' } as const;
+const FEED_BUTTONS = { Left: 'left', Right: 'right', Both: 'both', Bottle: 'bottle', Solids: 'solids' } as const;
 const DIAPER_BUTTONS = { Wet: 'wet', Dirty: 'dirty', Both: 'both' } as const;
 
 /** Saved as a nap or night sleep by `isNightSleep`, ending at the stop (`now`; Baby Buddy ends it at its own now). */
@@ -138,12 +138,13 @@ export async function stopSleep(
   });
 }
 
+/** `food`: a meal's (Solids), saved as its notes. */
 export async function stopFeeding(
   client: TrackerClient,
-  { child, button, bottle }: { child: number; button: FeedingStopButton; bottle: BottleDefaults },
+  { child, button, bottle, food }: { child: number; button: FeedingStopButton; bottle: BottleDefaults; food?: string },
 ): Promise<Outcome> {
   return consumeRunning(client, { child, name: TIMER_NAMES.feeding }, async (timer) => {
-    const entry = await client.stopFeeding({ timer: timer.id, ...feedingForStop(button, bottle) });
+    const entry = await client.stopFeeding({ timer: timer.id, ...feedingForStop(button, bottle, food) });
     return { type: 'stopped', created: { kind: 'feeding', entry } };
   });
 }
@@ -154,7 +155,13 @@ export async function stopFeeding(
  */
 export async function logFeed(
   client: TrackerClient,
-  { child, button, bottle, now = new Date() }: { child: number; button: FeedingStopButton; bottle: BottleDefaults; now?: Date },
+  {
+    child,
+    button,
+    bottle,
+    food,
+    now = new Date(),
+  }: { child: number; button: FeedingStopButton; bottle: BottleDefaults; food?: string; now?: Date },
 ): Promise<Outcome> {
   return reportFailures(async () => {
     const previous = await client.getLatestEntry('feeding', child);
@@ -163,7 +170,7 @@ export async function logFeed(
       child,
       start: start.toISOString(),
       end: end.toISOString(),
-      ...feedingForStop(button, bottle),
+      ...feedingForStop(button, bottle, food),
     });
     return { type: 'stopped', created: { kind: 'feeding', entry }, instant: true };
   });

@@ -36,3 +36,8 @@ How Molly was built, one folder per plan. Each has `MAIN.md` (the steps, with `[
 | [implan-ribbon-icons](implan-ribbon-icons/MAIN.md) | Ribbon's bow and tracker pictures | Done |
 | [implan-day-ml-total](implan-day-ml-total/MAIN.md) | About how much the baby drank per day and night | Done |
 | [implan-open-source](implan-open-source/MAIN.md) | Making the repo public | Done |
+| [implan-today-sheet-card](implan-today-sheet-card/MAIN.md) | Today sheet covers Recent days' top card (last night + today), with the ml line | Done |
+| [implan-half-side-feeds](implan-half-side-feeds/MAIN.md) | A feed from one breast counts half the default bottle in the ml line | Done |
+| [implan-ring-day-nav](implan-ring-day-nav/MAIN.md) | Past ring header becomes a pager (‹ ›, `Today ›`) with stat boxes, issue #3 | Done |
+| [implan-web-sheets](implan-web-sheets/MAIN.md) | Web sheets keep their surface and sit on the bottom; wide windows get a centred column, issue #5 | Open items left |
+| [implan-solid-food](implan-solid-food/MAIN.md) | Per-child Solid food setting: Solids under Feed, the food in the feeding's notes, issue #1 | Done |

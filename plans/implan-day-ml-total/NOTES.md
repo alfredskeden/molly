@@ -3,10 +3,10 @@
 ## Decisions (2026-10-14)
 
 - One ml total per Recent days **card** (the night that ended that morning plus the day after), not per half and not per calendar day. The `Tonight` card totals the live night so far.
-- Only Recent days shows it. Not the Today sheet, not the feed tile, not widgets or notifications.
+- Only Recent days shows it. Not the Today sheet, not the feed tile, not widgets or notifications. (Later the Today sheet got the top card's line: [`implan-today-sheet-card`](../implan-today-sheet-card/MAIN.md).)
 - Counted: feedings with method `bottle`, `left breast`, `right breast`, `both breasts`. Left out: `parent fed`, `self fed` (solids aren't drunk).
 - A bottle counts its saved `amount`.
-- A breastfeed counts the child's default bottle amount (the most the baby likely drinks). A bottle saved without `amount` counts the same way. Either one makes the total an estimate: `≈`, spoken "about".
+- A breastfeed counts the child's default bottle amount (the most the baby likely drinks). A bottle saved without `amount` counts the same way. Either one makes the total an estimate: `≈`, spoken "about". Since [`implan-half-side-feeds`](../implan-half-side-feeds/MAIN.md) a feed from one breast counts half the default.
 - When the child has no default bottle amount, those feeds add no ml; the line says how many there were instead (`360 ml + 3 breastfeeds`).
 - Wording and placement: a line under the two rings; `+ 3 breastfeeds` when all unmeasured feeds are breastfeeds, `+ 4 feeds without ml` when bottles without ml are among them.
 

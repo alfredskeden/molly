@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from 'react';
-import { BackHandler, Platform, Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
+import { BackHandler, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
 import Animated, {
@@ -138,48 +138,48 @@ export function Sheet({
       )}
     </>
   );
+  // Reanimated's views take `style` only: NativeWind drops their `className` on the web, so classes go on plain Views.
   return (
     <View className="absolute inset-0">
-      <Animated.View entering={SCRIM_IN} exiting={SCRIM_OUT} className="absolute inset-0">
-        <Animated.View style={scrimFade} className="absolute inset-0">
+      <Animated.View entering={SCRIM_IN} exiting={SCRIM_OUT} style={StyleSheet.absoluteFill}>
+        <Animated.View style={[StyleSheet.absoluteFill, scrimFade]}>
           <Pressable accessibilityLabel={scrimLabel} onPress={onScrimPress} className="absolute inset-0 bg-scrim" />
         </Animated.View>
       </Animated.View>
-      <Animated.View
-        entering={reduced ? undefined : ENTER}
-        exiting={reduced ? undefined : EXIT}
-        className="absolute bottom-0 left-0 right-0"
-      >
+      <Animated.View entering={reduced ? undefined : ENTER} exiting={reduced ? undefined : EXIT} style={styles.bottom}>
         <Animated.View style={lifted}>
-          <Animated.View
-            accessibilityLabel={label}
-            className="rounded-t-sheet bg-surface"
-            style={[dragged, { maxHeight: scroll ? height * 0.82 : undefined }]}
-            onLayout={(event) => sheetHeight.set(event.nativeEvent.layout.height)}
-          >
-            {scroll ? (
-              <>
-                <GestureDetector gesture={pan}>
-                  <View className="gap-3.5 px-4 pt-2.5">{header}</View>
-                </GestureDetector>
-                <ScrollView contentContainerStyle={{ paddingBottom: bottom }} className="px-4 pt-1.5">
+          <Animated.View style={dragged} onLayout={(event) => sheetHeight.set(event.nativeEvent.layout.height)}>
+            <View
+              accessibilityLabel={label}
+              className="rounded-t-sheet bg-surface"
+              style={{ maxHeight: scroll ? height * 0.82 : undefined }}
+            >
+              {scroll ? (
+                <>
+                  <GestureDetector gesture={pan}>
+                    <View className="gap-3.5 px-4 pt-2.5">{header}</View>
+                  </GestureDetector>
+                  <ScrollView contentContainerStyle={{ paddingBottom: bottom }} className="px-4 pt-1.5">
+                    {children}
+                  </ScrollView>
+                </>
+              ) : (
+                <View className="gap-4 px-4 pt-2.5" style={{ paddingBottom: bottom }}>
+                  <GestureDetector gesture={pan}>
+                    <View className="gap-4">{header}</View>
+                  </GestureDetector>
                   {children}
-                </ScrollView>
-              </>
-            ) : (
-              <View className="gap-4 px-4 pt-2.5" style={{ paddingBottom: bottom }}>
-                <GestureDetector gesture={pan}>
-                  <View className="gap-4">{header}</View>
-                </GestureDetector>
-                {children}
-              </View>
-            )}
+                </View>
+              )}
+            </View>
           </Animated.View>
         </Animated.View>
       </Animated.View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({ bottom: { position: 'absolute', bottom: 0, left: 0, right: 0 } });
 
 /**
  * The screen under a sheet: hidden from TalkBack while `sheetOpen`, so swiping never reaches a button under

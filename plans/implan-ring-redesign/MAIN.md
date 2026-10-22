@@ -20,7 +20,7 @@ The board phones, for reference in steps and checks: `1a` day awake · `1b` tapp
 
 Top to bottom, as `1a`:
 
-- **Header:** child's name (28/900) over `<window title> · <date>` (e.g. `Today · Thu 24 Sep`, `Last night · …`). Right: three 48×48 buttons, `history` (opens the Today sheet), `add` (ink-filled, opens Add entry), `settings`. **Tapping the name opens the Children sheet** (`features/children/ChildrenSheet.tsx`) when more than one child is shown; with one child it's plain text. The avatar stack and the other-child strip go.
+- **Header:** child's name (28/900) over `<window title> · <date>` (e.g. `Today · Thu 24 Sep`, `Last night · …`). Right: three 48×48 buttons, `history` (opens the Today sheet), `add` (ink-filled, opens Add entry), `settings`. **Tapping the name opens the Children sheet** (`features/children/ChildrenSheet.tsx`) when more than one child is shown; with one child it's plain text. The avatar stack and the other-child strip go. On a past ring this header is replaced by a pager (`‹ title ›`): [`implan-ring-day-nav`](../implan-ring-day-nav/MAIN.md).
 - **The ring** (400×400, centred in the free space). Geometry from the design script (`renderVals`): centre 200, sleep track radius 132 / width 30, marks radius 178, gap at the top from 16° and a 328° sweep, round caps.
   - Grey track, hour ticks inside it, sleep arcs in `sleep-mid` (tappable, 44 px hit stroke), the running sleep in `sleep-ink` up to now.
   - Feeds, diapers and medicine as 34 px round marks outside the track at their start, kept at least 15° apart in time order and never before 42° (clear of the cap), with their kind's icon (`Left`/`Right`/`Both`/`Bottle`, `Wet`/`Dirty`/`Both`, `medication`). A running feed is a filled mark with a `feed-mid` ring; tapping it opens Stop and save as.
@@ -51,7 +51,7 @@ Put the ring's pure logic in core, unit-tested, no React: angle of a time in a w
 
 ### Today sheet (`1e`)
 
-Bottom sheet over a scrim (`components/sheet.tsx` restyled), title `Today` / `Tonight`, four stat boxes (slept, naps or sleeps, feeds, diapers), `Recent · tap to edit` with the last six entries (tap opens the editor on the dashboard for that entry and shows its window), then a `Recent days` row. Replaces the Recent list and `See all`.
+Bottom sheet over a scrim (`components/sheet.tsx` restyled), title `Today` / `Tonight`, four stat boxes (slept, naps or sleeps, feeds, diapers; since [`implan-today-sheet-card`](../implan-today-sheet-card/MAIN.md) they count Recent days' top card, last night and today so far, with the ml line under them), `Recent · tap to edit` with the last six entries (tap opens the editor on the dashboard for that entry and shows its window), then a `Recent days` row. Replaces the Recent list and `See all`.
 
 ### Recent days (`1k`)
 

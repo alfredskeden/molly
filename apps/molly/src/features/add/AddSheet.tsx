@@ -7,6 +7,7 @@ import { Sheet } from '@/components/sheet';
 import { FIXED_SCALE, Segment, Spinner, Text } from '@/components/ui';
 import { amountInput, startAmount } from '@/features/feed/amount-input';
 import { BottleAmount } from '@/features/feed/BottleAmount';
+import { FoodField } from '@/features/feed/FoodField';
 import { HAPTICS } from '@/haptics/model';
 import { useHaptic } from '@/haptics/use-haptic';
 import { Glyph } from '@/theme/Glyph';
@@ -31,6 +32,8 @@ const KIND = {
   med: { picked: 'border-med-mid bg-med-bg', ink: 'text-med-ink', solid: 'bg-med-ink', onSolid: 'text-med-bg', glyph: 'med-ink', on: 'med-bg' },
 } as const;
 const TONE = { sleep: 'sleep', feed: 'feed', diaper: 'diaper', med: 'med' } as const;
+/** Solids last, offered only with the child's Solid food setting on. */
+const FEED_KINDS = ['Left', 'Right', 'Both', 'Bottle', 'Solids'] as const;
 
 const NUDGE_MS = 5 * 60_000;
 
@@ -41,6 +44,8 @@ const NUDGE_MS = 5 * 60_000;
 export function AddSheet({
   now,
   bottle,
+  solids,
+  ateLabel,
   pending,
   onSave,
   onClose,
@@ -48,6 +53,9 @@ export function AddSheet({
   now: Date;
   /** The last bottle: a finished bottle's amount row starts at its amount. */
   bottle: BottleDefaults;
+  /** Feed kind offers Solids (the child's Solid food setting), whose food field is labelled `ateLabel`. */
+  solids: boolean;
+  ateLabel: string;
   pending: boolean;
   onSave: (draft: AddDraft) => void;
   onClose: () => void;
@@ -63,7 +71,12 @@ export function AddSheet({
   const kind = KIND[draft.kind];
   const kinds =
     draft.kind === 'feed' && draft.end
-      ? { label: 'Feed kind', value: draft.feed, options: ['Left', 'Right', 'Both', 'Bottle'] as const, set: (feed: string) => set({ feed: feed as AddDraft['feed'] }) }
+      ? {
+          label: 'Feed kind',
+          value: draft.feed,
+          options: solids ? FEED_KINDS : FEED_KINDS.slice(0, 4),
+          set: (feed: string) => set({ feed: feed as AddDraft['feed'] }),
+        }
       : draft.kind === 'diaper'
         ? { label: 'Diaper kind', value: draft.diaper, options: ['Wet', 'Dirty', 'Both'] as const, set: (diaper: string) => set({ diaper: diaper as AddDraft['diaper'] }) }
         : draft.kind === 'med'
@@ -141,9 +154,27 @@ export function AddSheet({
           </Pressable>
         ))}
 
-      {kinds && <Segment label={kinds.label} options={kinds.options.map((value) => ({ value, label: value }))} value={kinds.value} onChange={kinds.set} tone={TONE[draft.kind]} />}
+      {kinds && (
+        <Segment
+          label={kinds.label}
+          options={kinds.options.map((value) => ({ value, label: value }))}
+          value={kinds.value}
+          onChange={kinds.set}
+          tone={TONE[draft.kind]}
+          small={kinds.options.length > 4}
+        />
+      )}
 
       {draft.kind === 'feed' && draft.end && draft.feed === 'Bottle' && <BottleAmount state={amount} dispatch={dispatchAmount} />}
+
+      {draft.kind === 'feed' && draft.end && draft.feed === 'Solids' && (
+        <View className="gap-1.5">
+          <Text aria-hidden className="px-1 text-sm font-extrabold text-muted">
+            {ateLabel}
+          </Text>
+          <FoodField label={ateLabel} value={draft.food} onChange={(food) => set({ food })} />
+        </View>
+      )}
 
       {draft.kind === 'med' && (
         <View className="gap-1.5">

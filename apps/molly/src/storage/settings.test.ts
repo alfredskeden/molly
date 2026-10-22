@@ -281,8 +281,17 @@ describe('the preferences of each child', () => {
       bottle: { type: 'breast milk', amount: 90 },
       vitaminDReminder: true,
       sex: 'girl',
+      solids: true,
     };
-    const otto = { shown: false, hue: 1, napWindow: { start: '07:00', end: '19:00' }, bottle: { type: 'formula' }, vitaminDReminder: false, sex: null };
+    const otto = {
+      shown: false,
+      hue: 1,
+      napWindow: { start: '07:00', end: '19:00' },
+      bottle: { type: 'formula' },
+      vitaminDReminder: false,
+      sex: null,
+      solids: false,
+    };
     const stored = JSON.stringify({ childId: 3, children: { 3: ella, 4: otto } });
 
     // When
@@ -296,7 +305,15 @@ describe('the preferences of each child', () => {
     // Given
     const stored = JSON.stringify({
       children: {
-        3: { shown: 'no', hue: 7, napWindow: { start: '25:00', end: '18:00' }, bottle: { type: 'juice' }, vitaminDReminder: 1, sex: 'other' },
+        3: {
+          shown: 'no',
+          hue: 7,
+          napWindow: { start: '25:00', end: '18:00' },
+          bottle: { type: 'juice' },
+          vitaminDReminder: 1,
+          sex: 'other',
+          solids: 'yes',
+        },
         4: { hue: 3, shown: false },
       },
     });

@@ -45,8 +45,8 @@ describe('how much the baby drank over a span', () => {
     expect(result.ml).toBe(350);
   });
 
-  it.each(['left breast', 'right breast', 'both breasts'] as const)(
-    'counts a %s feed as the default bottle, as an estimate',
+  it.each(['left breast', 'right breast'] as const)(
+    'counts a %s feed as half the default bottle, as an estimate',
     (method) => {
       // Given
       const feeds = [feeding({ start: at(13, 8), end: at(13, 8, 20), method })];
@@ -55,9 +55,49 @@ describe('how much the baby drank over a span', () => {
       const result = drank(feeds, from, to, 150);
 
       // Then
-      expect(result).toEqual({ ml: 150, estimated: true, unmeasured: 0, unmeasuredBreast: 0 });
+      expect(result).toEqual({ ml: 75, estimated: true, unmeasured: 0, unmeasuredBreast: 0 });
     },
   );
+
+  it('counts a feed from both breasts as the default bottle, as an estimate', () => {
+    // Given
+    const feeds = [feeding({ start: at(13, 8), end: at(13, 8, 20), method: 'both breasts' })];
+
+    // When
+    const result = drank(feeds, from, to, 150);
+
+    // Then
+    expect(result).toEqual({ ml: 150, estimated: true, unmeasured: 0, unmeasuredBreast: 0 });
+  });
+
+  it('counts left then right as two feeds the same as one from both breasts', () => {
+    // Given
+    const feeds = [
+      feeding({ start: at(13, 8), end: at(13, 8, 10), method: 'left breast' }),
+      feeding({ start: at(13, 8, 10), end: at(13, 8, 20), method: 'right breast' }),
+    ];
+
+    // When
+    const result = drank(feeds, from, to, 150);
+
+    // Then
+    expect(result.ml).toBe(150);
+  });
+
+  it('rounds the total once, not each half', () => {
+    // Given
+    const feeds = [
+      feeding({ start: at(13, 8), end: at(13, 8, 20), method: 'left breast' }),
+      feeding({ start: at(13, 11), end: at(13, 11, 20), method: 'left breast' }),
+      feeding({ start: at(13, 14), end: at(13, 14, 20), method: 'left breast' }),
+    ];
+
+    // When
+    const result = drank(feeds, from, to, 125);
+
+    // Then
+    expect(result.ml).toBe(188);
+  });
 
   it('counts a bottle saved without ml as the default bottle, as an estimate', () => {
     // Given
@@ -70,7 +110,7 @@ describe('how much the baby drank over a span', () => {
     expect(result).toEqual({ ml: 150, estimated: true, unmeasured: 0, unmeasuredBreast: 0 });
   });
 
-  it('adds bottles and a default per breastfeed together', () => {
+  it('adds bottles and the estimated breastfeeds together', () => {
     // Given
     const feeds = [
       bottle(at(13, 8), 120),
@@ -83,7 +123,7 @@ describe('how much the baby drank over a span', () => {
     const result = drank(feeds, from, to, 150);
 
     // Then
-    expect(result).toEqual({ ml: 520, estimated: true, unmeasured: 0, unmeasuredBreast: 0 });
+    expect(result).toEqual({ ml: 445, estimated: true, unmeasured: 0, unmeasuredBreast: 0 });
   });
 
   it('leaves out parent fed and self fed', () => {

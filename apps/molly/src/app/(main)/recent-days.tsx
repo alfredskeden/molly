@@ -20,8 +20,9 @@ import { useRunningTimer } from '@/features/dashboard/queries';
 import { PageSkeleton, useSkeleton } from '@/features/dashboard/Skeleton';
 import { UnreachableBanner } from '@/features/dashboard/Unreachable';
 import { useDays } from '@/features/days/queries';
-import { recentDays, type RecentDay, type RecentSlot } from '@/features/days/recent';
+import { cardSpan, recentDays, type RecentDay, type RecentSlot } from '@/features/days/recent';
 import { daysRows } from '@/features/days/rows';
+import { olderMayExist as olderWeeksMayExist } from '@/features/days/weeks';
 import { ringSleeps } from '@/features/ring/model';
 import { MiniRing } from '@/features/ring/MiniRing';
 import { Glyph } from '@/theme/Glyph';
@@ -41,15 +42,6 @@ function summary(window: DayWindow, entries: EntriesByKind, now: Date) {
   return { sleptMs: totals.sleepMs, naps, feeds: totals.feedings };
 }
 
-/** What a card's night and day held to drink, together: `≈ 840 ml`. Null when nothing was drunk. */
-function drankLine(card: RecentDay, entries: EntriesByKind, now: Date, defaultMl: number | undefined) {
-  const from = (card.night ?? card.day)?.window.start;
-  const to = (card.day ?? card.night)?.window.end;
-  if (!from || !to) return null;
-  const capped = new Date(Math.min(to.getTime(), now.getTime()));
-  return drankText(drank(entries.feeding, from, capped, defaultMl));
-}
-
 /** Every day and night as a clock (design `1k`), newest first, three days at a time. A tap opens one on the dashboard. */
 export default function RecentDays() {
   const { napWindow, bottle } = useChildPrefs();
@@ -65,9 +57,7 @@ export default function RecentDays() {
     const live = dayWindow(entries, running, napWindow, now);
     return { cards: pages ? recentDays(live, rows) : [], entries };
   }, [pages, napWindow, running, now]);
-  // Another week is worth asking for while the oldest one Baby Buddy sent had anything in it.
-  const lastPage = pages?.at(-1)?.entries;
-  const olderMayExist = !!lastPage && Object.values(lastPage).some((list) => list.length > 0);
+  const olderMayExist = olderWeeksMayExist(pages);
   const canMore = cards.length > shown || olderMayExist;
   const skeleton = useSkeleton(days.isPending);
   const insets = useSafeAreaInsets();
@@ -186,7 +176,9 @@ function DayCard({
   defaultMl: number | undefined;
   onOpen: (window: DayWindow) => void;
 }) {
-  const line = drankLine(card, entries, now, defaultMl);
+  const { from, to } = cardSpan(card, now);
+  // What the night and day held to drink, together: `≈ 840 ml`. Null when nothing was drunk.
+  const line = drankText(drank(entries.feeding, from, to, defaultMl));
   return (
     <View className="px-4">
       <Panel className="gap-1.5 px-3 pb-3 pt-3.5">

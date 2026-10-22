@@ -148,6 +148,7 @@ function parseChildPrefs(entry: Record<string, unknown>): Partial<ChildPrefs> {
   if (isBottleDefaults(entry.bottle)) prefs.bottle = entry.bottle;
   if (typeof entry.vitaminDReminder === 'boolean') prefs.vitaminDReminder = entry.vitaminDReminder;
   if (entry.sex === 'girl' || entry.sex === 'boy' || entry.sex === null) prefs.sex = entry.sex;
+  if (typeof entry.solids === 'boolean') prefs.solids = entry.solids;
   return prefs;
 }
 

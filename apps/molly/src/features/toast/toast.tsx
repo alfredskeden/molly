@@ -104,7 +104,10 @@ function ToastView({
   const needs = THEMES[look][scheme].needs;
   // Ribbon's bow or Life Sim's green: the face or heart and the Edit words.
   const accent = ornaments?.toast ?? needs?.toast ?? null;
-  const lead = needs && playful && toast.saved && toast.tone !== 'danger' ? needs.words.toastLeads[NEED_OF[toast.tone]] : null;
+  const lead =
+    needs && playful && toast.saved && toast.tone !== 'danger'
+      ? needs.words.toastLeads[toast.saved === 'meal' ? 'meal' : NEED_OF[toast.tone]]
+      : null;
   const actions = (
     <>
       {toast.adjust && (

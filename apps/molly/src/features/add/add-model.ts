@@ -1,7 +1,7 @@
 import { agoText, durationText } from '@molly/core';
 
 export type AddKind = 'sleep' | 'feed' | 'diaper' | 'med';
-export type FeedKind = 'Left' | 'Right' | 'Both' | 'Bottle';
+export type FeedKind = 'Left' | 'Right' | 'Both' | 'Bottle' | 'Solids';
 export type DiaperKind = 'Wet' | 'Dirty' | 'Both';
 export type MedKind = 'Vitamin D' | 'Other';
 
@@ -17,6 +17,8 @@ export type AddDraft = {
   note: string;
   /** A finished bottle's ml, from the last bottle; null while the typed amount is empty. */
   amount: number | null;
+  /** A meal's food (feed kind Solids). */
+  food: string;
 };
 
 const MINUTE_MS = 60_000;
@@ -26,7 +28,7 @@ const DEFAULT_LENGTH_MS = 30 * MINUTE_MS;
 const toMinute = (time: Date) => new Date(Math.floor(time.getTime() / MINUTE_MS) * MINUTE_MS);
 
 export function newDraft(kind: AddKind, now: Date, amount: number | null = null): AddDraft {
-  return { kind, start: toMinute(now), end: null, feed: 'Left', diaper: 'Wet', med: 'Vitamin D', note: '', amount };
+  return { kind, start: toMinute(now), end: null, feed: 'Left', diaper: 'Wet', med: 'Vitamin D', note: '', amount, food: '' };
 }
 
 export const hasRange = (kind: AddKind) => kind === 'sleep' || kind === 'feed';
@@ -54,6 +56,7 @@ export function addProblem(draft: AddDraft, now: Date): string | null {
     if (draft.end <= draft.start) return 'End must be after start';
     if (draft.end > now) return 'End is in the future';
     if (draft.kind === 'feed' && draft.feed === 'Bottle' && draft.amount === null) return 'Type an amount';
+    if (draft.kind === 'feed' && draft.feed === 'Solids' && !draft.food.trim()) return 'Write what was eaten';
   }
   return null;
 }

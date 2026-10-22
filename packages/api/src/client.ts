@@ -196,6 +196,19 @@ export function createClient({ baseUrl, token, timeoutMs = TIMEOUT_MS }: ClientC
       (await request<Page<Feeding>>(ENTRY_PATHS.feeding, { query: { child, method: 'bottle', limit: 10 }, ...options }))
         .results,
 
+    /** The newest feedings of any kind, newest first: one page, for the newest milk feed past a few meals. */
+    getRecentFeedings: async (child: number, options?: CallOptions): Promise<Feeding[]> =>
+      (await request<Page<Feeding>>(ENTRY_PATHS.feeding, { query: { child, limit: 20 }, ...options })).results,
+
+    /** The newest meals (`type=solid food`), newest first: one page, enough for the recent foods. */
+    getRecentSolids: async (child: number, options?: CallOptions): Promise<Feeding[]> =>
+      (
+        await request<Page<Feeding>>(ENTRY_PATHS.feeding, {
+          query: { child, type: 'solid food', limit: 20 },
+          ...options,
+        })
+      ).results,
+
     /** Default ordering is newest first (-start / -time), so `limit=1` is the latest. */
     getLatestEntries: async (child: number, options?: CallOptions) => {
       const [sleep, feeding, change] = await Promise.all([

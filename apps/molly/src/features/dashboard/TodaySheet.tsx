@@ -1,9 +1,10 @@
-import { agoText, counted, durationText, mergeTimeline, type EntriesByKind, type TimelineItem } from '@molly/core';
+import { agoText, counted, durationText, type drankText, isSolidFeed, mergeTimeline, type EntriesByKind, type TimelineItem } from '@molly/core';
 import { View } from 'react-native';
 
 import { Pressable } from '@/components/pressable';
 import { Sheet } from '@/components/sheet';
 import { Text } from '@/components/ui';
+import type { TodayStats } from '@/features/days/recent';
 import { diaperIcon, feedIcon } from '@/features/ring/model';
 import { Glyph } from '@/theme/Glyph';
 import { TrackerIcon } from '@/theme/TrackerIcon';
@@ -12,8 +13,6 @@ import type { FilledSymbol } from '@/theme/symbols';
 import { describeEntry, spokenEntry } from './timeline-text';
 
 const LATEST_ENTRIES_SHOWN = 6;
-
-export type TodayStats = { sleptMs: number; sleeps: number; feeds: number; diapers: number };
 
 const KIND_BOX = {
   sleep: { box: 'bg-sleep-bg', ink: 'sleep-ink', bg: 'sleep-bg' },
@@ -36,13 +35,15 @@ function iconOf(item: TimelineItem): FilledSymbol {
 }
 
 /**
- * The history button's sheet (design `1e`): the live window's totals in four boxes, the latest
- * entries (a tap opens one in the editor), and the way to Recent days.
+ * The history button's sheet (design `1e`): the totals of Recent days' top card (last night and today
+ * so far, or tonight) in four boxes with what was drunk under them, the latest entries (a tap opens one
+ * in the editor), and the way to Recent days.
  */
 export function TodaySheet({
   night,
   now,
   stats,
+  drank,
   entries,
   onEdit,
   onRecentDays,
@@ -51,19 +52,23 @@ export function TodaySheet({
   night: boolean;
   now: Date;
   stats: TodayStats;
+  /** `≈ 840 ml`, as on Recent days' card. Null when nothing was drunk. */
+  drank: ReturnType<typeof drankText>;
   entries: EntriesByKind;
   onEdit: (item: TimelineItem) => void;
   onRecentDays: () => void;
   onClose: () => void;
 }) {
   const title = night ? 'Tonight' : 'Today';
-  const boxes: { icon: FilledSymbol; ink: 'sleep-ink' | 'feed-ink' | 'diaper-ink'; value: string; label: string }[] = [
-    { icon: 'bedtime', ink: 'sleep-ink', value: durationText(stats.sleptMs), label: night ? 'slept tonight' : 'slept today' },
+  const sleepWord = stats.night ? 'sleep' : 'nap';
+  // Slept gets more room: last night and today together run to `13h 17m`. Narrow screens and large fonts wrap its value.
+  const boxes: { icon: FilledSymbol; ink: 'sleep-ink' | 'feed-ink' | 'diaper-ink'; value: string; label: string; wide?: boolean }[] = [
+    { icon: 'bedtime', ink: 'sleep-ink', value: durationText(stats.sleptMs), label: night ? 'slept tonight' : 'slept today', wide: true },
     {
       icon: night ? 'bedtime' : 'partly_cloudy_day',
       ink: 'sleep-ink',
       value: String(stats.sleeps),
-      label: night ? (stats.sleeps === 1 ? 'sleep' : 'sleeps') : stats.sleeps === 1 ? 'nap' : 'naps',
+      label: stats.sleeps === 1 ? sleepWord : `${sleepWord}s`,
     },
     { icon: 'breastfeeding', ink: 'feed-ink', value: String(stats.feeds), label: stats.feeds === 1 ? 'feed' : 'feeds' },
     { icon: 'baby_changing_station', ink: 'diaper-ink', value: String(stats.diapers), label: stats.diapers === 1 ? 'diaper' : 'diapers' },
@@ -73,28 +78,34 @@ export function TodaySheet({
     <Sheet label={title} title={title} onScrimPress={onClose} scroll>
       <View
         accessible
-        accessibilityLabel={`${title}: ${durationText(stats.sleptMs)} slept, ${counted(stats.sleeps, night ? 'sleep' : 'nap')}, ${counted(stats.feeds, 'feed')}, ${counted(stats.diapers, 'diaper')}`}
-        className="flex-row gap-2"
+        accessibilityLabel={`${title}: ${durationText(stats.sleptMs)} slept, ${counted(stats.sleeps, sleepWord)}, ${counted(stats.feeds, 'feed')}, ${counted(stats.diapers, 'diaper')}${drank ? `, ${drank.spoken}` : ''}`}
+        className="gap-2.5"
       >
-        {boxes.map((box) => (
-          <View key={box.label} className="flex-1 gap-0.5 rounded-box bg-bg px-2.5 pb-3 pt-2.5">
-            <TrackerIcon name={box.icon} size={20} ribbonSize={26} color={box.ink} light="bg" />
-            <Text numberOfLines={1} className="text-[19px] font-display tabular-nums">
-              {box.value}
-            </Text>
-            <Text numberOfLines={1} className="text-xs font-bold text-muted">
-              {box.label}
-            </Text>
-          </View>
-        ))}
+        <View className="flex-row gap-2">
+          {boxes.map((box) => (
+            <View key={box.label} className={`${box.wide ? 'flex-[1.25]' : 'flex-1'} gap-0.5 rounded-box bg-bg px-2.5 pb-3 pt-2.5`}>
+              <TrackerIcon name={box.icon} size={20} ribbonSize={26} color={box.ink} light="bg" />
+              <Text className="text-[19px] font-display tabular-nums">
+                {box.value}
+              </Text>
+              {/* One word shrinks to fit rather than break mid-word; `slept today` wraps between its words. */}
+              <Text numberOfLines={box.wide ? undefined : 1} adjustsFontSizeToFit={!box.wide} className="text-xs font-bold text-muted">
+                {box.label}
+              </Text>
+            </View>
+          ))}
+        </View>
+        {drank && <Text className="text-center text-label font-bold text-muted">{drank.text}</Text>}
       </View>
 
       <View className="pt-[22px]">
         <Text className="px-1 pb-1 text-label font-display text-muted">Recent · tap to edit</Text>
         {recent.length === 0 && <Text className="px-1 py-4 text-label font-bold text-muted">Nothing logged yet.</Text>}
         {recent.map((item) => {
-          const { title: name } = describeEntry(item);
-          const ranged = 'end' in item.entry;
+          const { title: name, detail } = describeEntry(item);
+          // A meal: the food as the title, `12:10 · Solids` under it, no length.
+          const meal = item.kind === 'feeding' && isSolidFeed(item.entry);
+          const ranged = 'end' in item.entry && !meal;
           const box = KIND_BOX[item.kind];
           return (
             <Pressable
@@ -119,7 +130,7 @@ export function TodaySheet({
                   {name}
                 </Text>
                 <Text className="text-caption font-bold tabular-nums text-muted">
-                  {'end' in item.entry ? `ended ${agoText(new Date(item.entry.end), now)}` : agoText(new Date(item.at), now)}
+                  {meal ? detail : 'end' in item.entry ? `ended ${agoText(new Date(item.entry.end), now)}` : agoText(new Date(item.at), now)}
                 </Text>
               </View>
               {ranged && 'end' in item.entry && (

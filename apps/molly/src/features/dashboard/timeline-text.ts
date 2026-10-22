@@ -1,5 +1,5 @@
-import type { FeedingMethod } from '@molly/api';
-import type { TimelineItem } from '@molly/core';
+import type { Feeding, FeedingMethod } from '@molly/api';
+import { isSolidFeed, type TimelineItem } from '@molly/core';
 
 import { formatClock, formatElapsed, spokenDuration } from '@/lib/time';
 
@@ -8,9 +8,14 @@ export const METHOD_LABELS: Record<FeedingMethod, string> = {
   'right breast': 'Right',
   'both breasts': 'Both',
   bottle: 'Bottle',
-  'parent fed': 'Parent fed',
-  'self fed': 'Self fed',
+  'parent fed': 'Solids',
+  'self fed': 'Solids',
 };
+
+/** A meal's food, as its notes hold it, or `No food noted`. */
+export function foodOf(meal: Pick<Feeding, 'notes'>): string {
+  return meal.notes?.trim() || 'No food noted';
+}
 
 export function diaperLabel({ wet, solid }: { wet: boolean; solid: boolean }): string {
   return wet && solid ? 'Wet + dirty' : solid ? 'Dirty' : 'Wet';
@@ -26,6 +31,8 @@ export function describeEntry(item: TimelineItem): { title: string; detail: stri
       return { title: item.entry.nap ? 'Nap' : 'Night sleep', detail: duration(item.entry) };
     case 'feeding': {
       const { entry } = item;
+      // A meal: the food first, no amount or length.
+      if (isSolidFeed(entry)) return { title: foodOf(entry), detail: `${formatClock(item.at)} · ${METHOD_LABELS[entry.method]}` };
       const detail = entry.method === 'bottle' && entry.amount !== null ? `${entry.amount} ml` : duration(entry);
       return { title: `Feed · ${METHOD_LABELS[entry.method]}`, detail };
     }
@@ -46,6 +53,7 @@ export function spokenEntry(item: TimelineItem): string {
         return [`${item.entry.nap ? 'Nap' : 'Night sleep'} at ${at}`, took(item.entry)];
       case 'feeding': {
         const { entry } = item;
+        if (isSolidFeed(entry)) return [`${METHOD_LABELS[entry.method]} at ${at}`, foodOf(entry)];
         const amount = entry.method === 'bottle' && entry.amount !== null ? `${entry.amount} ml` : took(entry);
         return [`Feed at ${at}`, METHOD_LABELS[entry.method], amount];
       }

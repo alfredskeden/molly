@@ -1,12 +1,24 @@
 import type { Feeding, FeedingType, StopFeeding } from '@molly/api';
 
-export type FeedingStopButton = 'left' | 'right' | 'both' | 'bottle';
+export type FeedingStopButton = 'left' | 'right' | 'both' | 'bottle' | 'solids';
 
 export type BottleDefaults = { type: FeedingType; amount?: number };
 
 export type FeedingStop = Omit<StopFeeding, 'timer'>;
 
-export function feedingForStop(button: FeedingStopButton, bottle: BottleDefaults): FeedingStop {
+const SOLIDS: ReadonlySet<Feeding['method']> = new Set(['parent fed', 'self fed']);
+
+/** What Solids saves a meal as: always parent fed (self fed isn't offered). */
+export const SOLIDS_METHOD: Feeding['method'] = 'parent fed';
+
+/** A meal rather than milk: decided by the method, as Baby Buddy's own entries may be `self fed`. */
+export function isSolidFeed(feeding: Pick<Feeding, 'method'>): boolean {
+  return SOLIDS.has(feeding.method);
+}
+
+/** `food`: what a meal (`solids`) was, saved trimmed as its notes; the caller never passes a blank one. */
+export function feedingForStop(button: FeedingStopButton, bottle: BottleDefaults, food = ''): FeedingStop {
+  if (button === 'solids') return { type: 'solid food', method: SOLIDS_METHOD, amount: 0, notes: food.trim() };
   if (button === 'left') return { type: 'breast milk', method: 'left breast' };
   if (button === 'right') return { type: 'breast milk', method: 'right breast' };
   if (button === 'both') return { type: 'breast milk', method: 'both breasts' };
