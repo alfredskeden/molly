@@ -32,7 +32,7 @@ Tests come first for `packages/core` and the plain-TS app models (Vitest, Given 
 
 ### `apps/molly`
 
-- [ ] `parseChildPrefs`: `solids: true` round-trips; a missing or non-boolean value gives `false`.
+- [x] `parseChildPrefs`: `solids: true` round-trips; a missing or non-boolean value gives `false`.
 - [ ] `trackers.ts` with the fake client:
   - `logFeed` with Solids posts the solid payload with notes and the instant times
   - `stopFeeding` with Solids posts `timer`, the payload and notes

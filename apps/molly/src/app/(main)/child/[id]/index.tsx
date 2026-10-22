@@ -233,8 +233,15 @@ function ChildForm({ child, prefs, all }: { child: Child; prefs: ChildPrefs; all
             />
           </Panel>
 
-          {hasNotifications && (
-            <Panel className="px-4">
+          <Panel className="px-4">
+            <ToggleRow
+              title="Solid food"
+              subtitle="Adds Solids to Feed"
+              value={draft.solids}
+              onChange={(solids) => set({ solids })}
+              last={!hasNotifications}
+            />
+            {hasNotifications && (
               <ToggleRow
                 title="Vitamin D reminder"
                 subtitle="After a sleep this phone stops, if no dose is logged that day"
@@ -244,8 +251,8 @@ function ChildForm({ child, prefs, all }: { child: Child; prefs: ChildPrefs; all
               >
                 {reminderLine && <NotificationLine line={reminderLine} onTurnOn={turnOn} />}
               </ToggleRow>
-            </Panel>
-          )}
+            )}
+          </Panel>
 
           <Text className="mt-2 px-1 text-center text-caption font-bold text-muted">Name and birth date come from Baby Buddy.</Text>
         </View>

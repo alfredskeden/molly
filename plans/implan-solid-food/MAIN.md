@@ -92,7 +92,7 @@ Each step lands with `pnpm check` green. TDD for `packages/core` and the plain-T
 1. [x] **Confirm against the live API** (`pnpm bb:up && pnpm bb:seed`, then add to `packages/api/src/entries.int.test.ts`): each item under "Facts to confirm" in `NOTES.md`. Record the results in `NOTES.md` and in `implan-molly/NOTES.md` "Confirmed against the live API". Add `notes` to `NewFeeding` / `StopFeeding`, and add the recent-solids fetch.
 2. [x] **Refactor first, core**: extract `isSolidFeed` and use it in `drank` (tests stay green). Then, test-first: `lastOfEach` and `needs` skip solids; `totalsBetween` still counts them.
 3. [x] **Core rules**: `feedingForStop('solids', …)`, `recentFoods`, chip toggling, `eatQuestion` / `ateLabel`, and `ChildPrefs.solids` with its default.
-4. [ ] **Setting**: `parseChildPrefs` (unit test in the storage tests), and the switch on the child screen.
+4. [x] **Setting**: `parseChildPrefs` (unit test in the storage tests), and the switch on the child screen.
 5. [ ] **Picker and Solids panel**: per-row `columns`, the Solids option in both feed pickers, the `restaurant` glyph, `SolidsPanel`, the writes in `trackers.ts` (unit tests with the fake client), the optimistic guess, `Copy.solids` in every theme, and Life Sim's meal toast lead.
 6. [ ] **Showing a meal**: `METHOD_LABELS`, `timeline-text.ts`, toasts and ring marks (unit tests in their `*.test.ts`); the editor (`editor-model.test.ts`, including the `withMethod` fix) and Add entry (`add-model.test.ts`).
 7. [ ] **Playwright** (`e2e/tests/solid-food.spec.ts`, see `TEST_STRATEGY.md`), and update any existing spec that assumed four feed options or the "Parent fed" label.
