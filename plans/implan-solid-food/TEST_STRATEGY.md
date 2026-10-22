@@ -72,8 +72,8 @@ Tests come first for `packages/core` and the plain-TS app models (Vitest, Given 
 - [x] The knife and fork shows in every theme, inside Ribbon's circle too.
 - [x] The Solids panel matches the design: field border, chips on and off, Save greyed out. The keyboard opens on Android without covering Save.
 - [x] The Today row, the ring mark and the editor's five-segment row (14 px labels fit) match the design.
-- [ ] Life Sim's meal toast leads with "Nom nom!".
-- [ ] TalkBack reads the Solids button as "Solids" in every theme.
+- [x] Life Sim's meal toast leads with "Nom nom!" (checked by the developer on their phone).
+- [x] TalkBack reads the Solids button as "Solids" in every theme (checked by the developer on their phone).
 
 ## Wrap-up
 

@@ -74,4 +74,4 @@ Life Sim's toast lead for a meal (`sim-words.ts` `toastLeads`, today `feed: 'Mil
 - Web (412 px, day colours): every theme's feed picker and Solids panel, the Today sheet and the editor. Labels fit on one line (Half-time snack included); Ribbon shows the knife and fork in its circle; Safari falls back to the glyph.
 - Emulator (release APK): the switch row, the picker, the editor's five segments (14 px labels fit), and a meal saved from a chip ("Feed saved · Banana", the Feed tile still on the bottle).
 - **Found and fixed on Android:** the keyboard covered the whole Solids panel. The dashboard's `ScrollView` is now keyboard-controller's `KeyboardAwareScrollView` (`bottomOffset` 160, so the chips and Save stay above it too).
-- Still open for the developer: TalkBack reading "Solids" in every theme, and Life Sim's "Nom nom!" toast lead seen on a device.
+- The developer checked the rest on their phone (2026-10-22): TalkBack reads "Solids" in every theme, and Life Sim's toast leads with "Nom nom!".
