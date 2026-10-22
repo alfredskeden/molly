@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { arcPath, sleepStroke, centreText, editorSubtitle, hourTicks, markTap, placeMarks, ringAngle, ringGhosts, ringPoint, sleepLabels, startLabel, windowDate, windowRow, windowTitle } from './ring';
+import { change, feeding, medication, sleep as sleepEntry } from '../test/fixtures';
+import { arcPath, sleepStroke, centreText, editorSubtitle, hourTicks, markTap, placeMarks, ringAngle, ringGhosts, ringPoint, sleepLabels, startLabel, windowDate, pastBoxes, pastBoxesSpoken, ringPager, windowRow, windowStats, windowTitle } from './ring';
 
 /** Thursday 24 September 2026, local time. */
 const at = (clock: string, day = 24) => {
@@ -752,5 +753,203 @@ describe('a tap on a mark', () => {
 
     // Then
     expect(key).toBe('feed');
+  });
+});
+
+describe("a past window's stats", () => {
+  const none = { sleep: [], feeding: [], change: [], medication: [] };
+  const iso = (clock: string, date = 24) => at(clock, date).toISOString();
+
+  it('are all zero with nothing logged in the window', () => {
+    // When
+    const stats = windowStats(day, none);
+
+    // Then
+    expect(stats).toEqual({ sleptMs: 0, naps: 0, feeds: 0, diapers: 0, medicine: 0 });
+  });
+
+  it('count one of each inside the window, with the sleep in full', () => {
+    // Given
+    const entries = {
+      sleep: [sleepEntry({ start: iso('09:00'), end: iso('10:30') })],
+      feeding: [feeding({ start: iso('08:00'), end: iso('08:20') })],
+      change: [change({ time: iso('08:30') })],
+      medication: [medication({ time: iso('11:00') })],
+    };
+
+    // When
+    const stats = windowStats(day, entries);
+
+    // Then
+    expect(stats).toEqual({ sleptMs: 90 * 60_000, naps: 1, feeds: 1, diapers: 1, medicine: 1 });
+  });
+
+  it('sum several sleeps and count several naps and feeds', () => {
+    // Given
+    const entries = {
+      ...none,
+      sleep: [sleepEntry({ start: iso('09:00'), end: iso('10:00') }), sleepEntry({ start: iso('13:00'), end: iso('14:30') })],
+      feeding: [
+        feeding({ start: iso('08:00'), end: iso('08:20') }),
+        feeding({ start: iso('11:00'), end: iso('11:15') }),
+        feeding({ start: iso('15:00'), end: iso('15:20') }),
+      ],
+    };
+
+    // When
+    const stats = windowStats(day, entries);
+
+    // Then
+    expect(stats).toMatchObject({ sleptMs: 150 * 60_000, naps: 2, feeds: 3 });
+  });
+
+  it("clip a sleep crossing the window's start, without counting it as a nap", () => {
+    // Given
+    const entries = { ...none, sleep: [sleepEntry({ start: iso('05:00'), end: iso('07:30') })] };
+
+    // When
+    const stats = windowStats(day, entries);
+
+    // Then
+    expect(stats).toMatchObject({ sleptMs: 30 * 60_000, naps: 0 });
+  });
+
+  it("count entries at the window's start and leave out those at its end", () => {
+    // Given
+    const entries = {
+      sleep: [sleepEntry({ start: iso('19:00'), end: iso('20:00') })],
+      feeding: [feeding({ start: iso('07:00'), end: iso('07:20') }), feeding({ start: iso('19:00'), end: iso('19:20') })],
+      change: [change({ time: iso('07:00') }), change({ time: iso('19:00') })],
+      medication: [medication({ time: iso('19:00') })],
+    };
+
+    // When
+    const stats = windowStats(day, entries);
+
+    // Then
+    expect(stats).toEqual({ sleptMs: 0, naps: 0, feeds: 1, diapers: 1, medicine: 0 });
+  });
+});
+
+describe('the pager over a past ring', () => {
+  // Live Thursday, then back one window at a time: newest first, day and night alternating.
+  const today = { kind: 'day' as const, start: at('07:13'), end: at('19:00') };
+  const lastNight = { kind: 'night' as const, start: at('19:10', 23), end: at('07:13') };
+  const yesterday = { kind: 'day' as const, start: at('07:00', 23), end: at('19:10', 23) };
+  const tuesdayNight = { kind: 'night' as const, start: at('19:00', 22), end: at('07:00', 23) };
+  const windows = [today, lastNight, yesterday, tuesdayNight];
+  const loaded = { loadedFrom: at('00:00', 22), olderMayExist: true };
+
+  it('offers the live ring next from the newest past ring', () => {
+    // When
+    const pager = ringPager({ windows, index: 1, ...loaded });
+
+    // Then
+    expect(pager.next).toEqual({ window: today, title: 'Today', spoken: 'Next: Today', live: true });
+  });
+
+  it('offers the newer past ring next from an older one', () => {
+    // When
+    const pager = ringPager({ windows, index: 2, ...loaded });
+
+    // Then
+    expect(pager.next).toEqual({ window: lastNight, title: 'Last night', spoken: 'Next: Last night', live: false });
+  });
+
+  it('offers the loaded window before as previous', () => {
+    // When
+    const pager = ringPager({ windows, index: 2, ...loaded });
+
+    // Then
+    expect(pager.previous).toEqual({ window: tuesdayNight, title: 'Tuesday night', spoken: 'Previous: Tuesday night', enabled: true, load: false });
+  });
+
+  it("asks for the window before when it isn't in the list yet but older may exist", () => {
+    // When
+    const pager = ringPager({ windows, index: 3, ...loaded });
+
+    // Then
+    expect(pager.previous).toEqual({ window: null, title: 'Tuesday', spoken: 'Previous: Tuesday', enabled: true, load: true });
+  });
+
+  it('asks for the window before when it starts before what is loaded', () => {
+    // When
+    const pager = ringPager({ windows, index: 2, loadedFrom: at('00:00', 23), olderMayExist: true });
+
+    // Then
+    expect(pager.previous).toMatchObject({ enabled: true, load: true });
+  });
+
+  it('turns previous off when nothing older may exist', () => {
+    // When
+    const pager = ringPager({ windows, index: 3, loadedFrom: at('00:00', 22), olderMayExist: false });
+
+    // Then
+    expect(pager.previous).toMatchObject({ title: 'Tuesday', spoken: 'Previous: Tuesday', enabled: false });
+  });
+
+  it('names the live night Tonight when it is next', () => {
+    // Given
+    const tonight = { kind: 'night' as const, start: at('19:00'), end: at('07:00', 25) };
+
+    // When
+    const pager = ringPager({ windows: [tonight, today, lastNight], index: 1, ...loaded });
+
+    // Then
+    expect(pager.next).toMatchObject({ title: 'Tonight', spoken: 'Next: Tonight', live: true });
+  });
+
+  it('steps back through days and nights in turn', () => {
+    // When
+    const titles = [1, 2, 3].map((index) => ringPager({ windows, index, ...loaded }).previous.title);
+
+    // Then
+    expect(titles).toEqual(['Yesterday', 'Tuesday night', 'Tuesday']);
+  });
+});
+
+describe("a past ring's stat boxes", () => {
+  const stats = { sleptMs: 130 * 60_000, naps: 3, feeds: 7, diapers: 5, medicine: 1 };
+
+  it('are slept, naps, feeds and diapers on a day', () => {
+    // When
+    const boxes = pastBoxes('day', stats);
+
+    // Then
+    expect(boxes.map(({ kind, value, label }) => [kind, value, label])).toEqual([
+      ['sleep', '2h 10m', 'slept'],
+      ['nap', '3', 'naps'],
+      ['feed', '7', 'feeds'],
+      ['diaper', '5', 'diapers'],
+    ]);
+  });
+
+  it('are slept, feeds, diapers and medicine on a night', () => {
+    // When
+    const boxes = pastBoxes('night', stats);
+
+    // Then
+    expect(boxes.map(({ kind, label }) => [kind, label])).toEqual([
+      ['sleep', 'slept'],
+      ['feed', 'feeds'],
+      ['diaper', 'diapers'],
+      ['med', 'medicine'],
+    ]);
+  });
+
+  it('say nap, feed and diaper for one', () => {
+    // When
+    const boxes = pastBoxes('day', { sleptMs: 0, naps: 1, feeds: 1, diapers: 1, medicine: 1 });
+
+    // Then
+    expect(boxes.map(({ value, label }) => `${value} ${label}`)).toEqual(['0m slept', '1 nap', '1 feed', '1 diaper']);
+  });
+
+  it('read as one line after the title', () => {
+    // When
+    const spoken = pastBoxesSpoken('Yesterday', pastBoxes('day', stats));
+
+    // Then
+    expect(spoken).toBe('Yesterday: 2h 10m slept, 3 naps, 7 feeds, 5 diapers');
   });
 });

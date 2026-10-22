@@ -25,10 +25,10 @@ import {
   skipNote,
   sleepContext,
   startLabel,
-  totalsBetween,
   UNDONE_SKIP_TAG,
   windowDate,
   windowRow,
+  windowStats,
   windowTitle,
   type CentreText,
   type DayWindow,
@@ -207,12 +207,7 @@ const FEEDING_STOPS: { button: FeedingStopButton; label: string; spoken?: string
 
 /** The past window's centre: what it held. */
 function pastCentre(window: DayWindow, entries: EntriesByKind): CentreText {
-  const totals = totalsBetween(entries, window.start, window.end);
-  const naps = entries.sleep.filter((entry) => {
-    const start = Date.parse(entry.start);
-    return start >= window.start.getTime() && start < window.end.getTime();
-  }).length;
-  return centreText({ state: 'past', kind: window.kind, sleptMs: totals.sleepMs, naps, feeds: totals.feedings, diapers: totals.changes });
+  return centreText({ state: 'past', kind: window.kind, ...windowStats(window, entries) });
 }
 
 export default function Dashboard() {

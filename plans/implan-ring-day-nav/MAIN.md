@@ -61,7 +61,7 @@ Before, a past ring could only switch to its pair (the cap) or go back to now; t
 
 ## Steps
 
-1. [ ] **Core rules (TDD, `packages/core`).** `windowStats` and the pager rule with unit tests (see TEST_STRATEGY.md). Move `pastCentre` onto `windowStats`.
+1. [x] **Core rules (TDD, `packages/core`).** `windowStats` and the pager rule with unit tests (see TEST_STRATEGY.md). Move `pastCentre` onto `windowStats`.
 2. [ ] **Loading older windows.** Widen `wantAt` to "the window before a given one"; when the loaded weeks don't reach it and older may exist, `fetchNextPage` and step once it's there. Give up quietly (and dim `‹`) when Baby Buddy has nothing older.
 3. [ ] **Pager header.** `Pager` component; render it instead of `Header` on a past ring. Remove `Header`'s past-window date line (`dateLine` becomes the live window's). Add `chevron_left` to the symbol set if missing.
 4. [ ] **Past stat boxes.** `PastStats` in place of the tiles on an idle past ring. Then remove the tile handlers' `setViewKey(null)` / `showLive()` that only existed for taps on a past ring (check each caller first, NOTES.md "Cleanup sweep").

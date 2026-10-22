@@ -2,7 +2,9 @@
 // the ring of one day or night window. Pure geometry and words; the app draws what these return.
 
 import { clockText, countdown, counted, durationText, timerText, whenText } from './format';
+import type { EntriesByKind } from './latest';
 import { likelySlots, type LikelySlot, type PlanSleep } from './likely-detail';
+import { totalsBetween } from './totals';
 
 /** The ring's geometry in its 400 × 400 box, from the design's `renderVals`. Angles are degrees clockwise from 12. */
 export const RING = {
@@ -223,6 +225,36 @@ export function centreText(input: CentreState): CentreText {
   }
 }
 
+export type WindowStats = { sleptMs: number; naps: number; feeds: number; diapers: number; medicine: number };
+
+/** What a past window held: its stat boxes and its centre text. */
+export function windowStats(window: Window, entries: EntriesByKind): WindowStats {
+  const totals = totalsBetween(entries, window.start, window.end);
+  const naps = entries.sleep.filter((entry) => {
+    const start = Date.parse(entry.start);
+    return start >= window.start.getTime() && start < window.end.getTime();
+  }).length;
+  return { sleptMs: totals.sleepMs, naps, feeds: totals.feedings, diapers: totals.changes, medicine: totals.medications };
+}
+
+export type PastBox = { kind: 'sleep' | 'nap' | 'feed' | 'diaper' | 'med'; value: string; label: string };
+
+/** Under a past ring: slept, naps, feeds and diapers on a day; slept, feeds, diapers and medicine on a night. */
+export function pastBoxes(kind: 'day' | 'night', stats: WindowStats): PastBox[] {
+  const count = (box: PastBox['kind'], value: number, word: string): PastBox => ({ kind: box, value: String(value), label: value === 1 ? word : `${word}s` });
+  const slept: PastBox = { kind: 'sleep', value: durationText(stats.sleptMs), label: 'slept' };
+  const feeds = count('feed', stats.feeds, 'feed');
+  const diapers = count('diaper', stats.diapers, 'diaper');
+  return kind === 'day'
+    ? [slept, count('nap', stats.naps, 'nap'), feeds, diapers]
+    : [slept, feeds, diapers, { kind: 'med', value: String(stats.medicine), label: 'medicine' }];
+}
+
+/** The boxes as one spoken group: `Yesterday: 2h 10m slept, 3 naps, 7 feeds, 5 diapers`. */
+export function pastBoxesSpoken(title: string, boxes: PastBox[]): string {
+  return `${title}: ${boxes.map(({ value, label }) => `${value} ${label}`).join(', ')}`;
+}
+
 export type WindowRow = {
   /** `Nap 2 likely`, `Bedtime likely`. */
   title: string;
@@ -290,6 +322,40 @@ export function windowTitle(window: Titled, live: Titled): string {
   if (window.kind === 'day') return back === 0 ? 'Today' : back === 1 ? 'Yesterday' : weekday;
   if (window.start.getTime() === live.start.getTime()) return 'Tonight';
   return live.kind === 'day' && back === 1 ? 'Last night' : `${weekday} night`;
+}
+
+export type RingPager<W extends Titled> = {
+  previous: { window: W | null; title: string; spoken: string; enabled: boolean; load: boolean };
+  next: { window: W; title: string; spoken: string; live: boolean };
+};
+
+/** A past ring's `‹` and `›`: one window older and one newer in `windows` (live first, newest first). */
+export function ringPager<W extends Titled>(input: { windows: W[]; index: number; loadedFrom: Date; olderMayExist: boolean }): RingPager<W> {
+  const { windows, index, loadedFrom, olderMayExist } = input;
+  const live = windows[0]!;
+  const shown = windows[index]!;
+  const newer = windows[index - 1]!;
+  const title = windowTitle(newer, live);
+  const older = windows[index + 1] ?? null;
+  const olderTitle = windowTitle(older ?? before(shown), live);
+  return {
+    previous: {
+      window: older,
+      title: olderTitle,
+      spoken: `Previous: ${olderTitle}`,
+      enabled: olderMayExist,
+      // Its entries aren't all loaded: its own start and length come from them.
+      load: !older || older.start < loadedFrom,
+    },
+    next: { window: newer, title, spoken: `Next: ${title}`, live: index === 1 },
+  };
+}
+
+/** The window before one not worked out yet, as far as its title goes: the night before a day starts the day before. */
+function before(window: Titled): Titled {
+  const { start } = window;
+  if (window.kind === 'night') return { kind: 'day', start };
+  return { kind: 'night', start: new Date(start.getFullYear(), start.getMonth(), start.getDate() - 1) };
 }
 
 /** The header's date for a window: the day it starts on, `Thu 24 Sep`. */
