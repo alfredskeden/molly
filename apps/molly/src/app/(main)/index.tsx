@@ -1,12 +1,14 @@
 import { BabyBuddyError, type FeedingMethod, type Note, type Timer } from '@molly/api';
 import {
   ageInMonths,
+  ateLabel,
   agoText,
   clockText,
   centreText,
   eatQuestion,
   editorSubtitle,
   isNightSleep,
+  isSolidFeed,
   dayPlan,
   dayWindow,
   diaperFor,
@@ -69,7 +71,7 @@ import type { AddDraft } from '@/features/add/add-model';
 import { ChildrenSheetFor } from '@/features/children/Switcher';
 import { useChildPrefs, useChildrenOnScreen } from '@/features/children/use-children';
 import { Editor } from '@/features/dashboard/Editor';
-import { draftOf, isChanged, nudge, patchOf, withMethod, withNap, type Draft, type EditTarget } from '@/features/dashboard/editor-model';
+import { draftOf, isChanged, nudge, patchOf, withMethod, withNap, withNotes, type Draft, type EditTarget } from '@/features/dashboard/editor-model';
 import { Header } from '@/features/dashboard/Header';
 import { Pager } from '@/features/dashboard/Pager';
 import { PastStats } from '@/features/dashboard/PastStats';
@@ -188,7 +190,9 @@ function withDraft(entries: EntriesByKind, draft: Draft | undefined): EntriesByK
       return {
         ...entries,
         feeding: entries.feeding.map((entry) =>
-          entry.id === draft.id ? { ...entry, start: iso(draft.start), end: iso(draft.end), method: draft.method } : entry,
+          entry.id === draft.id
+            ? { ...entry, start: iso(draft.start), end: iso(draft.end), method: draft.method, notes: draft.notes }
+            : entry,
         ),
       };
     case 'change':
@@ -215,6 +219,9 @@ const FEEDING_STOPS: { button: FeedingStopButton; label: string; spoken?: string
   { button: 'bottle', label: 'Bottle', method: 'bottle' },
 ];
 
+/** What Solids saves as: always parent fed (`feedingForStop`). */
+const SOLIDS_METHOD: FeedingMethod = 'parent fed';
+
 /** The past window's centre: what it held. */
 function pastCentre(window: DayWindow, entries: EntriesByKind): CentreText {
   return centreText({ state: 'past', kind: window.kind, ...windowStats(window, entries) });
@@ -234,6 +241,8 @@ export default function Dashboard() {
   const lastBottle = useLastBottle(bottle);
   // The Solids panel's chips: this child's recent foods.
   const foods = useRecentFoods();
+  // The meal words name the child when no pronoun is set ("What did Ella eat?").
+  const childName = child?.first_name ?? 'the baby';
   const skipNotes = useSkipNotes();
   const refresh = useRefreshAfterWrite();
   const keyRejected = useKeyRejected();
@@ -965,19 +974,34 @@ export default function Dashboard() {
       };
     }
     if (target.kind === 'feeding' && draft.kind === 'feeding') {
+      const meal = isSolidFeed(draft);
+      // Solids while the setting is on, or for a meal saved before it was turned off.
+      const withSolids = solids || isSolidFeed(target.entry);
       return {
         ...common,
         tone: 'feed' as const,
-        icon: 'breastfeeding' as const,
+        icon: meal ? ('restaurant' as const) : ('breastfeeding' as const),
         title: 'Feed',
         sub: editorSubtitle(draft, now, windowName),
         rows: range(draft.start, draft.end),
         kinds: {
           label: 'Feed kind',
-          options: FEEDING_STOPS.map(({ label, method }) => ({ value: method, label })),
-          value: draft.method,
+          options: [
+            ...FEEDING_STOPS.map(({ label, method }) => ({ value: method, label })),
+            ...(withSolids ? [{ value: SOLIDS_METHOD, label: 'Solids' }] : []),
+          ],
+          // A `self fed` meal from Baby Buddy shows as Solids too.
+          value: meal ? SOLIDS_METHOD : draft.method,
           onChange: (method: string) => changeDraft((current) => withMethod(current, method as FeedingMethod, bottle)),
+          small: withSolids,
         },
+        food: meal
+          ? {
+              label: ateLabel(childName, sex),
+              value: draft.notes ?? '',
+              onChange: (text: string) => changeDraft((current) => withNotes(current, text)),
+            }
+          : undefined,
         amount:
           draft.method === 'bottle'
             ? {
@@ -1212,7 +1236,7 @@ export default function Dashboard() {
               <SolidsPanel
                 title={copy.solids}
                 spokenTitle={spoken(copy.solids, PLAIN.solids)}
-                question={eatQuestion(child?.first_name ?? 'the baby', sex)}
+                question={eatQuestion(childName, sex)}
                 foods={foods}
                 busy={busy}
                 onSave={saveSolids}
@@ -1253,7 +1277,15 @@ export default function Dashboard() {
         />
       )}
       {askingAdd && (
-        <AddSheet now={now} bottle={lastBottle} pending={adding} onSave={(draft) => void saveAdded(draft)} onClose={() => setAskingAdd(false)} />
+        <AddSheet
+          now={now}
+          bottle={lastBottle}
+          solids={solids}
+          ateLabel={ateLabel(childName, sex)}
+          pending={adding}
+          onSave={(draft) => void saveAdded(draft)}
+          onClose={() => setAskingAdd(false)}
+        />
       )}
       {askingToday && loaded && liveWindow && (
         <TodaySheet

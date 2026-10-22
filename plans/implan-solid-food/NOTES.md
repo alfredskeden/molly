@@ -37,6 +37,8 @@
 - The food chips (`useRecentFoods`, query key `['solids', childId]`, persisted like `bottles`) merge `getRecentSolids` with the dashboard's entries.
 - The optimistic instant feed is built by `instantFeeding` (`optimistic.ts`), so the guess carrying the food is unit-tested.
 - Life Sim's meal lead: `Toast.saved` is `true | 'meal'`; `'meal'` picks `toastLeads.meal` ("Nom nom!").
+- `withMethod` now sets the type for every kind: a side is always breast milk (before, side to side kept the old type). A `self fed` meal shows as Solids in the editor (its value maps to `parent fed`).
+- Add entry offers Solids only for a finished feed: the feed kind row shows only with an end, so a meal never starts a timer there.
 - An empty `notes` string is never sent (Save is off without food), so its behaviour doesn't matter.
 
 ## Theme wording and icon (decided)

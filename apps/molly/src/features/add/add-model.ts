@@ -56,6 +56,7 @@ export function addProblem(draft: AddDraft, now: Date): string | null {
     if (draft.end <= draft.start) return 'End must be after start';
     if (draft.end > now) return 'End is in the future';
     if (draft.kind === 'feed' && draft.feed === 'Bottle' && draft.amount === null) return 'Type an amount';
+    if (draft.kind === 'feed' && draft.feed === 'Solids' && !draft.food.trim()) return 'Write what was eaten';
   }
   return null;
 }

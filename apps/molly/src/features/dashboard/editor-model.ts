@@ -1,5 +1,5 @@
 import type { Change, Feeding, FeedingMethod, Medication, Sleep } from '@molly/api';
-import type { BottleDefaults } from '@molly/core';
+import { isSolidFeed, type BottleDefaults } from '@molly/core';
 
 import type { Tracker } from '@/actions/trackers';
 
@@ -14,7 +14,17 @@ export type EditTarget =
 /** The editor's working copy: Done sends it, the close X drops it. */
 export type Draft =
   | { kind: 'sleep'; id: number; start: Date; end: Date; nap: boolean }
-  | { kind: 'feeding'; id: number; start: Date; end: Date; method: FeedingMethod; type: Feeding['type']; amount: number | null }
+  | {
+      kind: 'feeding';
+      id: number;
+      start: Date;
+      end: Date;
+      method: FeedingMethod;
+      type: Feeding['type'];
+      amount: number | null;
+      /** A meal's food. */
+      notes: string | null;
+    }
   | { kind: 'change'; id: number; time: Date; wet: boolean; solid: boolean }
   | { kind: 'medication'; id: number; time: Date }
   | { kind: 'running'; tracker: Tracker; start: Date; earliest: Date | null };
@@ -43,6 +53,7 @@ export function draftOf(target: EditTarget): Draft {
         method: entry.method,
         type: entry.type,
         amount: entry.amount,
+        notes: entry.notes,
       };
     }
     case 'change':
@@ -79,11 +90,21 @@ export function nudge(draft: Draft, field: DraftField, minutes: number, now: Dat
   }
 }
 
-/** A feed's new side or bottle: a bottle takes the child's bottle type and amount, a side is breast milk. */
+/**
+ * A feed's new side, bottle or Solids: a bottle takes the child's bottle type and amount, a side is breast
+ * milk, a meal solid food of no amount. The notes (a meal's food) stay whatever it becomes.
+ */
 export function withMethod(draft: Draft, method: FeedingMethod, bottle: BottleDefaults): Draft {
   if (draft.kind !== 'feeding' || draft.method === method) return draft;
-  if (method === 'bottle') return { ...draft, method, type: bottle.type, amount: draft.amount ?? bottle.amount ?? null };
-  return { ...draft, method, type: draft.method === 'bottle' ? 'breast milk' : draft.type, amount: draft.method === 'bottle' ? null : draft.amount };
+  const solid = isSolidFeed(draft);
+  if (isSolidFeed({ method })) return { ...draft, method, type: 'solid food', amount: 0 };
+  if (method === 'bottle') return { ...draft, method, type: bottle.type, amount: (solid ? null : draft.amount) ?? bottle.amount ?? null };
+  return { ...draft, method, type: 'breast milk', amount: draft.method === 'bottle' || solid ? null : draft.amount };
+}
+
+/** A meal's food, as typed. */
+export function withNotes(draft: Draft, notes: string): Draft {
+  return draft.kind === 'feeding' ? { ...draft, notes } : draft;
 }
 
 /** A sleep saved as a nap or night sleep, by hand: moving its times never changes it. */
@@ -103,6 +124,7 @@ export function patchOf(draft: Draft, target: EditTarget): Record<string, unknow
         type: draft.type,
         method: draft.method,
         amount: draft.amount,
+        notes: draft.notes,
       };
     case 'change':
       return { time: draft.time.toISOString(), wet: draft.wet, solid: draft.solid };

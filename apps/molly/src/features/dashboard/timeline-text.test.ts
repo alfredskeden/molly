@@ -1,7 +1,7 @@
 import type { Change, Feeding, Medication, Sleep } from '@molly/api';
 import { describe, expect, it } from 'vitest';
 
-import { spokenEntry } from './timeline-text';
+import { describeEntry, METHOD_LABELS, spokenEntry } from './timeline-text';
 
 const feeding: Feeding = {
   id: 1,
@@ -57,5 +57,41 @@ describe('rows read by a screen reader', () => {
 
     // Then
     expect(label).toBe(spoken);
+  });
+});
+
+describe('a meal', () => {
+  const meal: Feeding = { ...feeding, end: '2026-09-24T08:16:00+02:00', type: 'solid food', method: 'parent fed', amount: 0, notes: 'Carrot, Porridge' };
+
+  it('has its food as the title and the time and Solids as the detail', () => {
+    // When
+    const row = describeEntry({ kind: 'feeding', at: meal.start, entry: meal });
+
+    // Then
+    expect(row).toEqual({ title: 'Carrot, Porridge', detail: '08:15 · Solids' });
+  });
+
+  it('says no food was noted when its notes are blank', () => {
+    // When
+    const row = describeEntry({ kind: 'feeding', at: meal.start, entry: { ...meal, notes: '  ' } });
+
+    // Then
+    expect(row.title).toBe('No food noted');
+  });
+
+  it('reads as Solids with its food', () => {
+    // When
+    const label = spokenEntry({ kind: 'feeding', at: meal.start, entry: meal });
+
+    // Then
+    expect(label).toBe('Solids at 08:15, Carrot, Porridge. Edit.');
+  });
+
+  it.each(['parent fed', 'self fed'] as const)('is labelled Solids when %s', (method) => {
+    // When
+    const label = METHOD_LABELS[method];
+
+    // Then
+    expect(label).toBe('Solids');
   });
 });

@@ -38,16 +38,16 @@ Tests come first for `packages/core` and the plain-TS app models (Vitest, Given 
   - `stopFeeding` with Solids posts `timer`, the payload and notes
   - `addEntry` with Solids posts the payload with notes
 - [x] `optimistic.ts`: the guessed meal carries its notes.
-- [ ] `timeline-text.ts`: a meal's title is its food, or "No food noted" when it has none; its detail is "HH:MM · Solids"; its spoken text names the food. `METHOD_LABELS` says "Solids" for `parent fed` and `self fed`.
-- [ ] `outcome-messages.ts`: an instant or stopped meal's toast is "Feed saved · Carrot, Porridge" (with the theme's `feed` word), with no ml and no duration.
-- [ ] Ring marks: a meal uses the `restaurant` icon and its spoken text names the food.
-- [ ] `editor-model.ts`:
+- [x] `timeline-text.ts`: a meal's title is its food, or "No food noted" when it has none; its detail is "HH:MM · Solids"; its spoken text names the food. `METHOD_LABELS` says "Solids" for `parent fed` and `self fed`.
+- [x] `outcome-messages.ts`: an instant or stopped meal's toast is "Feed saved · Carrot, Porridge" (with the theme's `feed` word), with no ml and no duration.
+- [x] Ring marks: a meal uses the `restaurant` icon and its spoken text names the food.
+- [x] `editor-model.ts`:
   - a solid entry's draft has `method: 'parent fed'` and its notes
   - changing the notes marks the draft changed and patches `notes`
   - `withMethod` from solids to Left gives `breast milk` with no amount
   - `withMethod` from Bottle to Solids gives `solid food` with amount `0`
   - `withMethod` from Left to Bottle is unchanged
-- [ ] `add-model.ts`: Solids without food has a problem; with food, none. Switching kind keeps the typed food only for Solids.
+- [x] `add-model.ts`: Solids without food has a problem; with food, none; a side never needs one. Only Solids saves the typed food (`feedingForStop` drops it for milk, tested in core).
 - [x] Widget model: with a meal newer than the last milk feed, the snapshot's last side is the milk feed's side.
 
 ## Playwright (`e2e/tests/solid-food.spec.ts`, seeded Baby Buddy, classic theme unless said)

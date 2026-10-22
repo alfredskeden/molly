@@ -158,6 +158,30 @@ describe('an entry that can not be saved', () => {
     expect(problem).toBeNull();
   });
 
+  it('is a finished meal with no food written', () => {
+    // When
+    const problem = addProblem(draft({ kind: 'feed', feed: 'Solids', start: at('10:00'), end: at('10:20'), food: '  ' }), now);
+
+    // Then
+    expect(problem).toBe('Write what was eaten');
+  });
+
+  it('is fine as a finished meal with its food', () => {
+    // When
+    const problem = addProblem(draft({ kind: 'feed', feed: 'Solids', start: at('10:00'), end: at('10:20'), food: 'Pear' }), now);
+
+    // Then
+    expect(problem).toBeNull();
+  });
+
+  it('is fine as a side with no food, whatever was typed for a meal before', () => {
+    // When
+    const problem = addProblem(draft({ kind: 'feed', feed: 'Left', start: at('10:00'), end: at('10:20'), food: '' }), now);
+
+    // Then
+    expect(problem).toBeNull();
+  });
+
   it('is fine otherwise', () => {
     // When
     const problem = addProblem({ ...newDraft('med', now), med: 'Other', note: 'Paracetamol 2.5 ml' }, now);
