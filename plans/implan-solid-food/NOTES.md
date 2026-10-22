@@ -17,6 +17,7 @@
 - **Instant meals take the usual instant-feed span**: one minute ending now, never before the previous feeding's end (`instantFeedTimes`). The design says start = end; one minute keeps the overlap rule and the ring's mark the same as other instant feeds.
 - **What counts as solid** is decided by the method (`parent fed` or `self fed`), the rule `drank` already uses. Molly writes only `parent fed`, but entries added in Baby Buddy itself may be `self fed`.
 - **Recent foods** come from this child's newest solid feedings: split each note on commas, trim, keep each food once (ignoring case, the newest spelling wins), newest first, at most 5.
+- **Chips after typing** (step 3): the field is the only state. A chip is on when every food in the field is a chip (ignoring case); anything else typed turns all of them off. Tapping a chip then adds it after the typed text ("Pea purée, Banana"), so nothing typed is lost. Core: `recentFoods`, `chosenFoods`, `tapFood` in `solids.ts`.
 - **The editor shows the Solids segment** whenever the setting is on, or when the entry being edited is already solid, so an old meal still edits correctly after the setting is turned off.
 
 ## Cleanup sweep (planning)

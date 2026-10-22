@@ -61,6 +61,25 @@ describe('feeding stop buttons', () => {
     // Then
     expect(feeding).toStrictEqual({ type: 'breast milk', method: 'bottle' });
   });
+
+  it('Solids logs a parent-fed meal of no amount with the trimmed food as notes', () => {
+    // Given
+    const food = '  Carrot ';
+
+    // When
+    const feeding = feedingForStop('solids', bottleDefaults, food);
+
+    // Then
+    expect(feeding).toStrictEqual({ type: 'solid food', method: 'parent fed', amount: 0, notes: 'Carrot' });
+  });
+
+  it('a milk button carries no notes even with a food given', () => {
+    // When
+    const feeding = feedingForStop('left', bottleDefaults, 'Carrot');
+
+    // Then
+    expect(feeding).toStrictEqual({ type: 'breast milk', method: 'left breast' });
+  });
 });
 
 function feed(id: number, start: string, changes: Partial<Feeding> = {}): Feeding {

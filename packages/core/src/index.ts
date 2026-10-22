@@ -24,6 +24,7 @@ export * from './onboarding';
 export * from './replay';
 export * from './ring';
 export * from './sleep-guide';
+export * from './solids';
 export * from './stale';
 export * from './temperature';
 export * from './timeline';

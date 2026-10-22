@@ -16,8 +16,8 @@ Tests come first for `packages/core` and the plain-TS app models (Vitest, Given 
 - [x] `lastOfEach`: a meal newer than the last milk feed leaves `feeding` as the milk feed. With only meals, it is `null`.
 - [x] `needs` / `rhythm`: a meal doesn't refill the feed need and doesn't change the usual feed gap.
 - [x] `totalsBetween`: a meal still counts in `feedings`.
-- [ ] `feedingForStop('solids', bottle, '  Carrot ')` gives `solid food` / `parent fed` / `0` / `'Carrot'`. The other buttons are unchanged, and carry no notes.
-- [ ] `recentFoods`:
+- [x] `feedingForStop('solids', bottle, '  Carrot ')` gives `solid food` / `parent fed` / `0` / `'Carrot'`. The other buttons are unchanged, and carry no notes.
+- [x] `recentFoods`:
   - none → `[]`
   - one note → its food
   - `"Carrot, Porridge"` → two foods
@@ -26,9 +26,9 @@ Tests come first for `packages/core` and the plain-TS app models (Vitest, Given 
   - at most 5
   - blank or missing notes are skipped
   - milk feeds are ignored
-- [ ] Chip toggling: tapping an off chip adds it ("Carrot" → "Carrot, Porridge"); tapping an on chip removes it; typed text that isn't the chips' join turns every chip off.
-- [ ] `eatQuestion` / `ateLabel`: girl gives she, boy gives he, `null` gives the name.
-- [ ] `childPrefs`: `solids` defaults to `false`, and a stored `true` is kept.
+- [x] Chip toggling: tapping an off chip adds it ("Carrot" → "Carrot, Porridge"); tapping an on chip removes it; typed text that isn't the chips' join turns every chip off.
+- [x] `eatQuestion` / `ateLabel`: girl gives she, boy gives he, `null` gives the name.
+- [x] `childPrefs`: `solids` defaults to `false`, and a stored `true` is kept.
 
 ### `apps/molly`
 
