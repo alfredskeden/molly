@@ -66,8 +66,8 @@ Before, a past ring could only switch to its pair (the cap) or go back to now; t
 3. [x] **Pager header.** `Pager` component; render it instead of `Header` on a past ring. Remove `Header`'s past-window date line (`dateLine` becomes the live window's). Add `chevron_left` to the symbol set if missing.
 4. [x] **Past stat boxes.** `PastStats` in place of the tiles on an idle past ring. Then remove the tile handlers' `setViewKey(null)` / `showLive()` that only existed for taps on a past ring (check each caller first, NOTES.md "Cleanup sweep").
 5. [x] **E2E.** Update the specs that read the old one-line past header (`ring.spec.ts:101`, `recent-days.spec.ts:101,196`) and add the pager scenarios from TEST_STRATEGY.md.
-6. [ ] **Look review.** Web and emulator-5554, every theme by eye in day and night, 412 and 320 px, largest font.
-7. [ ] **Docs.** `plans/README.md` row; a one-line pointer in `plans/implan-ring-redesign/MAIN.md`'s Dashboard header bullet; facts found along the way in NOTES.md.
+6. [x] **Look review.** Web and emulator-5554, every theme by eye in day and night, 412 and 320 px, largest font.
+7. [x] **Docs.** `plans/README.md` row; a one-line pointer in `plans/implan-ring-redesign/MAIN.md`'s Dashboard header bullet; facts found along the way in NOTES.md.
 
 ## Boundaries
 

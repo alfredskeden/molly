@@ -44,6 +44,10 @@
 - `IconButton` gained `size`, `disabled` (opacity 0.3, `accessibilityState.disabled`) and `pending`; `InkButton` gained `trailing` (the pill's `chevron_right` after the label).
 - The Recent days screen stays mounted under the dashboard on web: e2e date checks after opening a ring from it need `.filter({ visible: true })`.
 
+- **Look review (2026-10-22):** web at 412 / 320 px in all eight looks, day and night; emulator-5554 at font scale 1.0 and 2.0. Fixed along the way: the slept box is wider (`flex-[1.25]`, as in the Today sheet) and its value wraps (`11h 55m` truncated otherwise); the pager title fills the centre column with no fixed line height and caps at `FIXED_SCALE`, since Android's `adjustsFontSizeToFit` clipped `Tuesday night` to `Tuesday` and ran into the pill; the two sides take the wider button's width (measured), so the title stays centred.
+- Left as is: on web at 320 px the night box's `medicine` truncates (`medi…`; web has no `adjustsFontSizeToFit`, Android shrinks it). At font scale 2.0 `Last night` sits right against the `Today ›` pill without overlapping.
+- Android (emulator): back on a paged-to ring goes to the live ring; home and back to the app goes to the live ring; the 60 s snap back is the existing e2e `a past window snaps back to now after a minute`, and each step changes `viewKey`, which restarts it.
+
 ## Open
 
 (none)

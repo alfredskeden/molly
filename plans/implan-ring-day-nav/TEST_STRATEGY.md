@@ -35,20 +35,20 @@ Pager rule (`ringPager` or whatever the implementer names it):
 
 ## Look review (manual: web and emulator-5554, never the developer's own phone)
 
-- [ ] Pager and boxes match the design's three phones (yesterday, last night with `Today ›`, night colours) in Classic.
-- [ ] Every theme by eye, day and night scheme: buttons, pill, boxes and the header pattern look right.
-- [ ] 412 and 320 px, and the largest font: long titles (`Wednesday night`) and values (`11h 40m`) fit or shrink cleanly; nothing overlaps the ring.
-- [ ] The dimmed `‹` reads as unavailable.
-- [ ] TalkBack (accessibility tree): title is a header, buttons read `Previous: …` / `Next: …`, boxes read as one label.
+- [x] Pager and boxes match the design's three phones (yesterday, last night with `Today ›`, night colours) in Classic.
+- [x] Every theme by eye, day and night scheme: buttons, pill, boxes and the header pattern look right.
+- [x] 412 and 320 px, and the largest font: long titles (`Wednesday night`) and values (`11h 40m`) fit or shrink cleanly; nothing overlaps the ring.
+- [x] The dimmed `‹` reads as unavailable.
+- [x] TalkBack (accessibility tree): title is a header, buttons read `Previous: …` / `Next: …`, boxes read as one label.
 
 ## Android (manual, emulator-5554)
 
-- [ ] Back on a paged-to ring goes to the live ring.
-- [ ] Idle 60 s on a past ring returns to now; stepping restarts the minute.
-- [ ] Leaving the app and coming back returns to now.
+- [x] Back on a paged-to ring goes to the live ring.
+- [x] Idle 60 s on a past ring returns to now; stepping restarts the minute.
+- [x] Leaving the app and coming back returns to now.
 
 ## Wrap-up
 
 - [x] Tile handlers no longer reset `viewKey` / call `showLive` only for past-ring taps (or the reason they still must is noted in NOTES.md); `Header` has no past-window branch.
 - [x] Typecheck, lint and all tests green after the removals.
-- [ ] `plans/README.md` lists this plan; the pointer is in `implan-ring-redesign/MAIN.md`; `MAIN.md` steps ticked.
+- [x] `plans/README.md` lists this plan; the pointer is in `implan-ring-redesign/MAIN.md`; `MAIN.md` steps ticked.
