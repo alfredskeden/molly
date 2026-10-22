@@ -268,27 +268,40 @@ export function MessageBox({ message }: { message: Message }) {
 /** Text in a control of fixed size (a segment, a step button) grows this much at most with the system font size. */
 export const FIXED_SCALE = 1.3;
 
-/** The header's 48 px square buttons: outlined on the surface, or filled in the accent (`ink`: Add). */
+/**
+ * The header's 48 px square buttons: outlined on the surface, or filled in the accent (`ink`: Add). `disabled`
+ * dims it (the pager's `‹` with nothing older) and announces it as unavailable.
+ */
 export function IconButton({
   icon,
   label,
   onPress,
   ink,
+  size,
+  disabled,
+  pending,
 }: {
   icon: OutlinedSymbol;
   /** Spoken: the button shows only its glyph. */
   label: string;
   onPress: () => void;
   ink?: boolean;
+  /** The glyph's, when not the header's. */
+  size?: number;
+  disabled?: boolean;
+  /** Waiting on what the press asked for: a spinner in place of the glyph. */
+  pending?: boolean;
 }) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityState={{ disabled: !!disabled, busy: !!pending }}
+      disabled={disabled}
       onPress={onPress}
-      className={`h-12 w-12 items-center justify-center rounded-button active:scale-[0.97] ${ink ? 'bg-accent shadow-button' : 'border-card border-edge bg-surface'}`}
+      className={`h-12 w-12 items-center justify-center rounded-button ${disabled ? 'opacity-30' : 'active:scale-[0.97]'} ${ink ? 'bg-accent shadow-button' : 'border-card border-edge bg-surface'}`}
     >
-      <Glyph name={icon} size={ink ? 26 : 22} color={ink ? 'on-accent' : 'ink'} />
+      {pending ? <Spinner color={ink ? 'on-accent' : 'ink'} /> : <Glyph name={icon} size={size ?? (ink ? 26 : 22)} color={ink ? 'on-accent' : 'ink'} />}
     </Pressable>
   );
 }
@@ -322,10 +335,13 @@ export function InkButton({
   pending,
   pendingLabel,
   accessibilityLabel,
+  trailing,
 }: {
   label: string;
   onPress: () => void;
   icon?: { name: FilledSymbol; filled: true } | { name: OutlinedSymbol; filled?: false };
+  /** A glyph after the label: the pager's `Today ›`. */
+  trailing?: OutlinedSymbol;
   tone?: Tone;
   tall?: boolean;
   stretch?: boolean;
@@ -343,7 +359,7 @@ export function InkButton({
       aria-busy={pending === true}
       disabled={pending}
       onPress={onPress}
-      className={`flex-row items-center justify-center gap-2 rounded-button active:scale-[0.97] ${tall ? 'h-14' : 'h-12'} ${stretch ? 'self-stretch' : icon ? 'self-center pl-3.5 pr-5' : 'px-7'} ${off ? 'bg-line' : `shadow-button ${SOLID[tone]}`}`}
+      className={`flex-row items-center justify-center ${trailing ? 'gap-0.5' : 'gap-2'} rounded-button active:scale-[0.97] ${tall ? 'h-14' : 'h-12'} ${stretch ? 'self-stretch' : icon ? 'self-center pl-3.5 pr-5' : trailing ? 'pl-3.5 pr-1.5' : 'px-7'} ${off ? 'bg-line' : `shadow-button ${SOLID[tone]}`}`}
     >
       {pending ? (
         <Spinner color={ink} />
@@ -356,9 +372,10 @@ export function InkButton({
           <Glyph name={icon.name} size={tall ? 22 : 20} color={ink} />
         ))
       )}
-      <Text className={`font-display-button ${tall ? 'text-title' : icon ? 'text-label' : 'text-base'} ${off ? 'text-muted' : ON_SOLID[tone]}`}>
+      <Text className={`font-display-button ${tall ? 'text-title' : icon || trailing ? 'text-label' : 'text-base'} ${off ? 'text-muted' : ON_SOLID[tone]}`}>
         {pending ? (pendingLabel ?? label) : label}
       </Text>
+      {trailing && !pending && <Glyph name={trailing} size={26} color={ink} />}
     </Pressable>
   );
 }

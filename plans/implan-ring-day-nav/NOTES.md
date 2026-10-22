@@ -34,6 +34,16 @@
 - **Docs:** `plans/README.md` row. `plans/implan-ring-redesign/MAIN.md` describes the header as always name + three buttons: add a one-line pointer to this plan, not a rewrite.
 - Nothing else found: no flags, storage keys, deps or copy tied to the old header.
 
+## Found while building
+
+- **Where `‹` stops:** `previous.enabled` is "some loaded entry starts before the shown ring, or the oldest week Baby Buddy sent wasn't empty". On a past ring with nothing loaded before it, the dashboard fetches the next `useDays` week straight away to find out, so `‹` dims at the first entry ever logged instead of walking through empty windows down to the oldest week. `useDays` is therefore enabled on every past ring (one week, five requests, in the background).
+- **Loaded or not:** a window is "loaded" when it starts on or after `loadedFrom`: the oldest loaded week's `from`, else the past fetch's two midnights. `windowsBefore` always returns windows (clock windows where nothing is logged), so the list is never short; a window before `loadedFrom` may have the wrong start and missing entries, hence `load: true`.
+- **`wantAt`** is now `{ time, before?: true, edit? }`: `before` = the newest window starting before `time` (cap's first tap, `‹`), else the window holding `time` (Today sheet). Back, Back to now and the snap back clear it, so a pending step can't land after the parent left.
+- **Pending `‹`:** a spinner in the button once the wait passes 400 ms (`useDelayed`, same threshold as `useUpdatingOnReturn`).
+- **Tile handler cleanup:** sleep tile's `showLive()`, feed tile's `setViewKey(null)`, `feedNow`'s and `saveAdded`'s `showLive()` removed (tiles and Add entry only exist on the live ring). `start()` keeps closing panels (`closePanels`) because Start sleep in the likely panel calls it; the `?edit=` param still resets `viewKey` (it can arrive on a past ring).
+- `IconButton` gained `size`, `disabled` (opacity 0.3, `accessibilityState.disabled`) and `pending`; `InkButton` gained `trailing` (the pill's `chevron_right` after the label).
+- The Recent days screen stays mounted under the dashboard on web: e2e date checks after opening a ring from it need `.filter({ visible: true })`.
+
 ## Open
 
 (none)
