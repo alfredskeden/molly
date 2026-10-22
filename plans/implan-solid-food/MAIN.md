@@ -96,7 +96,7 @@ Each step lands with `pnpm check` green. TDD for `packages/core` and the plain-T
 5. [x] **Picker and Solids panel**: per-row `columns`, the Solids option in both feed pickers, the `restaurant` glyph, `SolidsPanel`, the writes in `trackers.ts` (unit tests with the fake client), the optimistic guess, `Copy.solids` in every theme, and Life Sim's meal toast lead.
 6. [x] **Showing a meal**: `METHOD_LABELS`, `timeline-text.ts`, toasts and ring marks (unit tests in their `*.test.ts`); the editor (`editor-model.test.ts`, including the `withMethod` fix) and Add entry (`add-model.test.ts`).
 7. [x] **Playwright** (`e2e/tests/solid-food.spec.ts`, see `TEST_STRATEGY.md`), and update any existing spec that assumed four feed options or the "Parent fed" label.
-8. [ ] **Docs and wrap-up**: in `CLAUDE.md`, the Trackers line mentions solids (per-child, app only, not in `lastOfEach`). Add this plan to `plans/README.md`. Run the `implan-cleanup` wrap-up sweep. Look review on web and on the emulator (every theme's feed picker and wording, the Solids panel, the Today row, the editor). Rewrite issue #1 in Gherkin. Open the PR to `develop`.
+8. [x] **Docs and wrap-up**: in `CLAUDE.md`, the Trackers line mentions solids (per-child, app only, not in `lastOfEach`). Add this plan to `plans/README.md`. Run the `implan-cleanup` wrap-up sweep. Look review on web and on the emulator (every theme's feed picker and wording, the Solids panel, the Today row, the editor). Rewrite issue #1 in Gherkin. Open the PR to `develop`.
 
 ## Assumptions
 

@@ -49,7 +49,8 @@ import {
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { AppState, BackHandler, Platform, ScrollView, useWindowDimensions, View } from 'react-native';
+import { AppState, BackHandler, Platform, useWindowDimensions, View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -219,6 +220,9 @@ const FEEDING_STOPS: { button: FeedingStopButton; label: string; spoken?: string
   { button: 'both', label: 'Both', spoken: 'Both breasts', method: 'both breasts' },
   { button: 'bottle', label: 'Bottle', method: 'bottle' },
 ];
+
+/** What the Solids panel has under its food field (chips, Save, padding), kept above the keyboard too. */
+const SOLIDS_BELOW_FIELD = 160;
 
 /** The past window's centre: what it held. */
 function pastCentre(window: DayWindow, entries: EntriesByKind): CentreText {
@@ -1093,7 +1097,9 @@ export default function Dashboard() {
     <View className="flex-1 bg-bg">
       <BehindSheet sheetOpen={sheetOpen}>
         <HeaderArt />
-        <ScrollView
+        {/* Scrolls a focused field (the Solids panel's food) above the keyboard, with the chips and Save under it. */}
+        <KeyboardAwareScrollView
+          bottomOffset={SOLIDS_BELOW_FIELD}
           contentContainerStyle={{ flexGrow: 1, paddingTop: insets.top, paddingBottom: insets.bottom + 28 }}
           keyboardShouldPersistTaps="handled"
         >
@@ -1264,7 +1270,7 @@ export default function Dashboard() {
               </>
             )}
           </View>
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </BehindSheet>
       {askingLockScreen && timerOf(askingLockScreen) && (
         <LockScreenSheet

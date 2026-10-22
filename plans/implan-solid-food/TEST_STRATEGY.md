@@ -68,10 +68,10 @@ Tests come first for `packages/core` and the plain-TS app models (Vitest, Given 
 
 ## Manual look review (web and emulator-5554)
 
-- [ ] Feed picker with five options in every theme. The labels fit on one line at 412 px wide: Solids, Bonus snack, Space food, Half-time snack, solids, Nibbles, Meal.
-- [ ] The knife and fork shows in every theme, inside Ribbon's circle too.
-- [ ] The Solids panel matches the design: field border, chips on and off, Save greyed out. The keyboard opens on Android without covering Save.
-- [ ] The Today row, the ring mark and the editor's five-segment row (14 px labels fit) match the design.
+- [x] Feed picker with five options in every theme. The labels fit on one line at 412 px wide: Solids, Bonus snack, Space food, Half-time snack, solids, Nibbles, Meal.
+- [x] The knife and fork shows in every theme, inside Ribbon's circle too.
+- [x] The Solids panel matches the design: field border, chips on and off, Save greyed out. The keyboard opens on Android without covering Save.
+- [x] The Today row, the ring mark and the editor's five-segment row (14 px labels fit) match the design.
 - [ ] Life Sim's meal toast leads with "Nom nom!".
 - [ ] TalkBack reads the Solids button as "Solids" in every theme.
 
@@ -81,4 +81,4 @@ Tests come first for `packages/core` and the plain-TS app models (Vitest, Given 
 - [x] The `implan-cleanup` wrap-up sweep has run and its findings are applied or noted.
 - [x] `CLAUDE.md` Trackers line and `plans/README.md` updated.
 - [ ] Issue #1 rewritten in Gherkin.
-- [ ] `pnpm check` and `pnpm e2e` green; PR open against `develop`.
+- [x] `pnpm check` and `pnpm e2e` green; PR open against `develop`.
