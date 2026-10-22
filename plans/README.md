@@ -38,3 +38,4 @@ How Molly was built, one folder per plan. Each has `MAIN.md` (the steps, with `[
 | [implan-open-source](implan-open-source/MAIN.md) | Making the repo public | Done |
 | [implan-today-sheet-card](implan-today-sheet-card/MAIN.md) | Today sheet covers Recent days' top card (last night + today), with the ml line | Done |
 | [implan-half-side-feeds](implan-half-side-feeds/MAIN.md) | A feed from one breast counts half the default bottle in the ml line | Done |
+| [implan-ring-day-nav](implan-ring-day-nav/MAIN.md) | Past ring header becomes a pager (‹ ›, `Today ›`) with stat boxes, issue #3 | Planned |
