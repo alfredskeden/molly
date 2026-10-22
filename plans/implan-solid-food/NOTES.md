@@ -27,9 +27,9 @@
 - **Labels**: `METHOD_LABELS` (`timeline-text.ts:11-12`) says "Parent fed" / "Self fed". These show on the Feed tile, in toasts and as the widget's side. They become "Solids".
 - No dead code, flags, dependencies or assets are made obsolete by this plan.
 
-## Facts to confirm (step 1)
+## Confirmed against the live API (step 1, v2.11.0-ls251, 2026-10-22)
 
-- `GET /api/feedings/?type=solid food` filters by type. `?method=` is confirmed (`implan-molly/NOTES.md`); `type` isn't yet.
+- `GET /api/feedings/?type=solid food` filters by type: milk feeds are left out, `self fed` meals are included. `getRecentSolids(child)` uses it (one page of 20).
 - `POST /api/feedings/` with `timer` accepts `notes` and keeps it.
 - `amount: 0` is accepted and comes back as `0` (not `null`).
 - An empty `notes` string is never sent (Save is off without food), so its behaviour doesn't matter.

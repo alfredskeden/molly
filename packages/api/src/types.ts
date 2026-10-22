@@ -83,7 +83,14 @@ export type Feeding = {
  */
 export type StopSleep = { timer: number; nap: boolean };
 
-export type StopFeeding = { timer: number; type: FeedingType; method: FeedingMethod; amount?: number };
+/** `notes`: a meal's food (solid food); Molly writes no other feeding notes. */
+export type StopFeeding = {
+  timer: number;
+  type: FeedingType;
+  method: FeedingMethod;
+  amount?: number;
+  notes?: string;
+};
 
 export type DiaperColor = (typeof DIAPER_COLORS)[number];
 
@@ -114,6 +121,7 @@ export type NewFeeding = {
   type: FeedingType;
   method: FeedingMethod;
   amount?: number;
+  notes?: string;
 };
 
 /** Molly only uses `name` (the parent's whole text, e.g. "Paracetamol 2.5 ml"), never `dosage` / `dosage_unit`. */

@@ -4,9 +4,9 @@ Tests come first for `packages/core` and the plain-TS app models (Vitest, Given 
 
 ## API integration (`packages/api/src/entries.int.test.ts`, container from `pnpm bb:up && pnpm bb:seed`)
 
-- [ ] A finished feeding with `type: 'solid food'`, `method: 'parent fed'`, `amount: 0` and `notes` comes back with `amount` `0` and the notes unchanged.
-- [ ] Stopping a `molly:feeding` timer with those fields and `notes` keeps the notes.
-- [ ] The recent-solids fetch returns only that child's solid feedings, newest first. The filter it uses is recorded in `NOTES.md` and in `implan-molly/NOTES.md`.
+- [x] A finished feeding with `type: 'solid food'`, `method: 'parent fed'`, `amount: 0` and `notes` comes back with `amount` `0` and the notes unchanged.
+- [x] Stopping a `molly:feeding` timer with those fields and `notes` keeps the notes.
+- [x] The recent-solids fetch returns only that child's solid feedings, newest first. The filter it uses is recorded in `NOTES.md` and in `implan-molly/NOTES.md`.
 
 ## Unit (Vitest)
 
