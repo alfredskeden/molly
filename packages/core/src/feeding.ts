@@ -6,6 +6,13 @@ export type BottleDefaults = { type: FeedingType; amount?: number };
 
 export type FeedingStop = Omit<StopFeeding, 'timer'>;
 
+const SOLIDS: ReadonlySet<Feeding['method']> = new Set(['parent fed', 'self fed']);
+
+/** A meal rather than milk: decided by the method, as Baby Buddy's own entries may be `self fed`. */
+export function isSolidFeed(feeding: Pick<Feeding, 'method'>): boolean {
+  return SOLIDS.has(feeding.method);
+}
+
 export function feedingForStop(button: FeedingStopButton, bottle: BottleDefaults): FeedingStop {
   if (button === 'left') return { type: 'breast milk', method: 'left breast' };
   if (button === 'right') return { type: 'breast milk', method: 'right breast' };

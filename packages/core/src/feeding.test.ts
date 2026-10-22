@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { Feeding } from '@molly/api';
 
-import { feedingForStop, lastBottle } from './feeding';
+import { feedingForStop, isSolidFeed, lastBottle } from './feeding';
 
 const bottleDefaults = { type: 'formula', amount: 120 } as const;
 
@@ -136,5 +136,29 @@ describe('last bottle', () => {
 
     // Then
     expect(last).toEqual(bottleDefaults);
+  });
+});
+
+describe('solid or milk', () => {
+  it.each(['parent fed', 'self fed'] as const)('a "%s" feeding is solid', (method) => {
+    // Given
+    const meal = { method };
+
+    // When
+    const solid = isSolidFeed(meal);
+
+    // Then
+    expect(solid).toBe(true);
+  });
+
+  it.each(['left breast', 'right breast', 'both breasts', 'bottle'] as const)('a "%s" feeding is milk', (method) => {
+    // Given
+    const milk = { method };
+
+    // When
+    const solid = isSolidFeed(milk);
+
+    // Then
+    expect(solid).toBe(false);
   });
 });

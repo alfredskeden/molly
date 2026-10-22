@@ -361,6 +361,19 @@ describe('solid food', () => {
     expect(feeding).toMatchObject({ ...meal, notes: 'Banana', start: timer.start });
   });
 
+  it('recent feedings are every kind, newest first', async () => {
+    // Given
+    const client = clientAs(testEnv.parentA);
+    await client.logFeeding({ child: testEnv.childId, start: '2026-09-20T09:00:00Z', end: '2026-09-20T09:10:00Z', type: 'breast milk', method: 'left breast' });
+    await client.logFeeding({ child: testEnv.childId, start: '2026-09-20T12:00:00Z', end: '2026-09-20T12:01:00Z', ...meal, notes: 'Carrot' });
+
+    // When
+    const feedings = await client.getRecentFeedings(testEnv.childId);
+
+    // Then
+    expect(feedings.map((feeding) => feeding.method)).toEqual(['parent fed', 'left breast']);
+  });
+
   it("recent solids are only that child's meals, newest first", async () => {
     // Given
     const client = clientAs(testEnv.parentA);

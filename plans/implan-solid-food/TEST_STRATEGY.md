@@ -12,10 +12,10 @@ Tests come first for `packages/core` and the plain-TS app models (Vitest, Given 
 
 ### `packages/core`
 
-- [ ] `isSolidFeed`: true for `parent fed` and `self fed`, false for the sides and `bottle`. `drank` tests stay green unchanged after it switches to `isSolidFeed`.
-- [ ] `lastOfEach`: a meal newer than the last milk feed leaves `feeding` as the milk feed. With only meals, it is `null`.
-- [ ] `needs` / `rhythm`: a meal doesn't refill the feed need and doesn't change the usual feed gap.
-- [ ] `totalsBetween`: a meal still counts in `feedings`.
+- [x] `isSolidFeed`: true for `parent fed` and `self fed`, false for the sides and `bottle`. `drank` tests stay green unchanged after it switches to `isSolidFeed`.
+- [x] `lastOfEach`: a meal newer than the last milk feed leaves `feeding` as the milk feed. With only meals, it is `null`.
+- [x] `needs` / `rhythm`: a meal doesn't refill the feed need and doesn't change the usual feed gap.
+- [x] `totalsBetween`: a meal still counts in `feedings`.
 - [ ] `feedingForStop('solids', bottle, '  Carrot ')` gives `solid food` / `parent fed` / `0` / `'Carrot'`. The other buttons are unchanged, and carry no notes.
 - [ ] `recentFoods`:
   - none → `[]`
@@ -48,7 +48,7 @@ Tests come first for `packages/core` and the plain-TS app models (Vitest, Given 
   - `withMethod` from Bottle to Solids gives `solid food` with amount `0`
   - `withMethod` from Left to Bottle is unchanged
 - [ ] `add-model.ts`: Solids without food has a problem; with food, none. Switching kind keeps the typed food only for Solids.
-- [ ] Widget model: with a meal newer than the last milk feed, the snapshot's last side is the milk feed's side.
+- [x] Widget model: with a meal newer than the last milk feed, the snapshot's last side is the milk feed's side.
 
 ## Playwright (`e2e/tests/solid-food.spec.ts`, seeded Baby Buddy, classic theme unless said)
 

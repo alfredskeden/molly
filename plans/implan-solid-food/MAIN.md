@@ -90,7 +90,7 @@ Off (the default), nothing changes for that child: Feed keeps its four options.
 Each step lands with `pnpm check` green. TDD for `packages/core` and the plain-TS app models (Given / When / Then, zero → one → many, then boundaries); integration tests against the container for `packages/api`.
 
 1. [x] **Confirm against the live API** (`pnpm bb:up && pnpm bb:seed`, then add to `packages/api/src/entries.int.test.ts`): each item under "Facts to confirm" in `NOTES.md`. Record the results in `NOTES.md` and in `implan-molly/NOTES.md` "Confirmed against the live API". Add `notes` to `NewFeeding` / `StopFeeding`, and add the recent-solids fetch.
-2. [ ] **Refactor first, core**: extract `isSolidFeed` and use it in `drank` (tests stay green). Then, test-first: `lastOfEach` and `needs` skip solids; `totalsBetween` still counts them.
+2. [x] **Refactor first, core**: extract `isSolidFeed` and use it in `drank` (tests stay green). Then, test-first: `lastOfEach` and `needs` skip solids; `totalsBetween` still counts them.
 3. [ ] **Core rules**: `feedingForStop('solids', …)`, `recentFoods`, chip toggling, `eatQuestion` / `ateLabel`, and `ChildPrefs.solids` with its default.
 4. [ ] **Setting**: `parseChildPrefs` (unit test in the storage tests), and the switch on the child screen.
 5. [ ] **Picker and Solids panel**: per-row `columns`, the Solids option in both feed pickers, the `restaurant` glyph, `SolidsPanel`, the writes in `trackers.ts` (unit tests with the fake client), the optimistic guess, `Copy.solids` in every theme, and Life Sim's meal toast lead.

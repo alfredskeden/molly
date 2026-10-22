@@ -81,6 +81,17 @@ describe("the Today card's totals", () => {
     expect(totals).toEqual({ sleepMs: 0, feedings: 2, changes: 2, medications: 0 });
   });
 
+  it('count a meal as a feeding', () => {
+    // Given
+    const meal = feeding({ start: at(20, 12), end: at(20, 12, 1), type: 'solid food', method: 'parent fed', amount: 0 });
+
+    // When
+    const totals = todaysTotals({ ...none, feeding: [meal] }, since, null, now);
+
+    // Then
+    expect(totals.feedings).toBe(1);
+  });
+
   it('count medication since the window start, not before it', () => {
     // Given
     const entries = {

@@ -1,7 +1,7 @@
 import type { Change, Feeding, Sleep, Timer } from '@molly/api';
 
 import { dayWindow, morningWake, type DayWindow } from './day-window';
-import { newest, type EntriesByKind } from './latest';
+import { milkFeeds, newest, type EntriesByKind } from './latest';
 import { atClock, isNightSleep, type NapWindow } from './nap';
 import { DAY_PLAN_TUNING, median, NEXT_SLEEP_TUNING, sleepContext } from './next-sleep';
 import { isVitaminD } from './vitamin-d';
@@ -72,9 +72,9 @@ export function usualGap(spans: Span[], windows: DayWindow[], kind: DayWindow['k
   return gaps.length >= NEEDS_TUNING.gapsNeeded ? median(gaps) : null;
 }
 
-/** The usual gaps between feeds and between changes in windows of `kind`. */
+/** The usual gaps between milk feeds and between changes in windows of `kind`: a meal doesn't replace milk. */
 export function rhythm(entries: { feeding: Feeding[]; change: Change[] }, windows: DayWindow[], kind: DayWindow['kind']): Rhythm {
-  const feeds = entries.feeding.map((entry) => ({ start: new Date(entry.start), end: new Date(entry.end) }));
+  const feeds = milkFeeds(entries.feeding).map((entry) => ({ start: new Date(entry.start), end: new Date(entry.end) }));
   const changes = entries.change.map((entry) => ({ start: new Date(entry.time), end: new Date(entry.time) }));
   return { feed: usualGap(feeds, windows, kind), diaper: usualGap(changes, windows, kind) };
 }
@@ -103,7 +103,7 @@ export type NeedsInput = {
 export function needs(input: NeedsInput, now: Date): Needs {
   const { entries, running, rhythm, next } = input;
   const lastSleep = newest(entries.sleep);
-  const lastFeed = newest(entries.feeding);
+  const lastFeed = newest(milkFeeds(entries.feeding));
   const lastChange = newest(entries.change);
   const lastDose = newest(entries.medication.filter((entry) => isVitaminD(entry.name)));
   const wake = lastSleep && new Date(lastSleep.end);
@@ -219,7 +219,7 @@ export function moodlets(input: NeedsInput, now: Date): Moodlet[] {
   const { entries } = input;
   const last: Record<NeedKind, string | undefined> = {
     sleep: newest(entries.sleep)?.end,
-    feed: newest(entries.feeding)?.end,
+    feed: newest(milkFeeds(entries.feeding))?.end,
     diaper: newest(entries.change)?.time,
     medicine: newest(entries.medication)?.time,
   };

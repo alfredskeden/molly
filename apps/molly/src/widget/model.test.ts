@@ -188,6 +188,7 @@ describe('the widget snapshot', () => {
       listTimers: vi.fn(async () => []),
       listNotes: vi.fn(async () => []),
       getRecentBottles: async () => [],
+      getRecentFeedings: async () => [],
     };
 
     // When
@@ -206,6 +207,27 @@ describe('the widget snapshot', () => {
       nextSleep: null,
       lastBottle: { type: 'formula', amount: 120 },
     });
+  });
+
+  it('keeps the last milk feed as the last feeding when a meal is newer', async () => {
+    // Given
+    const meal = { ...savedFeeding, id: 5, start: '2026-09-20T07:30:00Z', type: 'solid food', method: 'parent fed', amount: 0 };
+    const milk = { ...savedFeeding, id: 4, start: '2026-09-20T06:10:00Z', type: 'breast milk', method: 'left breast' };
+    const client = {
+      findTimer: vi.fn(async () => null),
+      getLatestEntries: vi.fn(async () => ({ sleep: null, feeding: meal, change: null })),
+      getRecentFeedings: vi.fn(async () => [meal, milk]),
+      listEntries: vi.fn(async () => []),
+      listChildren: vi.fn(async () => []),
+      listNotes: vi.fn(async () => []),
+      getRecentBottles: vi.fn(async () => []),
+    };
+
+    // When
+    const snapshot = await fetchSnapshot(client as never, { child: CHILD, userId: 2, napWindow, now: NOW });
+
+    // Then
+    expect(snapshot).toMatchObject({ lastFeeding: '2026-09-20T06:10:00Z', lastFeedingMethod: 'left breast' });
   });
 
   it("keeps the newest bottle with an amount, where the widget's Bottle saves from", async () => {
@@ -242,6 +264,7 @@ describe('the widget snapshot', () => {
       listTimers: vi.fn(async () => []),
       listNotes: vi.fn(async () => []),
       getRecentBottles: async () => [],
+      getRecentFeedings: async () => [],
     };
 
     // When
@@ -263,6 +286,7 @@ describe('the widget snapshot', () => {
       listTimers: vi.fn(async () => []),
       listNotes: vi.fn(async () => [skip]),
       getRecentBottles: async () => [],
+      getRecentFeedings: async () => [],
     };
 
     // When
@@ -285,6 +309,7 @@ describe('the widget snapshot', () => {
       listTimers: vi.fn(async () => []),
       listNotes: vi.fn(async () => []),
       getRecentBottles: async () => [],
+      getRecentFeedings: async () => [],
     };
 
     // When
@@ -306,6 +331,7 @@ describe('the widget snapshot', () => {
       listTimers: vi.fn(async () => []),
       listNotes: vi.fn(async () => []),
       getRecentBottles: async () => [],
+      getRecentFeedings: async () => [],
     };
 
     // When
@@ -408,6 +434,7 @@ describe('refreshing the widget cache', () => {
     listNotes: async () => [],
     listTimers: async () => [],
     getRecentBottles: async () => [],
+    getRecentFeedings: async () => [],
   };
 
   it('a refused refresh whose profile check is refused too notes the rejected key', async () => {
@@ -867,6 +894,7 @@ describe('a widget tap waiting on Baby Buddy', () => {
       listChildren: async () => [],
       listNotes: async () => [],
       getRecentBottles: async () => [],
+      getRecentFeedings: async () => [],
       listTimers: async () => [],
     };
 
@@ -1109,6 +1137,7 @@ describe('a refresh with a Vitamin D reminder showing', () => {
     listChildren: async () => children,
     listNotes: async () => [],
     getRecentBottles: async () => [],
+    getRecentFeedings: async () => [],
     listTimers: async () => [],
     listEntries: vi.fn(async (kind: string, query: { child: number }) => (kind === 'medication' ? medication(query.child) : [])),
   });
@@ -1321,6 +1350,7 @@ describe('several children on the widget', () => {
       listEntries: async () => [],
       listNotes: async () => [],
       getRecentBottles: async () => [],
+      getRecentFeedings: async () => [],
       listChildren: async () => [
         { id: OTTO, first_name: 'Otto', birth_date: '2026-06-01' },
         { id: CHILD, first_name: 'Molly', birth_date: '2026-05-10' },
@@ -1579,6 +1609,7 @@ describe('widgets pinned to a child', () => {
       listEntries: async () => [],
       listNotes: async () => [],
       getRecentBottles: async () => [],
+      getRecentFeedings: async () => [],
       listChildren: async () => [
         { id: OTTO, first_name: 'Otto', birth_date: '2026-06-01' },
         { id: CHILD, first_name: 'Molly', birth_date: '2026-05-10' },
@@ -1764,6 +1795,7 @@ describe('the nap reminder in the widget cache', () => {
       listChildren: async () => children,
       listNotes: async () => [],
       getRecentBottles: async () => [],
+      getRecentFeedings: async () => [],
       listTimers: async () => [],
       ...overrides,
     }) as never;

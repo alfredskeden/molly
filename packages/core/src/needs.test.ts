@@ -195,6 +195,21 @@ describe('the rhythm', () => {
     // Then
     expect(found).toEqual({ feed: null, diaper: null });
   });
+
+  it('leaves meals out of the usual gap between feeds', () => {
+    // Given
+    const feedings = [0, 3, 6, 9, 12, 15].map((hour) => feeding({ start: at(11, 1 + hour), end: at(11, 1 + hour, 30) }));
+    const meals = [2, 5, 8, 11, 14].map((hour) =>
+      feeding({ start: at(11, 1 + hour), end: at(11, 1 + hour, 1), type: 'solid food', method: 'parent fed' }),
+    );
+    const wide = [windowOf('day', on(11, 0), on(12, 0))];
+
+    // When
+    const found = rhythm({ feeding: [...feedings, ...meals], change: [] }, wide, 'day');
+
+    // Then
+    expect(found.feed).toBe(2.5 * HOUR);
+  });
 });
 
 const none = { sleep: [], feeding: [], change: [], medication: [] };
@@ -298,6 +313,18 @@ describe('the feed need', () => {
 
     // When
     const found = needs(input({ entries: { ...none, feeding: [feed] } }), on(12, 10, 30));
+
+    // Then
+    expect(found.feed?.value).toBe(50);
+  });
+
+  it("isn't refilled by a meal after the last milk feed", () => {
+    // Given
+    const feed = feeding({ start: at(12, 8, 30), end: at(12, 9) });
+    const meal = feeding({ start: at(12, 9, 59), end: at(12, 10), type: 'solid food', method: 'parent fed' });
+
+    // When
+    const found = needs(input({ entries: { ...none, feeding: [feed, meal] }, rhythm: { feed: 2 * HOUR, diaper: null } }), on(12, 10));
 
     // Then
     expect(found.feed?.value).toBe(50);
@@ -568,6 +595,17 @@ describe('the moodlets', () => {
       { key: 'fresh-bum', points: 1 },
       { key: 'soothed-gums', points: 1 },
     ]);
+  });
+
+  it("give no milk-drunk one for a meal", () => {
+    // Given
+    const meal = feeding({ start: at(12, 9, 50), end: at(12, 9, 51), type: 'solid food', method: 'parent fed' });
+
+    // When
+    const found = moodlets(input({ entries: { ...none, feeding: [meal] } }), on(12, 10));
+
+    // Then
+    expect(found).toEqual([]);
   });
 
   it('give none for something logged over 30 minutes ago', () => {

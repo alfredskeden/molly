@@ -1,5 +1,6 @@
 import type { Feeding } from '@molly/api';
 
+import { isSolidFeed } from './feeding';
 import { counted } from './format';
 
 /**
@@ -9,7 +10,6 @@ import { counted } from './format';
  */
 export type Drank = { ml: number; estimated: boolean; unmeasured: number; unmeasuredBreast: number };
 
-const SOLIDS: ReadonlySet<Feeding['method']> = new Set(['parent fed', 'self fed']);
 const ONE_SIDE: ReadonlySet<Feeding['method']> = new Set(['left breast', 'right breast']);
 
 /**
@@ -20,7 +20,7 @@ const ONE_SIDE: ReadonlySet<Feeding['method']> = new Set(['left breast', 'right 
 export function drank(feedings: Feeding[], from: Date, to: Date, defaultMl: number | undefined): Drank {
   const [start, end] = [from.getTime(), to.getTime()];
   const drunk = feedings.filter(
-    (feed) => !SOLIDS.has(feed.method) && Date.parse(feed.start) >= start && Date.parse(feed.start) < end,
+    (feed) => !isSolidFeed(feed) && Date.parse(feed.start) >= start && Date.parse(feed.start) < end,
   );
   const measured = drunk.flatMap((feed) => (feed.method === 'bottle' && feed.amount !== null ? [feed.amount] : []));
   const unmeasured = drunk.filter((feed) => feed.method !== 'bottle' || feed.amount === null);

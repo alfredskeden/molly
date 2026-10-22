@@ -32,6 +32,7 @@
 - `GET /api/feedings/?type=solid food` filters by type: milk feeds are left out, `self fed` meals are included. `getRecentSolids(child)` uses it (one page of 20).
 - `POST /api/feedings/` with `timer` accepts `notes` and keeps it.
 - `amount: 0` is accepted and comes back as `0` (not `null`).
+- The widget snapshot read the server's newest feeding (`getLatestEntries`), any kind. When that one is a meal, the refresh now also fetches `getRecentFeedings(child)` (one page of 20, every kind) and takes the newest milk feed from it. The hunger moodlet ("milk-drunk") follows milk feeds too.
 - An empty `notes` string is never sent (Save is off without food), so its behaviour doesn't matter.
 
 ## Theme wording and icon (decided)

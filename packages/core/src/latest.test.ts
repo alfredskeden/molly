@@ -48,4 +48,27 @@ describe('last of each', () => {
     // Then
     expect(last).toEqual({ sleep: newerSleep, feeding: newerFeeding, change: newerChange });
   });
+
+  it('keeps the last milk feed as the feeding when a meal is newer', () => {
+    // Given
+    const milk = feeding({ start: '2026-09-20T09:00:00Z', end: '2026-09-20T09:15:00Z' });
+    const meal = feeding({ start: '2026-09-20T12:00:00Z', end: '2026-09-20T12:01:00Z', type: 'solid food', method: 'parent fed' });
+
+    // When
+    const last = lastOfEach({ sleep: [], feeding: [milk, meal], change: [], medication: [] });
+
+    // Then
+    expect(last.feeding).toBe(milk);
+  });
+
+  it('has no feeding with only meals', () => {
+    // Given
+    const meal = feeding({ start: '2026-09-20T12:00:00Z', end: '2026-09-20T12:01:00Z', type: 'solid food', method: 'self fed' });
+
+    // When
+    const last = lastOfEach({ sleep: [], feeding: [meal], change: [], medication: [] });
+
+    // Then
+    expect(last.feeding).toBeNull();
+  });
 });
