@@ -2,6 +2,7 @@ import { createClient, type Timer } from '@molly/api';
 import {
   lastBottle,
   NEEDS_TUNING,
+  recentFoods,
   rhythm,
   SKIP_TAG,
   windowsBefore,
@@ -101,6 +102,22 @@ export function useLastBottle(fallback: BottleDefaults): BottleDefaults {
   });
   const recent = useRecentEntries().data?.feeding;
   return useMemo(() => lastBottle([...(recent ?? []), ...(bottles.data ?? [])], fallback), [recent, bottles.data, fallback]);
+}
+
+/**
+ * The Solids panel's chips (`recentFoods`): the newest meals reach further back than the entries' two days,
+ * and the entries add one saved since.
+ */
+export function useRecentFoods(): string[] {
+  const client = useClient();
+  const { childId } = useSignedInSession();
+  const solids = useQuery({
+    queryKey: ['solids', childId],
+    queryFn: ({ signal }) => client.getRecentSolids(childId, { signal }),
+  });
+  const recent = useRecentEntries().data?.feeding;
+  // A meal in both lists gives the same foods twice, which `recentFoods` keeps once.
+  return useMemo(() => recentFoods([...(recent ?? []), ...(solids.data ?? [])]), [recent, solids.data]);
 }
 
 /** The past page starts after the midnight this many days back (yesterday's day, seen after midnight). */

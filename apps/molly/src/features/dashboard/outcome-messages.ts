@@ -29,8 +29,8 @@ export type Toast = {
   adjust?: Adjustable;
   /** An entry to open in the edit screen. */
   edit?: { kind: 'sleep' | 'feeding'; id: number };
-  /** An entry was just saved here: Life Sim leads with its tracker's top word ("Fresh bum!"). */
-  saved?: true;
+  /** An entry was just saved here: Life Sim leads with its tracker's top word ("Fresh bum!"), or its meal's (`meal`). */
+  saved?: true | 'meal';
   /** Takes the change back: a skipped nap's Undo. */
   undo?: () => void;
   /** A child's avatar instead of the tone's dot ("Showing Otto"). */

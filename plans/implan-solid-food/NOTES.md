@@ -34,6 +34,9 @@
 - `POST /api/feedings/` with `timer` accepts `notes` and keeps it.
 - `amount: 0` is accepted and comes back as `0` (not `null`).
 - The widget snapshot read the server's newest feeding (`getLatestEntries`), any kind. When that one is a meal, the refresh now also fetches `getRecentFeedings(child)` (one page of 20, every kind) and takes the newest milk feed from it. The hunger moodlet ("milk-drunk") follows milk feeds too.
+- The food chips (`useRecentFoods`, query key `['solids', childId]`, persisted like `bottles`) merge `getRecentSolids` with the dashboard's entries.
+- The optimistic instant feed is built by `instantFeeding` (`optimistic.ts`), so the guess carrying the food is unit-tested.
+- Life Sim's meal lead: `Toast.saved` is `true | 'meal'`; `'meal'` picks `toastLeads.meal` ("Nom nom!").
 - An empty `notes` string is never sent (Save is off without food), so its behaviour doesn't matter.
 
 ## Theme wording and icon (decided)

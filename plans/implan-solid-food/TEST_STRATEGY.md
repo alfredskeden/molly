@@ -33,11 +33,11 @@ Tests come first for `packages/core` and the plain-TS app models (Vitest, Given 
 ### `apps/molly`
 
 - [x] `parseChildPrefs`: `solids: true` round-trips; a missing or non-boolean value gives `false`.
-- [ ] `trackers.ts` with the fake client:
+- [x] `trackers.ts` with the fake client:
   - `logFeed` with Solids posts the solid payload with notes and the instant times
   - `stopFeeding` with Solids posts `timer`, the payload and notes
   - `addEntry` with Solids posts the payload with notes
-- [ ] `optimistic.ts`: the guessed meal carries its notes.
+- [x] `optimistic.ts`: the guessed meal carries its notes.
 - [ ] `timeline-text.ts`: a meal's title is its food, or "No food noted" when it has none; its detail is "HH:MM · Solids"; its spoken text names the food. `METHOD_LABELS` says "Solids" for `parent fed` and `self fed`.
 - [ ] `outcome-messages.ts`: an instant or stopped meal's toast is "Feed saved · Carrot, Porridge" (with the theme's `feed` word), with no ml and no duration.
 - [ ] Ring marks: a meal uses the `restaurant` icon and its spoken text names the food.
