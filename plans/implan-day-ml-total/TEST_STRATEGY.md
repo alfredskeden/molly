@@ -9,7 +9,7 @@
 - [x] Many bottles with ml → their sum.
 - [x] One breastfeed (each of left / right / both) with a 150 ml default → 150 ml, estimated.
 - [x] Bottle without ml with a default → counts the default, estimated.
-- [x] Bottles and breastfeeds mixed → bottle ml plus default per breastfeed, estimated.
+- [x] Bottles and breastfeeds mixed → bottle ml plus default per breastfeed, estimated (one breast counts half since [`implan-half-side-feeds`](../implan-half-side-feeds/MAIN.md)).
 - [x] `parent fed` and `self fed` add nothing and aren't counted as unmeasured.
 - [x] Boundaries: a feed starting exactly at `from` counts, one starting at `to` doesn't, one that started before `from` and ran past it doesn't.
 - [x] No default: breastfeeds add no ml, `unmeasured` and `unmeasuredBreast` count them, not estimated.

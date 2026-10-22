@@ -38,10 +38,10 @@ Only `drank` in `packages/core/src/drank.ts` changes. Its callers (`drankLine` i
 
 ## Steps
 
-1. [ ] `drank` counts one side as half the default, TDD in `packages/core/src/drank.test.ts` (see `TEST_STRATEGY.md`). Update the tests that assumed a full default per breastfeed (the `it.each` over the three methods, "adds bottles and a default per breastfeed together"). Rewrite the doc comments on `Drank` and `drank` so they no longer say every breastfeed counts `defaultMl`.
-2. [ ] Update the ml numbers in `e2e/tests/recent-days.spec.ts` (expected values are in `NOTES.md`) and rename the two tests "… a breastfeed counted as the default bottle" to say one side counts half. Add a `both breasts` feed to the Today sheet test so the full-default case is covered end to end.
-3. [ ] Docs: in `plans/implan-day-ml-total/MAIN.md` (outcome line and the "Default bottle as the breastfeed estimate" decision) and `plans/implan-today-sheet-card/MAIN.md` (ml line rule) add a pointer that one-side breastfeeds count half since this plan, the way `implan-day-ml-total` already points to `implan-today-sheet-card`. Add this plan to `plans/README.md`.
-4. [ ] `pnpm check` and `pnpm e2e` green; tick `TEST_STRATEGY.md`.
+1. [x] `drank` counts one side as half the default, TDD in `packages/core/src/drank.test.ts` (see `TEST_STRATEGY.md`). Update the tests that assumed a full default per breastfeed (the `it.each` over the three methods, "adds bottles and a default per breastfeed together"). Rewrite the doc comments on `Drank` and `drank` so they no longer say every breastfeed counts `defaultMl`.
+2. [x] Update the ml numbers in `e2e/tests/recent-days.spec.ts` (expected values are in `NOTES.md`) and rename the two tests "… a breastfeed counted as the default bottle" to say one side counts half. Add a `both breasts` feed to the Today sheet test so the full-default case is covered end to end.
+3. [x] Docs: in `plans/implan-day-ml-total/MAIN.md` (outcome line and the "Default bottle as the breastfeed estimate" decision) and `plans/implan-today-sheet-card/MAIN.md` (ml line rule) add a pointer that one-side breastfeeds count half since this plan, the way `implan-day-ml-total` already points to `implan-today-sheet-card`. Add this plan to `plans/README.md`.
+4. [x] `pnpm check` and `pnpm e2e` green; tick `TEST_STRATEGY.md`.
 
 ## Assumptions
 
