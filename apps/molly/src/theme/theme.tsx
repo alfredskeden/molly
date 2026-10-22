@@ -113,7 +113,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     <ThemeContext.Provider value={theme}>
       <View style={variablesFor(look)} className="flex-1 bg-bg">
         <StatusBar style={scheme === 'night' ? 'light' : 'dark'} />
-        {children}
+        {/* A wide browser window gets the phone layout in a centred column, not tiles and sheets stretched edge to edge. */}
+        <View className={Platform.OS === 'web' ? 'w-full max-w-[520px] flex-1 self-center' : 'flex-1'}>{children}</View>
       </View>
     </ThemeContext.Provider>
   );
