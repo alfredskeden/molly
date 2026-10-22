@@ -73,3 +73,35 @@ test('storage that cannot be read ends on onboarding, not on the splash', async 
   // Then
   await expect(page.getByLabel('Baby Buddy address')).toBeVisible();
 });
+
+test('a sheet sits on the bottom of the screen with its own surface', async ({ page }) => {
+  // Given
+  await signInAs(page, testEnv.parentB);
+
+  // When
+  await button(page, 'Add entry').click();
+
+  // Then
+  const sheet = page.getByLabel('New entry', { exact: true });
+  await expect(sheet).toBeVisible();
+  // Polled: the sheet slides in from below.
+  await expect
+    .poll(async () => Math.round(await sheet.evaluate((node) => node.getBoundingClientRect().bottom)))
+    .toBe(page.viewportSize()!.height);
+  expect((await sheet.boundingBox())!.y).toBeGreaterThan(0);
+  expect(await sheet.evaluate((node) => getComputedStyle(node).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
+});
+
+test('a wide browser window shows the app in a centred phone-width column', async ({ page }) => {
+  // Given
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await signInAs(page, testEnv.parentB);
+
+  // When
+  await button(page, 'Add entry').click();
+
+  // Then
+  const box = (await page.getByLabel('New entry', { exact: true }).boundingBox())!;
+  expect(box.width).toBeLessThanOrEqual(520);
+  expect(Math.round(box.x + box.width / 2)).toBe(640);
+});
