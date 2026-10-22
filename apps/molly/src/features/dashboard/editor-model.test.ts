@@ -1,7 +1,7 @@
 import type { Change, Feeding, Sleep } from '@molly/api';
 import { describe, expect, it } from 'vitest';
 
-import { draftOf, isChanged, nudge, patchOf, withMethod, withNap } from './editor-model';
+import { draftOf, isChanged, nudge, patchOf, withMethod, withNap, withNotes } from './editor-model';
 
 const at = (clock: string) => {
   const [hours = 0, minutes = 0] = clock.split(':').map(Number);
@@ -139,6 +139,7 @@ describe("a feed's kind", () => {
       type: 'breast milk',
       method: 'right breast',
       amount: null,
+      notes: null,
     });
   });
 
@@ -159,6 +160,59 @@ describe("a feed's kind", () => {
 
     // Then
     expect(patchOf(draft, { kind: 'feeding', entry: bottleFeed })).toMatchObject({ type: 'breast milk', method: 'left breast', amount: null });
+  });
+});
+
+describe('a meal', () => {
+  const meal: Feeding = { ...feed, type: 'solid food', method: 'parent fed', amount: 0, notes: 'Carrot' };
+
+  it('opens as Solids with its food', () => {
+    // When
+    const draft = draftOf({ kind: 'feeding', entry: meal });
+
+    // Then
+    expect(draft).toMatchObject({ method: 'parent fed', notes: 'Carrot' });
+  });
+
+  it('is changed once its food changes, and sends the new food', () => {
+    // When
+    const draft = withNotes(draftOf({ kind: 'feeding', entry: meal }), 'Carrot, Pea');
+
+    // Then
+    expect(isChanged(draft, { kind: 'feeding', entry: meal })).toBe(true);
+    expect(patchOf(draft, { kind: 'feeding', entry: meal })).toMatchObject({ notes: 'Carrot, Pea' });
+  });
+
+  it('is breast milk with no amount when it becomes a side, keeping the notes', () => {
+    // When
+    const draft = withMethod(draftOf({ kind: 'feeding', entry: meal }), 'left breast', bottle);
+
+    // Then
+    expect(patchOf(draft, { kind: 'feeding', entry: meal })).toMatchObject({
+      type: 'breast milk',
+      method: 'left breast',
+      amount: null,
+      notes: 'Carrot',
+    });
+  });
+
+  it("takes the child's bottle and amount when it becomes a bottle", () => {
+    // When
+    const draft = withMethod(draftOf({ kind: 'feeding', entry: meal }), 'bottle', bottle);
+
+    // Then
+    expect(patchOf(draft, { kind: 'feeding', entry: meal })).toMatchObject({ type: 'formula', method: 'bottle', amount: 120 });
+  });
+
+  it('a bottle becomes solid food of no amount', () => {
+    // Given
+    const bottleFeed: Feeding = { ...feed, type: 'formula', method: 'bottle', amount: 150 };
+
+    // When
+    const draft = withMethod(draftOf({ kind: 'feeding', entry: bottleFeed }), 'parent fed', bottle);
+
+    // Then
+    expect(patchOf(draft, { kind: 'feeding', entry: bottleFeed })).toMatchObject({ type: 'solid food', method: 'parent fed', amount: 0 });
   });
 });
 

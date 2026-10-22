@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { clientAs, resetEntries, testEnv } from '../test/test-env';
+import { clientAs, createChild, deleteChild, resetEntries, resetTimers, testEnv } from '../test/test-env';
 import { DIAPER_COLORS, FEEDING_METHODS, FEEDING_TYPES } from './index';
 
 beforeEach(resetEntries);
@@ -325,5 +325,72 @@ describe('enum values Molly sends', () => {
 
     // Then
     expect(edited.color).toBe(color);
+  });
+});
+
+describe('solid food', () => {
+  const meal = { type: 'solid food', method: 'parent fed', amount: 0 } as const;
+
+  it('a meal with amount 0 and notes keeps both', async () => {
+    // Given
+    const client = clientAs(testEnv.parentA);
+
+    // When
+    const feeding = await client.logFeeding({
+      child: testEnv.childId,
+      start: '2026-09-20T12:00:00Z',
+      end: '2026-09-20T12:01:00Z',
+      ...meal,
+      notes: 'Carrot, Porridge',
+    });
+
+    // Then
+    expect(feeding).toMatchObject({ ...meal, notes: 'Carrot, Porridge' });
+  });
+
+  it('stopping a feeding timer as a meal keeps the notes', async () => {
+    // Given
+    const client = clientAs(testEnv.parentA);
+    await resetTimers();
+    const timer = await client.startTimer({ child: testEnv.childId, name: 'molly:feeding' });
+
+    // When
+    const feeding = await client.stopFeeding({ timer: timer.id, ...meal, notes: 'Banana' });
+
+    // Then
+    expect(feeding).toMatchObject({ ...meal, notes: 'Banana', start: timer.start });
+  });
+
+  it('recent feedings are every kind, newest first', async () => {
+    // Given
+    const client = clientAs(testEnv.parentA);
+    await client.logFeeding({ child: testEnv.childId, start: '2026-09-20T09:00:00Z', end: '2026-09-20T09:10:00Z', type: 'breast milk', method: 'left breast' });
+    await client.logFeeding({ child: testEnv.childId, start: '2026-09-20T12:00:00Z', end: '2026-09-20T12:01:00Z', ...meal, notes: 'Carrot' });
+
+    // When
+    const feedings = await client.getRecentFeedings(testEnv.childId);
+
+    // Then
+    expect(feedings.map((feeding) => feeding.method)).toEqual(['parent fed', 'left breast']);
+  });
+
+  it("recent solids are only that child's meals, newest first", async () => {
+    // Given
+    const client = clientAs(testEnv.parentA);
+    const sibling = await createChild('Sibling');
+    try {
+      await client.logFeeding({ child: testEnv.childId, start: '2026-09-20T08:00:00Z', end: '2026-09-20T08:01:00Z', ...meal, notes: 'Carrot' });
+      await client.logFeeding({ child: testEnv.childId, start: '2026-09-20T09:00:00Z', end: '2026-09-20T09:10:00Z', type: 'breast milk', method: 'left breast' });
+      await client.logFeeding({ child: testEnv.childId, start: '2026-09-20T12:00:00Z', end: '2026-09-20T12:01:00Z', type: 'solid food', method: 'self fed', notes: 'Banana' });
+      await client.logFeeding({ child: sibling, start: '2026-09-20T13:00:00Z', end: '2026-09-20T13:01:00Z', ...meal, notes: 'Pear' });
+
+      // When
+      const solids = await client.getRecentSolids(testEnv.childId);
+
+      // Then
+      expect(solids.map((feeding) => feeding.notes)).toEqual(['Banana', 'Carrot']);
+    } finally {
+      await deleteChild(sibling);
+    }
   });
 });

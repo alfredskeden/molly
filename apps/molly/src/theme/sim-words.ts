@@ -16,8 +16,8 @@ export type SimWords = {
   pastNap: string;
   /** Under the wanted tracker's icon in the ring's corner. */
   wants: string;
-  /** Before a saved entry's toast ("Fresh bum! Diaper saved 12:10"). */
-  toastLeads: Record<NeedKind, string>;
+  /** Before a saved entry's toast ("Fresh bum! Diaper saved 12:10"); `meal` before a saved meal's. */
+  toastLeads: Record<NeedKind | 'meal', string>;
 };
 
 export const SIM_WORDS: SimWords = {
@@ -42,5 +42,5 @@ export const SIM_WORDS: SimWords = {
   },
   pastNap: 'Way past nap time',
   wants: 'Wants',
-  toastLeads: { sleep: 'Bright-eyed!', feed: 'Milk drunk!', diaper: 'Fresh bum!', medicine: 'Soothed gums!' },
+  toastLeads: { sleep: 'Bright-eyed!', feed: 'Milk drunk!', diaper: 'Fresh bum!', medicine: 'Soothed gums!', meal: 'Nom nom!' },
 };

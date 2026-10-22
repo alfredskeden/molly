@@ -155,6 +155,27 @@ describe('stopping a feeding', () => {
     expect(client.findTimer).toHaveBeenCalledWith({ child: CHILD, name: 'molly:feeding' });
     expect(client.stopFeeding).toHaveBeenCalledWith({ timer: 8, type: 'formula', method: 'bottle', amount: 120 });
   });
+
+  it('with Solids consumes the timer as a meal with the food as notes', async () => {
+    // Given
+    const runningFeeding = { ...runningSleep, id: 8, name: 'molly:feeding' };
+    const client = fakeClient({
+      findTimer: vi.fn(async () => runningFeeding),
+      stopFeeding: vi.fn(async () => savedFeeding),
+    });
+
+    // When
+    await stopFeeding(client, { child: CHILD, button: 'solids', bottle: { type: 'formula', amount: 120 }, food: 'Carrot, Porridge' });
+
+    // Then
+    expect(client.stopFeeding).toHaveBeenCalledWith({
+      timer: 8,
+      type: 'solid food',
+      method: 'parent fed',
+      amount: 0,
+      notes: 'Carrot, Porridge',
+    });
+  });
 });
 
 describe('cancelling a timer', () => {
@@ -282,6 +303,25 @@ describe('logging an instant feed', () => {
 
     // Then
     expect(client.logFeeding).toHaveBeenCalledWith(expect.objectContaining({ type: 'breast milk', method: 'bottle', amount: 135 }));
+  });
+
+  it('saves a meal with its food, ending now and a minute long', async () => {
+    // Given
+    const client = fakeClient({ logFeeding: vi.fn(async () => savedFeeding) });
+
+    // When
+    await logFeed(client, { child: CHILD, button: 'solids', bottle: { type: 'formula', amount: 120 }, food: 'Banana', now });
+
+    // Then
+    expect(client.logFeeding).toHaveBeenCalledWith({
+      child: CHILD,
+      start: '2026-09-20T14:29:00.000Z',
+      end: '2026-09-20T14:30:00.000Z',
+      type: 'solid food',
+      method: 'parent fed',
+      amount: 0,
+      notes: 'Banana',
+    });
   });
 
   it("starts at the previous feed's end when that was under a minute ago", async () => {
@@ -421,7 +461,7 @@ describe('adding an entry from the Add entry sheet', () => {
   const start = new Date('2026-09-20T10:50:00Z');
   const end = new Date('2026-09-20T11:20:00Z');
   const bottle = { type: 'formula' as const, amount: 120 };
-  const base = { feed: 'Left' as const, diaper: 'Wet' as const, med: 'Vitamin D' as const, note: '', amount: null };
+  const base = { feed: 'Left' as const, diaper: 'Wet' as const, med: 'Vitamin D' as const, note: '', amount: null, food: '' };
 
   it('starts a timer backdated to the start when a sleep has no end', async () => {
     // Given
@@ -486,6 +526,25 @@ describe('adding an entry from the Add entry sheet', () => {
       type: 'formula',
       method: 'bottle',
       amount: 135,
+    });
+  });
+
+  it('saves a finished meal with its food', async () => {
+    // Given
+    const client = fakeClient({ logFeeding: vi.fn(async () => savedFeeding) });
+
+    // When
+    await addEntry(client, { child: CHILD, napWindow, bottle, draft: { ...base, kind: 'feed', feed: 'Solids', food: ' Pear ', start, end } });
+
+    // Then
+    expect(client.logFeeding).toHaveBeenCalledWith({
+      child: CHILD,
+      start: start.toISOString(),
+      end: end.toISOString(),
+      type: 'solid food',
+      method: 'parent fed',
+      amount: 0,
+      notes: 'Pear',
     });
   });
 

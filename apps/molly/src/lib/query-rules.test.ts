@@ -85,6 +85,17 @@ describe('what the persisted cache keeps', () => {
     expect(kept).toBe(true);
   });
 
+  it('keeps the recent meals, where the food chips come from', () => {
+    // Given
+    const query = { ...settled, key: ['solids', 1] };
+
+    // When
+    const kept = shouldPersist(query);
+
+    // Then
+    expect(kept).toBe(true);
+  });
+
   it('never keeps a guess', () => {
     // Given
     const query = { ...settled, guessed: true };

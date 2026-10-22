@@ -1,4 +1,4 @@
-import { agoText, counted, durationText, type drankText, mergeTimeline, type EntriesByKind, type TimelineItem } from '@molly/core';
+import { agoText, counted, durationText, type drankText, isSolidFeed, mergeTimeline, type EntriesByKind, type TimelineItem } from '@molly/core';
 import { View } from 'react-native';
 
 import { Pressable } from '@/components/pressable';
@@ -102,8 +102,10 @@ export function TodaySheet({
         <Text className="px-1 pb-1 text-label font-display text-muted">Recent · tap to edit</Text>
         {recent.length === 0 && <Text className="px-1 py-4 text-label font-bold text-muted">Nothing logged yet.</Text>}
         {recent.map((item) => {
-          const { title: name } = describeEntry(item);
-          const ranged = 'end' in item.entry;
+          const { title: name, detail } = describeEntry(item);
+          // A meal: the food as the title, `12:10 · Solids` under it, no length.
+          const meal = item.kind === 'feeding' && isSolidFeed(item.entry);
+          const ranged = 'end' in item.entry && !meal;
           const box = KIND_BOX[item.kind];
           return (
             <Pressable
@@ -128,7 +130,7 @@ export function TodaySheet({
                   {name}
                 </Text>
                 <Text className="text-caption font-bold tabular-nums text-muted">
-                  {'end' in item.entry ? `ended ${agoText(new Date(item.entry.end), now)}` : agoText(new Date(item.at), now)}
+                  {meal ? detail : 'end' in item.entry ? `ended ${agoText(new Date(item.entry.end), now)}` : agoText(new Date(item.at), now)}
                 </Text>
               </View>
               {ranged && 'end' in item.entry && (

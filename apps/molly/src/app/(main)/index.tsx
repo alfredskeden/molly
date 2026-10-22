@@ -1,11 +1,15 @@
 import { BabyBuddyError, type FeedingMethod, type Note, type Timer } from '@molly/api';
 import {
   ageInMonths,
+  ateLabel,
   agoText,
   clockText,
   centreText,
+  eatQuestion,
   editorSubtitle,
   isNightSleep,
+  isSolidFeed,
+  SOLIDS_METHOD,
   dayPlan,
   dayWindow,
   diaperFor,
@@ -45,7 +49,8 @@ import {
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { AppState, BackHandler, Platform, ScrollView, useWindowDimensions, View } from 'react-native';
+import { AppState, BackHandler, Platform, useWindowDimensions, View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -68,7 +73,7 @@ import type { AddDraft } from '@/features/add/add-model';
 import { ChildrenSheetFor } from '@/features/children/Switcher';
 import { useChildPrefs, useChildrenOnScreen } from '@/features/children/use-children';
 import { Editor } from '@/features/dashboard/Editor';
-import { draftOf, isChanged, nudge, patchOf, withMethod, withNap, type Draft, type EditTarget } from '@/features/dashboard/editor-model';
+import { draftOf, isChanged, nudge, patchOf, withMethod, withNap, withNotes, type Draft, type EditTarget } from '@/features/dashboard/editor-model';
 import { Header } from '@/features/dashboard/Header';
 import { Pager } from '@/features/dashboard/Pager';
 import { PastStats } from '@/features/dashboard/PastStats';
@@ -76,6 +81,7 @@ import { LikelyPanel } from '@/features/dashboard/LikelyPanel';
 import { LockScreenSheet } from '@/features/dashboard/LockScreenSheet';
 import { useOptimistic } from '@/features/dashboard/optimistic';
 import { BottlePanel } from '@/features/feed/BottlePanel';
+import { SolidsPanel } from '@/features/feed/SolidsPanel';
 import { mergeDays, useDays } from '@/features/days/queries';
 import { olderMayExist } from '@/features/days/weeks';
 import { cardSpan, cardStats, recentDays } from '@/features/days/recent';
@@ -87,6 +93,7 @@ import {
   useClient,
   useKeyRejected,
   useLastBottle,
+  useRecentFoods,
   usePastEntries,
   useRecentEntries,
   useRefreshAfterWrite,
@@ -185,7 +192,9 @@ function withDraft(entries: EntriesByKind, draft: Draft | undefined): EntriesByK
       return {
         ...entries,
         feeding: entries.feeding.map((entry) =>
-          entry.id === draft.id ? { ...entry, start: iso(draft.start), end: iso(draft.end), method: draft.method } : entry,
+          entry.id === draft.id
+            ? { ...entry, start: iso(draft.start), end: iso(draft.end), method: draft.method, notes: draft.notes }
+            : entry,
         ),
       };
     case 'change':
@@ -200,9 +209,10 @@ function withDraft(entries: EntriesByKind, draft: Draft | undefined): EntriesByK
 
 /**
  * What the panel under the ring shows instead of the tiles. `feed` is the instant feed picker (Time feeds
- * off); `bottleStop` / `bottleNow` the bottle amount row after Bottle in the stop or the instant picker.
+ * off); `bottleStop` / `bottleNow` the bottle amount row after Bottle in the stop or the instant picker,
+ * `solidsStop` / `solidsNow` the Solids panel after Solids.
  */
-type Panel = 'tiles' | 'stopFeed' | 'feed' | 'bottleStop' | 'bottleNow' | 'diaper' | 'med';
+type Panel = 'tiles' | 'stopFeed' | 'feed' | 'bottleStop' | 'bottleNow' | 'solidsStop' | 'solidsNow' | 'diaper' | 'med';
 
 const FEEDING_STOPS: { button: FeedingStopButton; label: string; spoken?: string; method: FeedingMethod }[] = [
   { button: 'left', label: 'Left', method: 'left breast' },
@@ -210,6 +220,9 @@ const FEEDING_STOPS: { button: FeedingStopButton; label: string; spoken?: string
   { button: 'both', label: 'Both', spoken: 'Both breasts', method: 'both breasts' },
   { button: 'bottle', label: 'Bottle', method: 'bottle' },
 ];
+
+/** What the Solids panel has under its food field (chips, Save, padding), kept above the keyboard too. */
+const SOLIDS_BELOW_FIELD = 160;
 
 /** The past window's centre: what it held. */
 function pastCentre(window: DayWindow, entries: EntriesByKind): CentreText {
@@ -220,7 +233,7 @@ export default function Dashboard() {
   const client = useClient();
   const { childId, credentials } = useSignedInSession();
   const settings = useSettings().data ?? DEFAULT_SETTINGS;
-  const { napWindow, bottle } = useChildPrefs();
+  const { napWindow, bottle, solids, sex } = useChildPrefs();
   const { shown } = useChildrenOnScreen();
   const child = useChildren().data?.find((candidate) => candidate.id === childId);
   const sleepTimer = useRunningTimer('sleep');
@@ -228,6 +241,10 @@ export default function Dashboard() {
   const entries = useRecentEntries();
   // Where the bottle amount row starts: the last bottle's type and amount.
   const lastBottle = useLastBottle(bottle);
+  // The Solids panel's chips: this child's recent foods.
+  const foods = useRecentFoods(solids);
+  // The meal words name the child when no pronoun is set ("What did Ella eat?").
+  const childName = child?.first_name ?? 'the baby';
   const skipNotes = useSkipNotes();
   const refresh = useRefreshAfterWrite();
   const keyRejected = useKeyRejected();
@@ -555,21 +572,21 @@ export default function Dashboard() {
       () => optimistic.ended('sleep'),
       { tracker: 'sleep', timer: sleepTimer.data },
     );
-  const endFeed = (button: FeedingStopButton, chosen: BottleDefaults = lastBottle) =>
+  const endFeed = (button: FeedingStopButton, chosen: BottleDefaults = lastBottle, food?: string) =>
     run(
       'feeding',
       'stopTimer',
-      () => stopFeeding(client, { child: childId, button, bottle: chosen }),
+      () => stopFeeding(client, { child: childId, button, bottle: chosen, food }),
       () => optimistic.ended('feeding'),
       { tracker: 'feeding', timer: feedingTimer.data },
     );
   /** Time feeds off: the feed is saved finished at once. */
-  const feedNow = (button: FeedingStopButton, chosen: BottleDefaults = lastBottle) => {
-    const feeding = feedingForStop(button, chosen);
+  const feedNow = (button: FeedingStopButton, chosen: BottleDefaults = lastBottle, food?: string) => {
+    const feeding = feedingForStop(button, chosen, food);
     return run(
       'feeding',
       'log',
-      () => logFeed(client, { child: childId, button, bottle: chosen }),
+      () => logFeed(client, { child: childId, button, bottle: chosen, food }),
       () => optimistic.fed({ ...feeding, amount: feeding.amount ?? null }),
     );
   };
@@ -871,17 +888,29 @@ export default function Dashboard() {
     },
   };
 
-  /** Left / Right / Both act at once; Bottle opens the amount row first. */
-  const feedOptionsFor = (bottlePanel: Panel, act: (button: FeedingStopButton) => void): PickerOption[] =>
-    FEEDING_STOPS.map(({ button, label, spoken: name }) => ({
+  /** Left / Right / Both act at once; Bottle opens the amount row first, Solids (when on) the food panel. */
+  const feedOptionsFor = (bottlePanel: Panel, solidsPanel: Panel, act: (button: FeedingStopButton) => void): PickerOption[] => [
+    ...FEEDING_STOPS.map(({ button, label, spoken: name }): PickerOption => ({
       label,
       spoken: name,
       icon: button === 'left' ? 'arrow_back' : button === 'right' ? 'arrow_forward' : button === 'both' ? 'swap_horiz' : 'water_full',
       ribbon: button === 'bottle' ? 'bottle' : 'feed',
       onPress: button === 'bottle' ? () => setPanel(bottlePanel) : closing(() => act(button)),
-    }));
-  const feedOptions = feedOptionsFor('bottleStop', (button) => void endFeed(button));
-  const instantFeedOptions = feedOptionsFor('bottleNow', (button) => void feedNow(button));
+    })),
+    ...(solids
+      ? [{ label: copy.solids, spoken: spoken(copy.solids, PLAIN.solids), icon: 'restaurant' as const, onPress: () => setPanel(solidsPanel) }]
+      : []),
+  ];
+  const feedOptions = feedOptionsFor('bottleStop', 'solidsStop', (button) => void endFeed(button));
+  const instantFeedOptions = feedOptionsFor('bottleNow', 'solidsNow', (button) => void feedNow(button));
+  // Five options: the sides on one row, Bottle and Solids on the next.
+  const feedColumns = solids ? [3, 2] : 2;
+  /** The Solids panel's Save: the meal now, or the running feed stopped as one. */
+  const saveSolids = (food: string) => {
+    const stopping = panel === 'solidsStop';
+    setPanel('tiles');
+    void (stopping ? endFeed('solids', lastBottle, food) : feedNow('solids', lastBottle, food));
+  };
   /** The amount row's Save: the last bottle's type with the amount chosen. */
   const saveBottle = (amount: number) => {
     const chosen = { type: lastBottle.type, amount };
@@ -947,19 +976,34 @@ export default function Dashboard() {
       };
     }
     if (target.kind === 'feeding' && draft.kind === 'feeding') {
+      const meal = isSolidFeed(draft);
+      // Solids while the setting is on, or for a meal saved before it was turned off.
+      const withSolids = solids || isSolidFeed(target.entry);
       return {
         ...common,
         tone: 'feed' as const,
-        icon: 'breastfeeding' as const,
+        icon: meal ? ('restaurant' as const) : ('breastfeeding' as const),
         title: 'Feed',
         sub: editorSubtitle(draft, now, windowName),
         rows: range(draft.start, draft.end),
         kinds: {
           label: 'Feed kind',
-          options: FEEDING_STOPS.map(({ label, method }) => ({ value: method, label })),
-          value: draft.method,
+          options: [
+            ...FEEDING_STOPS.map(({ label, method }) => ({ value: method, label })),
+            ...(withSolids ? [{ value: SOLIDS_METHOD, label: 'Solids' }] : []),
+          ],
+          // A `self fed` meal from Baby Buddy shows as Solids too.
+          value: meal ? SOLIDS_METHOD : draft.method,
           onChange: (method: string) => changeDraft((current) => withMethod(current, method as FeedingMethod, bottle)),
+          small: withSolids,
         },
+        food: meal
+          ? {
+              label: ateLabel(childName, sex),
+              value: draft.notes ?? '',
+              onChange: (text: string) => changeDraft((current) => withNotes(current, text)),
+            }
+          : undefined,
         amount:
           draft.method === 'bottle'
             ? {
@@ -1053,7 +1097,9 @@ export default function Dashboard() {
     <View className="flex-1 bg-bg">
       <BehindSheet sheetOpen={sheetOpen}>
         <HeaderArt />
-        <ScrollView
+        {/* Scrolls a focused field (the Solids panel's food) above the keyboard, with the chips and Save under it. */}
+        <KeyboardAwareScrollView
+          bottomOffset={SOLIDS_BELOW_FIELD}
           contentContainerStyle={{ flexGrow: 1, paddingTop: insets.top, paddingBottom: insets.bottom + 28 }}
           keyboardShouldPersistTaps="handled"
         >
@@ -1159,7 +1205,7 @@ export default function Dashboard() {
                 title={copy.stopAs}
                 spokenTitle={spoken(copy.stopAs, PLAIN.stopAs)}
                 options={feedOptions}
-                columns={2}
+                columns={feedColumns}
                 cancel={{ label: copy.cancelFeed, spoken: spoken(copy.cancelFeed, PLAIN.cancelFeed), onPress: closing(() => void cancel('feeding')) }}
                 extra={{
                   label: 'Edit start',
@@ -1178,7 +1224,7 @@ export default function Dashboard() {
                 title={copy.feedAs}
                 spokenTitle={spoken(copy.feedAs, PLAIN.feedAs)}
                 options={instantFeedOptions}
-                columns={2}
+                columns={feedColumns}
                 busy={busy}
                 onClose={() => setPanel('tiles')}
               />
@@ -1189,6 +1235,16 @@ export default function Dashboard() {
                 busy={busy}
                 onSave={saveBottle}
                 onClose={() => setPanel(panel === 'bottleStop' ? 'stopFeed' : 'feed')}
+              />
+            ) : (panel === 'solidsStop' && feedRunning) || (panel === 'solidsNow' && !feedRunning) ? (
+              <SolidsPanel
+                title={copy.solids}
+                spokenTitle={spoken(copy.solids, PLAIN.solids)}
+                question={eatQuestion(childName, sex)}
+                foods={foods}
+                busy={busy}
+                onSave={saveSolids}
+                onClose={() => setPanel(panel === 'solidsStop' ? 'stopFeed' : 'feed')}
               />
             ) : panel === 'diaper' ? (
               <Picker tone="diaper" title={copy.diaper} spokenTitle={spoken(copy.diaper, PLAIN.diaper)} options={diaperOptions} columns={3} busy={busy} onClose={() => setPanel('tiles')} />
@@ -1214,7 +1270,7 @@ export default function Dashboard() {
               </>
             )}
           </View>
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </BehindSheet>
       {askingLockScreen && timerOf(askingLockScreen) && (
         <LockScreenSheet
@@ -1225,7 +1281,15 @@ export default function Dashboard() {
         />
       )}
       {askingAdd && (
-        <AddSheet now={now} bottle={lastBottle} pending={adding} onSave={(draft) => void saveAdded(draft)} onClose={() => setAskingAdd(false)} />
+        <AddSheet
+          now={now}
+          bottle={lastBottle}
+          solids={solids}
+          ateLabel={ateLabel(childName, sex)}
+          pending={adding}
+          onSave={(draft) => void saveAdded(draft)}
+          onClose={() => setAskingAdd(false)}
+        />
       )}
       {askingToday && loaded && liveWindow && (
         <TodaySheet

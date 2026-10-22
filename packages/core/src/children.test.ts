@@ -129,7 +129,7 @@ describe('the age label', () => {
 });
 
 describe('the default preferences of a child', () => {
-  it('shows the child with the default nap window, bottle, no reminder and no sex', () => {
+  it('shows the child with the default nap window, bottle, no reminder, no sex and no solid food', () => {
     // When
     const prefs = defaultChildPrefs(0);
 
@@ -141,6 +141,7 @@ describe('the default preferences of a child', () => {
       bottle: { type: 'formula', amount: 120 },
       vitaminDReminder: false,
       sex: null,
+      solids: false,
     });
   });
 
@@ -198,6 +199,14 @@ describe("a child's preferences", () => {
 
     // Then
     expect(prefs).toEqual({ ...defaultChildPrefs(1), napWindow: { start: '08:00', end: '18:00' } });
+  });
+
+  it('keep solid food on when stored on', () => {
+    // When
+    const prefs = childPrefs([ella], { [ella.id]: { solids: true } }, ella.id);
+
+    // Then
+    expect(prefs.solids).toBe(true);
   });
 
   it('are the first defaults for a child not in the list', () => {

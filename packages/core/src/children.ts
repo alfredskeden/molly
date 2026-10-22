@@ -20,6 +20,8 @@ export type ChildPrefs = {
   bottle: BottleDefaults;
   vitaminDReminder: boolean;
   sex: Sex | null;
+  /** Feed offers Solids (a meal with its food in the notes). */
+  solids: boolean;
 };
 
 /** Stored per child id; a field missing (or unreadable when stored) falls back to the child's default. */
@@ -36,6 +38,7 @@ export function defaultChildPrefs(index: number): ChildPrefs {
     bottle: DEFAULT_BOTTLE,
     vitaminDReminder: false,
     sex: null,
+    solids: false,
   };
 }
 

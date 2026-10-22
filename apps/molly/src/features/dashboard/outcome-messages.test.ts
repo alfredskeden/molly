@@ -135,6 +135,30 @@ describe('toasts in a theme with its own words', () => {
     expect(toast.text).toBe('Feed saved · Bottle 135 ml');
   });
 
+  it("an instant meal says its food in the theme's words and leads with a meal in Life Sim", () => {
+    // Given
+    const meal = { ...feed, start: '2026-09-24T07:14:00Z', type: 'solid food', method: 'parent fed', amount: 0, notes: 'Carrot, Porridge' } as const;
+    const outcome = { type: 'stopped', created: { kind: 'feeding', entry: meal }, instant: true } as const;
+
+    // When
+    const toast = outcomeToast(outcome, 'feeding', ME, ARCADE);
+
+    // Then
+    expect(toast).toMatchObject({ text: 'Power-up saved · Carrot, Porridge', saved: 'meal' });
+  });
+
+  it('a feed stopped as a meal says its food, not how long it took', () => {
+    // Given
+    const meal = { ...feed, type: 'solid food', method: 'parent fed', amount: 0, notes: 'Banana' } as const;
+    const outcome = { type: 'stopped', created: { kind: 'feeding', entry: meal } } as const;
+
+    // When
+    const toast = outcomeToast(outcome, 'feeding', ME);
+
+    // Then
+    expect(toast).toMatchObject({ text: 'Feed saved · Banana', saved: 'meal' });
+  });
+
   it("a logged diaper and a cancelled feed are named with the theme's words", () => {
     // Given
     const logged = { type: 'logged', created: { kind: 'change', entry: change } } as const;

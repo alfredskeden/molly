@@ -1,12 +1,12 @@
 import type { Feeding, Sleep } from '@molly/api';
-import { agoText, durationText } from '@molly/core';
+import { agoText, durationText, isSolidFeed } from '@molly/core';
 
 import type { AdjustTarget, Outcome, Tracker } from '@/actions/trackers';
 import type { HelpTopic } from '@/features/help/topics';
 import { formatElapsed } from '@/lib/time';
 import { PLAIN, type Copy } from '@/theme/copy';
 
-import { describeEntry, diaperLabel, METHOD_LABELS } from './timeline-text';
+import { describeEntry, diaperLabel, foodOf, METHOD_LABELS } from './timeline-text';
 
 export type ToastTone = 'sleep' | 'feed' | 'diaper' | 'med' | 'danger';
 
@@ -29,8 +29,8 @@ export type Toast = {
   adjust?: Adjustable;
   /** An entry to open in the edit screen. */
   edit?: { kind: 'sleep' | 'feeding'; id: number };
-  /** An entry was just saved here: Life Sim leads with its tracker's top word ("Fresh bum!"). */
-  saved?: true;
+  /** An entry was just saved here: Life Sim leads with its tracker's top word ("Fresh bum!"), or its meal's (`meal`). */
+  saved?: true | 'meal';
   /** Takes the change back: a skipped nap's Undo. */
   undo?: () => void;
   /** A child's avatar instead of the tone's dot ("Showing Otto"). */
@@ -74,12 +74,16 @@ export function outcomeToast(outcome: Outcome, source: Source, me?: number, copy
       };
     case 'stopped': {
       const { created } = outcome;
+      // A meal says its food, never an amount or how long it took.
+      const meal = created.kind === 'feeding' && isSolidFeed(created.entry);
       if (outcome.instant && created.kind === 'feeding') {
         const { entry } = created;
         return {
-          text: `${copy.feed} saved · ${METHOD_LABELS[entry.method]}${entry.amount !== null ? ` ${entry.amount} ml` : ''}`,
+          text: meal
+            ? `${copy.feed} saved · ${foodOf(entry)}`
+            : `${copy.feed} saved · ${METHOD_LABELS[entry.method]}${entry.amount !== null ? ` ${entry.amount} ml` : ''}`,
           tone,
-          saved: true,
+          saved: meal ? 'meal' : true,
           adjust: {
             target: { kind: 'feedingAt', id: entry.id, lengthMs: Date.parse(entry.end) - Date.parse(entry.start) },
             title: 'When was it?',
@@ -93,11 +97,13 @@ export function outcomeToast(outcome: Outcome, source: Source, me?: number, copy
       const text =
         created.kind === 'sleep'
           ? `${copy.sleep} saved · ${took(created.entry)}`
-          : `${copy.feed} saved · ${METHOD_LABELS[created.entry.method]} · ${took(created.entry)}`;
+          : meal
+            ? `${copy.feed} saved · ${foodOf(created.entry)}`
+            : `${copy.feed} saved · ${METHOD_LABELS[created.entry.method]} · ${took(created.entry)}`;
       return {
         text,
         tone,
-        saved: true,
+        saved: meal ? 'meal' : true,
         adjust: {
           target: { kind: created.kind, id: created.entry.id },
           title: 'When did it end?',

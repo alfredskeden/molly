@@ -4,9 +4,12 @@ import {
   childPrefs,
   dayPlan,
   dayWindow,
+  isSolidFeed,
   isVitaminD,
   lastBottle,
+  milkFeeds,
   napReminderAt,
+  newest,
   NEXT_SLEEP_TUNING,
   parseSkip,
   SKIP_TAG,
@@ -286,7 +289,14 @@ export function answeredCache(
 
 export type SnapshotClient = Pick<
   Client,
-  'findTimer' | 'listTimers' | 'getLatestEntries' | 'listEntries' | 'listChildren' | 'listNotes' | 'getRecentBottles'
+  | 'findTimer'
+  | 'listTimers'
+  | 'getLatestEntries'
+  | 'getRecentFeedings'
+  | 'listEntries'
+  | 'listChildren'
+  | 'listNotes'
+  | 'getRecentBottles'
 >;
 
 type RunningTimer = { start: string; byMe: boolean };
@@ -348,6 +358,8 @@ async function fetchSnapshotAndChildren(
     client.listNotes({ child, tags: SKIP_TAG, date_min: day(1) }),
     client.getRecentBottles(child),
   ]);
+  // The last side follows milk: past a meal, the newest milk feed among the recent feedings.
+  const lastFeed = latest.feeding && isSolidFeed(latest.feeding) ? newest(milkFeeds(await client.getRecentFeedings(child))) : latest.feeding;
   const running = (timer: typeof sleepTimer) => timer && { start: timer.start, byMe: timer.user === userId };
   const found = children.find((candidate) => candidate.id === child);
   const birthDate = found?.birth_date ?? null;
@@ -361,8 +373,8 @@ async function fetchSnapshotAndChildren(
     sleepTimer: running(sleepTimer),
     feedingTimer: running(feedingTimer),
     lastSleep: latest.sleep?.end ?? null,
-    lastFeeding: latest.feeding?.start ?? null,
-    lastFeedingMethod: latest.feeding?.method ?? null,
+    lastFeeding: lastFeed?.start ?? null,
+    lastFeedingMethod: lastFeed?.method ?? null,
     lastChange: latest.change?.time ?? null,
     nextSleep: next ? { kind: next.kind, start: next.start.toISOString(), end: next.end.toISOString() } : null,
     lastBottle: lastBottle(bottles, childPrefs(children, prefs, child).bottle),

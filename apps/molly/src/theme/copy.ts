@@ -34,6 +34,8 @@ export type Copy = {
   wet: string;
   dirty: string;
   both: string;
+  /** Feed's Solids button and the Solids panel's title (plans/implan-solid-food); spoken as "Solids". */
+  solids: string;
   /** The Settings screen's title and the header link to it. */
   settings: string;
   /**
@@ -91,6 +93,7 @@ const classic: Copy = {
   wet: 'Wet',
   dirty: 'Dirty',
   both: 'Both',
+  solids: 'Solids',
   settings: 'Settings',
   likelyNap: 'Nap {n} likely',
   likelyBedtime: 'Bedtime likely',
@@ -136,6 +139,7 @@ const arcade: Copy = {
   wet: 'Wet',
   dirty: 'Dirty',
   both: 'Combo',
+  solids: 'Bonus snack',
   settings: 'Options',
   likelyNap: 'Save point {n} ahead',
   likelyBedtime: 'Final save ahead',
@@ -181,6 +185,7 @@ const space: Copy = {
   wet: 'Wet',
   dirty: 'Dirty',
   both: 'Both',
+  solids: 'Space food',
   settings: 'Controls',
   likelyNap: 'Hypersleep {n} on approach',
   likelyBedtime: 'Night dock on approach',
@@ -226,6 +231,7 @@ const score: Copy = {
   wet: 'Wet',
   dirty: 'Dirty',
   both: 'Double',
+  solids: 'Half-time snack',
   settings: 'Tactics',
   likelyNap: 'Time-out {n} expected',
   likelyBedtime: 'Full time expected',
@@ -271,6 +277,7 @@ const term: Copy = {
   wet: '--wet',
   dirty: '--dirty',
   both: '--both',
+  solids: 'solids',
   settings: 'config',
   likelyNap: '$ inspect nap_{n}',
   likelyBedtime: '$ inspect bedtime',
@@ -316,6 +323,7 @@ const safari: Copy = {
   wet: 'Wee',
   dirty: 'Poo',
   both: 'Both',
+  solids: 'Nibbles',
   settings: 'Settings',
   likelyNap: 'Lion nap {n} coming up',
   likelyBedtime: 'Den time coming up',
@@ -364,6 +372,7 @@ const ribbon: Copy = {
   wet: 'Wet',
   dirty: 'Dirty',
   both: 'Both',
+  solids: 'Solids',
   settings: 'Settings',
   likelyNap: 'Nap {n} likely',
   likelyBedtime: 'Bedtime likely',
@@ -412,6 +421,7 @@ const sim: Copy = {
   wet: 'Wet',
   dirty: 'Dirty',
   both: 'Both',
+  solids: 'Meal',
   settings: 'Settings',
   likelyNap: 'Nap {n} likely',
   likelyBedtime: 'Bedtime likely',
