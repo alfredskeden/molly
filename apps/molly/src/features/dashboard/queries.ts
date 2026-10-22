@@ -106,14 +106,15 @@ export function useLastBottle(fallback: BottleDefaults): BottleDefaults {
 
 /**
  * The Solids panel's chips (`recentFoods`): the newest meals reach further back than the entries' two days,
- * and the entries add one saved since.
+ * and the entries add one saved since. Fetched only while the child's Solid food setting is on (`enabled`).
  */
-export function useRecentFoods(): string[] {
+export function useRecentFoods(enabled: boolean): string[] {
   const client = useClient();
   const { childId } = useSignedInSession();
   const solids = useQuery({
     queryKey: ['solids', childId],
     queryFn: ({ signal }) => client.getRecentSolids(childId, { signal }),
+    enabled,
   });
   const recent = useRecentEntries().data?.feeding;
   // A meal in both lists gives the same foods twice, which `recentFoods` keeps once.

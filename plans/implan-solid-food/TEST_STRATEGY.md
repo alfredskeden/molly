@@ -52,19 +52,19 @@ Tests come first for `packages/core` and the plain-TS app models (Vitest, Given 
 
 ## Playwright (`e2e/tests/solid-food.spec.ts`, seeded Baby Buddy, classic theme unless said)
 
-- [ ] With Solid food off (the default), Feed shows exactly Left, Right, Both and Bottle.
-- [ ] Turning it on on the child screen adds Solids. The picker shows Left / Right / Both on one row and Bottle / Solids on the next (checked by the buttons' positions).
-- [ ] Solids opens the panel with the field focused. The question uses the child's name while "Girl or boy" is unset, and "she" after Girl is chosen.
-- [ ] Save is disabled while the field is empty or only spaces.
-- [ ] Typing "Carrot purée" and saving writes a feeding with `solid food`, `parent fed`, `amount` 0 and notes "Carrot purée" (checked through the API), and the toast says "Feed saved · Carrot purée".
-- [ ] With earlier meals "Carrot, Porridge" and "Banana", the chips are Banana, Carrot, Porridge. Tapping Banana then Carrot saves "Banana, Carrot".
-- [ ] The Today sheet row shows the food as its title and "HH:MM · Solids" below it.
-- [ ] After a bottle and then a meal, the Feed tile's last feed is still the bottle.
-- [ ] With Time feeds on: start a feed, then "Stop and save as" → Solids → food → Save. This writes a solid feeding spanning the timer.
-- [ ] Editor: a meal opens with Solids selected and the food field filled; changing the food and Done patches the notes. With Solid food turned off, the same meal still opens with Solids selected.
-- [ ] Add entry: Feed kind Solids with a food saves a meal.
-- [ ] Another child with Solid food off still shows four options (per-child setting).
-- [ ] Existing feed specs still pass, updated wherever they assumed four options or the "Parent fed" label.
+- [x] With Solid food off (the default), Feed shows exactly Left, Right, Both and Bottle.
+- [x] Turning it on on the child screen adds Solids. The picker shows Left / Right / Both on one row and Bottle / Solids on the next (checked by the buttons' positions).
+- [x] Solids opens the panel with the field focused. The question uses the child's name while "Girl or boy" is unset, and "she" after Girl is chosen.
+- [x] Save is disabled while the field is empty or only spaces.
+- [x] Typing "Carrot purée" and saving writes a feeding with `solid food`, `parent fed`, `amount` 0 and notes "Carrot purée" (checked through the API), and the toast says "Feed saved · Carrot purée".
+- [x] With earlier meals "Carrot, Porridge" and "Banana", the chips are Banana, Carrot, Porridge. Tapping Banana then Carrot saves "Banana, Carrot".
+- [x] The Today sheet row shows the food as its title and "HH:MM · Solids" below it.
+- [x] After a bottle and then a meal, the Feed tile's last feed is still the bottle.
+- [x] With Time feeds on: start a feed, then "Stop and save as" → Solids → food → Save. This writes a solid feeding spanning the timer.
+- [x] Editor: a meal opens with Solids selected and the food field filled; changing the food and Done patches the notes. With Solid food turned off, the same meal still opens with Solids selected.
+- [x] Add entry: Feed kind Solids with a food saves a meal.
+- [x] Another child with Solid food off still shows four options (per-child setting).
+- [x] Existing feed specs still pass, updated wherever they assumed four options or the "Parent fed" label.
 
 ## Manual look review (web and emulator-5554)
 

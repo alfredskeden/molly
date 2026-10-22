@@ -240,7 +240,7 @@ export default function Dashboard() {
   // Where the bottle amount row starts: the last bottle's type and amount.
   const lastBottle = useLastBottle(bottle);
   // The Solids panel's chips: this child's recent foods.
-  const foods = useRecentFoods();
+  const foods = useRecentFoods(solids);
   // The meal words name the child when no pronoun is set ("What did Ella eat?").
   const childName = child?.first_name ?? 'the baby';
   const skipNotes = useSkipNotes();

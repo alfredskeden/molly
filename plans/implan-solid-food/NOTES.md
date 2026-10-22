@@ -39,6 +39,8 @@
 - Life Sim's meal lead: `Toast.saved` is `true | 'meal'`; `'meal'` picks `toastLeads.meal` ("Nom nom!").
 - `withMethod` now sets the type for every kind: a side is always breast milk (before, side to side kept the old type). A `self fed` meal shows as Solids in the editor (its value maps to `parent fed`).
 - Add entry offers Solids only for a finished feed: the feed kind row shows only with an end, so a meal never starts a timer there.
+- The recent-solids query runs only while the child's Solid food setting is on, so a child without it makes no extra request (and the persisted cache holds the same six queries as before).
+- No existing Playwright spec assumed four feed options or "Parent fed", so none needed changing. `day-plan.spec.ts` "a sleep of 15 minutes or more after the skip ends it" failed once in a full run and passed on rerun (time of day dependent, unrelated).
 - An empty `notes` string is never sent (Save is off without food), so its behaviour doesn't matter.
 
 ## Theme wording and icon (decided)
