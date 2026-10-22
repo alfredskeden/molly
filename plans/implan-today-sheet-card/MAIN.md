@@ -31,7 +31,7 @@ The span is the current card from `recentDays` (`src/features/days/recent.ts`). 
 - **Slept:** `todaysTotals(entries, from, sleepRunning, now).sleepMs`. Sleeps are clipped at `from`, and a running sleep counts, as today.
 - **Sleeps:** sleeps that started in the span, plus one if a sleep is running. The label is `sleep`/`sleeps` whenever the card has a night, and `nap`/`naps` only on a card with no night.
 - **Feeds, diapers:** `todaysTotals` counts from `from`.
-- **ml line:** `drankText(drank(entries.feeding, from, now, bottle.amount))`, with the same text, spoken text and absence rules as Recent days' card. Breastfeeds and bottles without ml use the child's default bottle amount, marked `≈`. With no default, the line counts them instead. With no feeds, there is no line.
+- **ml line:** `drankText(drank(entries.feeding, from, now, bottle.amount))`, with the same text, spoken text and absence rules as Recent days' card. Breastfeeds and bottles without ml use the child's default bottle amount, marked `≈` (a feed from one breast half of it since [`implan-half-side-feeds`](../implan-half-side-feeds/MAIN.md)). With no default, the line counts them instead. With no feeds, there is no line.
 
 The labels `slept today` / `slept tonight` and the titles `Today` / `Tonight` stay. The card is called Today on Recent days too.
 

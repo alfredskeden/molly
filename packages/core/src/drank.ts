@@ -3,17 +3,19 @@ import type { Feeding } from '@molly/api';
 import { counted } from './format';
 
 /**
- * Roughly how much a baby drank over a span. `estimated` once a default bottle stood in for a feed
- * with no ml; with no default those feeds add nothing and are counted in `unmeasured` instead
- * (`unmeasuredBreast` of them breastfeeds), so the words can name them.
+ * Roughly how much a baby drank over a span. `estimated` once the default bottle (or half of it) stood
+ * in for a feed with no ml; with no default those feeds add nothing and are counted in `unmeasured`
+ * instead (`unmeasuredBreast` of them breastfeeds), so the words can name them.
  */
 export type Drank = { ml: number; estimated: boolean; unmeasured: number; unmeasuredBreast: number };
 
 const SOLIDS: ReadonlySet<Feeding['method']> = new Set(['parent fed', 'self fed']);
+const ONE_SIDE: ReadonlySet<Feeding['method']> = new Set(['left breast', 'right breast']);
 
 /**
- * Bottles count their saved amount; breastfeeds and bottles saved without one count `defaultMl`,
- * the most the baby probably drank. A feed counts when it started in `[from, to)`, like `totalsBetween`.
+ * Bottles count their saved amount. Feeds from both breasts and bottles saved without one count
+ * `defaultMl`, the most the baby probably drank; a feed from one breast counts half of it. The
+ * total is rounded once to whole ml. A feed counts when it started in `[from, to)`, like `totalsBetween`.
  */
 export function drank(feedings: Feeding[], from: Date, to: Date, defaultMl: number | undefined): Drank {
   const [start, end] = [from.getTime(), to.getTime()];
@@ -22,11 +24,12 @@ export function drank(feedings: Feeding[], from: Date, to: Date, defaultMl: numb
   );
   const measured = drunk.flatMap((feed) => (feed.method === 'bottle' && feed.amount !== null ? [feed.amount] : []));
   const unmeasured = drunk.filter((feed) => feed.method !== 'bottle' || feed.amount === null);
-  const guessed = defaultMl === undefined ? 0 : unmeasured.length;
+  const guessed = defaultMl === undefined ? [] : unmeasured;
   const left = defaultMl === undefined ? unmeasured : [];
+  const shares = guessed.reduce((total, feed) => total + (ONE_SIDE.has(feed.method) ? 0.5 : 1), 0);
   return {
-    ml: measured.reduce((total, ml) => total + ml, 0) + guessed * (defaultMl ?? 0),
-    estimated: guessed > 0,
+    ml: Math.round(measured.reduce((total, ml) => total + ml, 0) + shares * (defaultMl ?? 0)),
+    estimated: guessed.length > 0,
     unmeasured: left.length,
     unmeasuredBreast: left.filter((feed) => feed.method !== 'bottle').length,
   };
