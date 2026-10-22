@@ -9,6 +9,7 @@ import {
   editorSubtitle,
   isNightSleep,
   isSolidFeed,
+  SOLIDS_METHOD,
   dayPlan,
   dayWindow,
   diaperFor,
@@ -218,9 +219,6 @@ const FEEDING_STOPS: { button: FeedingStopButton; label: string; spoken?: string
   { button: 'both', label: 'Both', spoken: 'Both breasts', method: 'both breasts' },
   { button: 'bottle', label: 'Bottle', method: 'bottle' },
 ];
-
-/** What Solids saves as: always parent fed (`feedingForStop`). */
-const SOLIDS_METHOD: FeedingMethod = 'parent fed';
 
 /** The past window's centre: what it held. */
 function pastCentre(window: DayWindow, entries: EntriesByKind): CentreText {

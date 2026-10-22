@@ -61,3 +61,10 @@ The developer asked for playful wording per theme, written to match each theme's
 Life Sim's toast lead for a meal (`sim-words.ts` `toastLeads`, today `feed: 'Milk drunk!'`) is **"Nom nom!"**. That needs a lead chosen by the saved feed, not only by tone (`NEED_OF` in `features/toast/toast.tsx`).
 
 **Icon**: the knife and fork (`restaurant`) in every theme for now. Ribbon shows it as a glyph in its usual circle (no drawn picture); Safari's pictured buttons fall back to the glyph too.
+
+## Cleanup sweep (wrap-up, 2026-10-22)
+
+- Applied: the dashboard's own `SOLIDS_METHOD` and the ring's `'parent fed'` / `'self fed'` icons duplicated the solid rule. Core now exports `SOLIDS_METHOD` (used by `feedingForStop` and the editor), and `feedIcon` asks `isSolidFeed`. Only `isSolidFeed`, `METHOD_LABELS` and the API enums list the methods now.
+- `drank.ts`'s private `SOLIDS` is gone (step 2).
+- Older plans (`implan-molly`, `implan-day-ml-total`, `implan-half-side-feeds`) mention `parent fed` as history; left as they are.
+- Nothing else made obsolete: no flags, dependencies, assets or storage keys.

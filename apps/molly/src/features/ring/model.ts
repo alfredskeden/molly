@@ -50,8 +50,6 @@ const FEED_ICONS: Partial<Record<FeedingMethod, FilledSymbol>> = {
   'right breast': 'arrow_forward',
   'both breasts': 'swap_horiz',
   bottle: 'water_full',
-  'parent fed': 'restaurant',
-  'self fed': 'restaurant',
 };
 
 /** The design's diaper glyphs: Wet a drop, Dirty a face, Both a star. */
@@ -59,7 +57,9 @@ export function diaperIcon({ wet, solid }: { wet: boolean; solid: boolean }): Fi
   return wet && solid ? 'star' : solid ? 'sentiment_stressed' : 'water_drop';
 }
 
-export const feedIcon = (method: FeedingMethod): FilledSymbol => FEED_ICONS[method] ?? 'breastfeeding';
+/** A side's arrow, the bottle, a meal's knife and fork. */
+export const feedIcon = (method: FeedingMethod): FilledSymbol =>
+  isSolidFeed({ method }) ? 'restaurant' : (FEED_ICONS[method] ?? 'breastfeeding');
 
 const overlaps = (window: DayWindow, start: number, end: number) => end > window.start.getTime() && start < window.end.getTime();
 const inside = (window: DayWindow, time: number) => time >= window.start.getTime() && time < window.end.getTime();

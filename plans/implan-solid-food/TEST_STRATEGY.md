@@ -77,8 +77,8 @@ Tests come first for `packages/core` and the plain-TS app models (Vitest, Given 
 
 ## Wrap-up
 
-- [ ] `drank.ts` no longer has its own `SOLIDS`; nothing else in the code lists `parent fed` / `self fed` apart from `isSolidFeed`, `METHOD_LABELS` and the API enums.
-- [ ] The `implan-cleanup` wrap-up sweep has run and its findings are applied or noted.
-- [ ] `CLAUDE.md` Trackers line and `plans/README.md` updated.
+- [x] `drank.ts` no longer has its own `SOLIDS`; nothing else in the code lists `parent fed` / `self fed` apart from `isSolidFeed`, `METHOD_LABELS` and the API enums.
+- [x] The `implan-cleanup` wrap-up sweep has run and its findings are applied or noted.
+- [x] `CLAUDE.md` Trackers line and `plans/README.md` updated.
 - [ ] Issue #1 rewritten in Gherkin.
 - [ ] `pnpm check` and `pnpm e2e` green; PR open against `develop`.
