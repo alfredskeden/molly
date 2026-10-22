@@ -77,6 +77,7 @@ import { LockScreenSheet } from '@/features/dashboard/LockScreenSheet';
 import { useOptimistic } from '@/features/dashboard/optimistic';
 import { BottlePanel } from '@/features/feed/BottlePanel';
 import { mergeDays, useDays } from '@/features/days/queries';
+import { olderMayExist } from '@/features/days/weeks';
 import { cardSpan, cardStats, recentDays } from '@/features/days/recent';
 import { failureToast, outcomeToast, skipRefusedToast, staleStopToast, type Source } from '@/features/dashboard/outcome-messages';
 import { Picker, type PickerOption } from '@/features/dashboard/Picker';
@@ -501,8 +502,8 @@ export default function Dashboard() {
   const oldestWeek = days.data?.pages.at(-1);
   // Every entry since then is loaded; a window starting earlier would be missing some.
   const loadedFrom = oldestWeek ? Math.min(oldestWeek.from.getTime(), pastFrom) : pastFrom;
-  // Recent days' rule: another week is worth asking for while the oldest one Baby Buddy sent had anything in it.
-  const olderWeeksMayExist = !oldestWeek || Object.values(oldestWeek.entries).some((list) => list.length > 0);
+  // Unknown until a week is loaded.
+  const olderWeeksMayExist = !oldestWeek || olderMayExist(days.data!.pages);
   // The live window, then every one before it back to the one on screen (and the one asked for), newest first.
   const daysBack = reach === Infinity ? 1 : Math.ceil((now.getTime() - reach) / DAY_MS) + 1;
   const windows = liveWindow ? [liveWindow, ...(everything ? windowsBefore(everything, napWindow, now, daysBack, sleepRunning) : [])] : [];
@@ -724,9 +725,7 @@ export default function Dashboard() {
   if (!windowParam && openedWindow) setOpenedWindow(null);
   if (windowParam && windowParam !== openedWindow) {
     setOpenedWindow(windowParam);
-    setEditing(null);
-    setLikely(null);
-    setPanel('tiles');
+    closePanels();
     setViewKey(liveWindow && keyOf(liveWindow) === windowParam ? null : windowParam);
   }
   useEffect(() => {
@@ -1065,15 +1064,11 @@ export default function Dashboard() {
             updating={updating}
             onChildren={shown.length > 1 ? () => setAskingChildren(true) : null}
             onHistory={() => {
-              setEditing(null);
-              setLikely(null);
-              setPanel('tiles');
+              closePanels();
               setAskingToday(true);
             }}
             onAdd={() => {
-              setEditing(null);
-              setLikely(null);
-              setPanel('tiles');
+              closePanels();
               setAskingAdd(true);
             }}
             onSettings={() => router.push('/settings')}
@@ -1111,9 +1106,7 @@ export default function Dashboard() {
                 capLabel={capLabel}
                 needs={needs}
                 onCap={() => {
-                  setEditing(null);
-                  setLikely(null);
-                  setPanel('tiles');
+                  closePanels();
                   const pair = windows[pairOf(viewIndex)];
                   // The window before isn't loaded yet: fetch it and switch once it is.
                   if (live && !pair) return liveWindow && setWantAt({ time: liveWindow.start.getTime(), before: true });

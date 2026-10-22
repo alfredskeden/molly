@@ -22,6 +22,7 @@ import { UnreachableBanner } from '@/features/dashboard/Unreachable';
 import { useDays } from '@/features/days/queries';
 import { cardSpan, recentDays, type RecentDay, type RecentSlot } from '@/features/days/recent';
 import { daysRows } from '@/features/days/rows';
+import { olderMayExist as olderWeeksMayExist } from '@/features/days/weeks';
 import { ringSleeps } from '@/features/ring/model';
 import { MiniRing } from '@/features/ring/MiniRing';
 import { Glyph } from '@/theme/Glyph';
@@ -56,9 +57,7 @@ export default function RecentDays() {
     const live = dayWindow(entries, running, napWindow, now);
     return { cards: pages ? recentDays(live, rows) : [], entries };
   }, [pages, napWindow, running, now]);
-  // Another week is worth asking for while the oldest one Baby Buddy sent had anything in it.
-  const lastPage = pages?.at(-1)?.entries;
-  const olderMayExist = !!lastPage && Object.values(lastPage).some((list) => list.length > 0);
+  const olderMayExist = olderWeeksMayExist(pages);
   const canMore = cards.length > shown || olderMayExist;
   const skeleton = useSkeleton(days.isPending);
   const insets = useSafeAreaInsets();
