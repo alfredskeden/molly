@@ -98,7 +98,8 @@ test("an entry of last night in the Today sheet opens on last night's ring", asy
   await button(page, /^Feed at 22:30, Left, 20 minutes\. Edit\.$/).click();
 
   // Then
-  await expect(page.getByText(`Last night · ${dateOf(-1)}`, { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Last night', exact: true })).toBeVisible();
+  await expect(page.getByText(dateOf(-1), { exact: true }).filter({ visible: true })).toBeVisible();
   await expect(page.getByLabel('Edit Feed', { exact: true })).toBeVisible();
   await expect(button(page, 'Back to now')).toBeVisible();
 });
@@ -193,15 +194,21 @@ test('1g: a mini ring opens that window on the dashboard, with Back to now', asy
   await button(page, /^Yesterday, Day: /).click();
 
   // Then
-  await expect(page.getByText(`Yesterday · ${dateOf(-1)}`, { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Yesterday', exact: true })).toBeVisible();
+  await expect(page.getByText(dateOf(-1), { exact: true }).filter({ visible: true })).toBeVisible();
   await expect(page.getByLabel('Slept 1h 0m, 1 nap · 1 feed', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Yesterday: 1h 0m slept, 1 nap, 1 feed, 0 diapers', { exact: true })).toBeVisible();
+  await expect(button(page, `Previous: ${weekday(-2)} night`)).toBeVisible();
+  await expect(button(page, 'Next: Last night')).toBeVisible();
+  for (const action of ['Today', 'Add entry', 'Settings']) await expect(button(page, action)).toBeHidden();
   await expect(button(page, 'Back to now')).toBeVisible();
 
   // When: the cap pairs windows counting back from now, so yesterday's day pairs with the night before it
   await button(page, `Switch to ${weekday(-2).toLowerCase()} night`).click();
 
   // Then
-  await expect(page.getByText(`${weekday(-2)} night · ${dateOf(-2)}`, { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: `${weekday(-2)} night`, exact: true })).toBeVisible();
+  await expect(page.getByText(dateOf(-2), { exact: true }).filter({ visible: true })).toBeVisible();
 });
 
 test('a nap in progress counts in the Today sheet, added to last night and the finished nap', async ({ page }) => {

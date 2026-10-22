@@ -1,0 +1,53 @@
+# Notes
+
+## Design source
+
+- `Molly Ring Day Nav Board.dc.html` (three phones: yesterday mid-history, last night with Today next, last night in night colours) imports `Molly Ring v5.dc.html` (private design source; `support.js` is only the canvas runtime). Snapshot: [`design/Molly Ring v5.dc.html`](design/Molly%20Ring%20v5.dc.html), fetched 2026-10-22.
+- v5 differs from the v4 snapshot (`plans/implan-ring-redesign/design/`) only in:
+  - a pager header shown while `isPast` (template lines ~20–28), and the old header wrapped in `isLive`;
+  - `showPastStats` boxes in place of the tiles on a past ring (`showTiles: pIdle && live`);
+  - script: `pagePrev` / `pageNext` step `view ± 1`, `nextLive` when `view === -1`, `prevOp` 0.3 at the limit, `prevAria` / `nextAria` = `Previous: <title>` / `Next: <title>`, `pastStats`.
+- `Back to now` is still in v5 on past rings. The cap still switches to the pair.
+- Board text: "The buttons work in both screens" means both colour schemes (the third phone is night colours).
+
+## Decisions (2026-10-22, from issue #3)
+
+- **How far back:** `‹` keeps going until Baby Buddy has nothing older (like Recent days' `Load 3 more days`), not the design's two-week stop. It dims (opacity 0.3, still announced, does nothing) once nothing older exists.
+- **Snap back:** keep the 60 s snap back to now and the return-from-background reset. Each step changes `viewKey`, which already restarts the minute (effect deps in `index.tsx`), so stepping through a week works.
+- **Buttons only.** No swipe gestures.
+- Past stat boxes and the hidden live header are part of the design and in scope, though the issue names only the buttons.
+
+## Facts from the code
+
+- Dashboard window state: `viewKey` (`<kind>-<start ms>`, null = live) and `windows` (live first, then `windowsBefore(everything, …, daysBack, …)`, newest first) in `apps/molly/src/app/(main)/index.tsx` (~255, ~494). `viewIndex` is the shown window's index; the cap uses `pairOf(viewIndex)`.
+- Older data: `usePastEntries` covers `PAST_DAYS = 2` midnights; beyond that `useDays(older)` (`features/days/queries.ts`, a week per page, `fetchNextPage`) is enabled. The dashboard only ever loads page 0 today. Recent days decides "older may exist" as "the oldest page Baby Buddy sent had any entry" (`recent-days.tsx`, `olderMayExist`).
+- `wantAt` (`index.tsx` ~258) waits for a window not yet loaded; `time: null` means "the window before live" (the cap's first tap).
+- Titles and dates: `windowTitle(window, live)` and `windowDate(window)` in `packages/core/src/ring.ts` (`Yesterday`, `Last night`, `Tuesday night`, `Thu 24 Sep`). Same words as the design's `titleOf2`.
+- Past centre text: `pastCentre` (`index.tsx` ~209) from `totalsBetween` (`packages/core/src/totals.ts`, has `sleepMs`, `feedings`, `changes`, `medications`) plus sleeps started in the window.
+- Buttons: `IconButton` (`components/ui.tsx`, 48×48, themed) takes an `OutlinedSymbol`; `chevron_right` is used elsewhere as a `Glyph`, check `chevron_left` is in the symbol set. `InkButton` is the ink pill.
+- E2E asserting the old one-line header on past windows: `e2e/tests/ring.spec.ts:101`, `e2e/tests/recent-days.spec.ts:101,196`.
+
+## Cleanup sweep (planning)
+
+- **Remove:** the past-window branch of the header's date line: `Header` only ever shows the live window now. Tile handlers' `setViewKey(null)` / `showLive()` that exist only because a tile could be tapped on a past ring (`index.tsx` ~782 sleep, ~794 feed, diaper and med alike). Check each caller first: `start()` is also called from the likely panel (live only) and maybe Add entry (header hidden on past, but verify no other route in).
+- **Refactor first:** the pager rule as a pure, unit-tested function; `wantAt` widened from "before live" to "before a given window".
+- **Docs:** `plans/README.md` row. `plans/implan-ring-redesign/MAIN.md` describes the header as always name + three buttons: add a one-line pointer to this plan, not a rewrite.
+- Nothing else found: no flags, storage keys, deps or copy tied to the old header.
+
+## Found while building
+
+- **Where `‹` stops:** `previous.enabled` is "some loaded entry starts before the shown ring, or the oldest week Baby Buddy sent wasn't empty". On a past ring with nothing loaded before it, the dashboard fetches the next `useDays` week straight away to find out, so `‹` dims at the first entry ever logged instead of walking through empty windows down to the oldest week. `useDays` is therefore enabled on every past ring (one week, five requests, in the background).
+- **Loaded or not:** a window is "loaded" when it starts on or after `loadedFrom`: the oldest loaded week's `from`, else the past fetch's two midnights. `windowsBefore` always returns windows (clock windows where nothing is logged), so the list is never short; a window before `loadedFrom` may have the wrong start and missing entries, hence `load: true`.
+- **`wantAt`** is now `{ time, before?: true, edit? }`: `before` = the newest window starting before `time` (cap's first tap, `‹`), else the window holding `time` (Today sheet). Back, Back to now and the snap back clear it, so a pending step can't land after the parent left.
+- **Pending `‹`:** a spinner in the button once the wait passes 400 ms (`useDelayed`, same threshold as `useUpdatingOnReturn`).
+- **Tile handler cleanup:** sleep tile's `showLive()`, feed tile's `setViewKey(null)`, `feedNow`'s and `saveAdded`'s `showLive()` removed (tiles and Add entry only exist on the live ring). `start()` keeps closing panels (`closePanels`) because Start sleep in the likely panel calls it; the `?edit=` param still resets `viewKey` (it can arrive on a past ring).
+- `IconButton` gained `size`, `disabled` (opacity 0.3, `accessibilityState.disabled`) and `pending`; `InkButton` gained `trailing` (the pill's `chevron_right` after the label).
+- The Recent days screen stays mounted under the dashboard on web: e2e date checks after opening a ring from it need `.filter({ visible: true })`.
+
+- **Look review (2026-10-22):** web at 412 / 320 px in all eight looks, day and night; emulator-5554 at font scale 1.0 and 2.0. Fixed along the way: the slept box is wider (`flex-[1.25]`, as in the Today sheet) and its value wraps (`11h 55m` truncated otherwise); the pager title fills the centre column with no fixed line height and caps at `FIXED_SCALE`, since Android's `adjustsFontSizeToFit` clipped `Tuesday night` to `Tuesday` and ran into the pill; the two sides take the wider button's width (measured), so the title stays centred.
+- Left as is: on web at 320 px the night box's `medicine` truncates (`medi…`; web has no `adjustsFontSizeToFit`, Android shrinks it). At font scale 2.0 `Last night` sits right against the `Today ›` pill without overlapping.
+- Android (emulator): back on a paged-to ring goes to the live ring; home and back to the app goes to the live ring; the 60 s snap back is the existing e2e `a past window snaps back to now after a minute`, and each step changes `viewKey`, which restarts it.
+
+## Open
+
+(none)

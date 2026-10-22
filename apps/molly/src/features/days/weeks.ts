@@ -19,3 +19,9 @@ export function mergeWeeks(pages: { entries: EntriesByKind }[]): EntriesByKind {
     medication: unique(pages.map((page) => page.entries.medication)),
   };
 }
+
+/** Another week is worth asking for while the oldest one Baby Buddy sent had anything in it. */
+export function olderMayExist(pages: { entries: EntriesByKind }[] | undefined): boolean {
+  const oldest = pages?.at(-1)?.entries;
+  return !!oldest && Object.values(oldest).some((list) => list.length > 0);
+}
