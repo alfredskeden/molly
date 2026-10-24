@@ -5,7 +5,6 @@ import {
   dayPlan,
   dayRhythm,
   dayWindow,
-  isNightSleep,
   isSolidFeed,
   isVitaminD,
   lastBottle,
@@ -29,6 +28,7 @@ import {
 } from '@molly/core';
 
 import {
+  byClock,
   logDiaper,
   logFeed,
   logMedication,
@@ -102,11 +102,11 @@ export function tapContext(
 
 /**
  * Whether stopping a sleep saves the night, without the child's sleeps at hand: for the running sleep the refresh
- * saw (same start), from its `nightFrom` on; otherwise, or from a cache before it, by the clock (`isNightSleep`).
+ * saw (same start), from its `nightFrom` on; otherwise, or from a cache before it, by the clock (`byClock`).
  */
 export function nightRule(timer: RunningTimer | null, napWindow: NapWindow): NightRule {
   return ({ start, end }) => {
-    if (timer?.nightFrom === undefined || Date.parse(timer.start) !== start.getTime()) return isNightSleep(start, end, napWindow);
+    if (timer?.nightFrom === undefined || Date.parse(timer.start) !== start.getTime()) return byClock(napWindow)({ start, end });
     return timer.nightFrom !== null && end.getTime() >= Date.parse(timer.nightFrom);
   };
 }

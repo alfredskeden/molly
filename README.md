@@ -16,7 +16,8 @@ A fast, one-handed front end for [Baby Buddy](https://github.com/babybuddy/babyb
 - **The day as a ring**: from morning wake to bedtime, then the night. Naps, feeds, changes and medicine sit at their own times; Recent days shows earlier days the same way.
 - **Next likely sleep**: while the baby is awake, when the next nap or bedtime is likely, from the baby's age and the last two weeks of sleeps. Skip a nap and the rest of the day moves.
 - **Android widgets and lock-screen notification**: start and stop sleeps and log feeds without opening the app. Live Updates on Android 16.
-- **Two or three children**, each with their own colour, nap window, default bottle and widgets.
+- **Day and night from the child's rhythm**: Molly learns when each child usually wakes and goes to bed, so an early wake starts the day and an evening catnap stays a nap. Saved to Baby Buddy as nap or night sleep.
+- **Two or three children**, each with their own colour, day and night starting times, default bottle and widgets.
 - **Measurements**: weight against the WHO bands, height, head circumference, temperature and BMI.
 - **Development guide**: what many children do at each age, with sources (Sweden or international).
 - **Themes**: eight looks, from the plain Molly Classic to Arcade, Ribbon and Life Sim, each in day and night.

@@ -75,7 +75,7 @@ Tests come first for `packages/core` and the plain-TS app models (Vitest, Given 
 
 ## Cleanup (from the planning sweep)
 
-- [ ] `isNap` is no longer exported. `WAKE_RANGE_MS`, `usualMorningAfter`, `usualBedtime`, `NEEDS_TUNING.wakesNeeded` and `NEXT_SLEEP_TUNING.bedtimesNeeded` are gone (grep finds nothing).
-- [ ] No caller outside the fallback uses the by-clock rule directly (grep for `isNightSleep` shows only the new verdict's fallback, or the name has moved).
-- [ ] `CLAUDE.md`, `README.md`, `plans/implan-molly/NOTES.md` and the child screen copy describe the new rule. `plans/README.md` shows the plan's status.
-- [ ] `pnpm check` is green (boundaries, typecheck, lint, all Vitest, web-bundle check).
+- [x] `isNap` is no longer exported. `WAKE_RANGE_MS`, `usualMorningAfter`, `usualBedtime`, `NEEDS_TUNING.wakesNeeded` and `NEXT_SLEEP_TUNING.bedtimesNeeded` are gone (grep finds nothing).
+- [x] No caller outside the fallback uses the by-clock rule directly (grep for `isNightSleep` shows only the new verdict's fallback, or the name has moved).
+- [x] `CLAUDE.md`, `README.md`, `plans/implan-molly/NOTES.md` and the child screen copy describe the new rule. `plans/README.md` shows the plan's status.
+- [x] `pnpm check` is green (boundaries, typecheck, lint, all Vitest, web-bundle check).
