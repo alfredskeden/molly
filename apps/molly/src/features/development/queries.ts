@@ -5,8 +5,11 @@ import { useClient, useSettings } from '@/features/dashboard/queries';
 import { updateSettings } from '@/storage/settings';
 import { DEFAULT_SETTINGS, type Settings } from '@/storage/types';
 
-/** The child's own numbers need the last 7 full days, and a night ending in the first of them. */
-const SLEEP_DAYS = 9;
+/**
+ * The child's own numbers need the last 7 full days, and a night ending in the first of them; the child's
+ * rhythm, which splits naps from nights, is learned from the 14 days before today.
+ */
+const SLEEP_DAYS = 15;
 
 /**
  * The guide's child's sleeps (the Sleep topic's last 7 days) and recent medication (Vitamin D today), for any

@@ -1,10 +1,10 @@
 import type { Timer } from '@molly/api';
-import { parseSkip, windowsBefore, type DayWindow, type EntriesByKind, type NapWindow, type Skip } from '@molly/core';
+import { dayRhythm, parseSkip, windowsBefore, type DayRhythm, type DayWindow, type EntriesByKind, type NapWindow, type Skip } from '@molly/core';
 
 import { mergeDays, type DaysPage } from './queries';
 import { WINDOW_DAYS } from './weeks';
 
-export type DaysRows = { rows: DayWindow[]; entries: EntriesByKind; skips: Skip[] };
+export type DaysRows = { rows: DayWindow[]; entries: EntriesByKind; skips: Skip[]; rhythm: DayRhythm };
 
 /** Whether anything was logged in the window: a sleep in it, or a feed, diaper or medication. */
 function logged(entries: EntriesByKind, window: DayWindow): boolean {
@@ -20,19 +20,21 @@ function logged(entries: EntriesByKind, window: DayWindow): boolean {
 
 /**
  * The Days screen's rows, newest first: every finished day and night that starts in a loaded week
- * (the live one is the dashboard's), up to the oldest with anything logged.
+ * (the live one is the dashboard's), up to the oldest with anything logged. Days and nights by the child's
+ * rhythm (`rhythm`), learned from the loaded sleeps.
  */
-export function daysRows(pages: DaysPage[], napWindow: NapWindow, running: Timer | null, now: Date): DaysRows {
+export function daysRows(pages: DaysPage[], birthDate: string | null, napWindow: NapWindow, running: Timer | null, now: Date): DaysRows {
   const { entries, skips: notes } = mergeDays(pages);
   const skips = notes.flatMap((note) => {
     const skip = parseSkip(note);
     return skip ? [skip] : [];
   });
+  const rhythm = dayRhythm(entries.sleep, birthDate, napWindow, now);
   const oldest = pages.at(-1);
-  if (!oldest) return { rows: [], entries, skips };
-  const windows = windowsBefore(entries, napWindow, now, pages.length * WINDOW_DAYS, running).filter(
+  if (!oldest) return { rows: [], entries, skips, rhythm };
+  const windows = windowsBefore(entries, rhythm, now, pages.length * WINDOW_DAYS, running).filter(
     (window) => window.start >= oldest.from,
   );
   const last = windows.findLastIndex((window) => logged(entries, window));
-  return { rows: windows.slice(0, last + 1), entries, skips };
+  return { rows: windows.slice(0, last + 1), entries, skips, rhythm };
 }

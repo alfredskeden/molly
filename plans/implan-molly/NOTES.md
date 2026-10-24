@@ -80,7 +80,7 @@ Probed against the `e2e/docker-compose.yml` container with the seeded users. **T
 - **Bottle defaults: formula, 120 ml** (chosen by the agent when no answer came; editable in Settings, default in `src/storage/types.ts`).
 - `src/actions/trackers.ts` (plain TS, unit-tested with a fake client) holds every write: start, stop sleep, stop feeding, cancel, log diaper. Each looks the timer up first; a gone or forbidden write becomes `alreadyStopped` / `permissionNeeded`, other failures `failed`. The widget (step 9) reuses it.
 - Queries (TanStack Query 5.103): running timers per tracker and entries since yesterday's midnight, both polled every 30 s and refetched on focus (AppState on native). Any write invalidates `timer` and `entries`. The query provider is keyed by base URL + user + child, so sign-out or a child change starts with an empty cache.
-- Settings screen: bottle type and amount, nap window, child (only with several children), sign out. Entry screen: edit times (`YYYY-MM-DD HH:MM` local), nap, type, method, amount, tags, color, contents, notes; delete asks for confirmation.
+- Settings screen: bottle type and amount, nap window (since #14 the child screen's "Day starts / Day ends": starting values for the learned day rhythm, see `plans/implan-day-night/`), child (only with several children), sign out. Entry screen: edit times (`YYYY-MM-DD HH:MM` local), nap, type, method, amount, tags, color, contents, notes; delete asks for confirmation.
 - React Native Web ignores `accessibilityState.checked` for radios; `Choice` uses `role="radio"` + `aria-checked`.
 - Playwright: Playwright's `clock.runFor` did not fire TanStack's poll interval, `clock.fastForward` does. Two-parent tests wait for each write's banner before fast-forwarding.
 - `pnpm check` runs the boundary check (`scripts/check-boundaries.mjs`), typecheck, ESLint (`eslint-config-expo`), all Vitest suites and the web-bundle check (`scripts/check-web-bundle.mjs`). `pnpm e2e` runs Playwright.
@@ -228,7 +228,7 @@ Step 8 (2026-09-25), lock-screen notification:
 - Deploy (changed 2026-09-24, no GHCR): no registry. `pnpm web:up` builds and runs the image on the Mac; `pnpm web:image:pi` writes `dist/molly-web-arm64.tar` for `docker load` on the Pi. The operator sets the web origin and Baby Buddy's `CORS_ALLOWED_ORIGINS` on the server and runs the Pi checks.
 - Keystore: at a path outside the repo, passwords in `~/.gradle/gradle.properties`, backed up to a password manager. Nothing in git.
 - Times shown in the device timezone. Timestamps sent to Baby Buddy with offsets.
-- Settings (bottle default type/amount, nap window, later prediction defaults) are per device, in local storage. There is no shared config.
+- Settings (bottle default type/amount, nap window — since #14 only starting values for the learned day rhythm — later prediction defaults) are per device, in local storage. There is no shared config.
 - MVP dashboard: running timers (elapsed, who started), last of each tracker, today's totals since midnight, recent timeline with tap to edit or delete.
 - Plan is split: root files describe the system, `phases/mvp/` holds the MVP detail. Polish, multi-child and predictions are outlines in root `MAIN.md` until they're planned. They're named, not numbered, because the original brief called predictions "Phase 2".
 - Timer naming convention `molly:sleep` / `molly:feeding`. Molly ignores other timers.

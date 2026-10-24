@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { sleep } from '../test/fixtures';
 import { likelyDetail, likelySlots } from './likely-detail';
-import type { PastDay } from './next-sleep';
+import type { PastDay } from './day-window';
 
 /** Thursday 24 September 2026, local time; `day` back for an earlier one. */
 const at = (clock: string, day = 24) => {

@@ -1,7 +1,8 @@
 import type { Sleep } from '@molly/api';
 
 import { DAY_PLAN_TUNING, dayPlan, type DayPlanTuning, type Skip } from './day-plan';
-import { morningWake, type DayWindow } from './day-window';
+import { DAY_TUNING, dayRhythm, type DayRhythm, type DayTuning } from './day-rhythm';
+import { isNight as isNightIn, pastDays, wakeAndBedtime, type DayWindow } from './day-window';
 import { atClock, isNightSleep, type NapWindow } from './nap';
 import { NEXT_SLEEP_TUNING, nextSleep, type NextSleep, type NextSleepTuning } from './next-sleep';
 
@@ -11,10 +12,16 @@ export function knownAt(sleeps: Sleep[], now: Date): Sleep[] {
 }
 
 const MINUTE_MS = 60 * 1000;
+const DAY_MS = 24 * 60 * MINUTE_MS;
 
-/** Night sleep or nap by when it happened (`isNightSleep`), as the plan tells them; the saved flag isn't read. */
-function isNight(entry: Sleep, napWindow: NapWindow): boolean {
-  return isNightSleep(new Date(entry.start), new Date(entry.end), napWindow);
+/** Night sleep or nap by the child's rhythm (`isNight`), knowing every sleep; the saved flag isn't read. */
+function isNight(entry: Sleep, sleeps: Sleep[], rhythm: DayRhythm): boolean {
+  return isNightIn({ start: new Date(entry.start), end: new Date(entry.end) }, sleeps, rhythm, afterAll(sleeps));
+}
+
+/** A moment after every sleep has ended: all of them are known. */
+function afterAll(sleeps: Sleep[]): Date {
+  return new Date(Math.max(0, ...sleeps.map((entry) => Date.parse(entry.end))) + DAY_MS);
 }
 
 /** Whether the sleep started inside the window, how many minutes outside it if not, and its width. */
@@ -47,8 +54,10 @@ export function replay(
   birthDate: string,
   napWindow: NapWindow,
   tuning: NextSleepTuning = NEXT_SLEEP_TUNING,
+  dayTuning: DayTuning = DAY_TUNING,
 ): ReplayCase[] {
   const sorted = [...sleeps].sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
+  const known = dayRhythm(sorted, birthDate, napWindow, afterAll(sorted), dayTuning);
   return sorted.flatMap((target, index) => {
     if (index === 0) return [];
     const start = Date.parse(target.start);
@@ -56,9 +65,11 @@ export function replay(
     const long = Date.parse(target.end) - start >= tuning.catnapUnder * MINUTE_MS;
     if (!long || start - woke < 15 * MINUTE_MS) return [];
     const now = new Date(Math.max(start - LEAD_MS, woke));
-    const prediction = nextSleep(knownAt(sorted, now), null, birthDate, napWindow, now, tuning);
+    const before = knownAt(sorted, now);
+    const prediction = nextSleep(before, null, birthDate, dayRhythm(before, birthDate, napWindow, now, dayTuning), now, tuning);
     const started = new Date(start);
-    const kind = !isNight(target, napWindow) ? 'nap' : isNight(sorted[index - 1]!, napWindow) ? 'night' : 'bedtime';
+    const night = (entry: Sleep) => isNight(entry, sorted, known);
+    const kind = !night(target) ? 'nap' : night(sorted[index - 1]!) ? 'night' : 'bedtime';
     return [{ started, target: kind, now, prediction, score: prediction && score(prediction, started) }];
   });
 }
@@ -80,16 +91,16 @@ export function likelyFor(
   sleeps: Sleep[],
   skips: Skip[],
   birthDate: string | null,
-  napWindow: NapWindow,
+  rhythm: DayRhythm,
 ): LikelySleep[] {
   const shown = sleeps
     .filter((entry) => inside(window, new Date(entry.start)))
     .flatMap((entry): LikelySleep[] => {
       const started = new Date(entry.start);
       const tapped = skips.filter((skip) => skip.at <= started);
-      const plan = dayPlan(knownAt(sleeps, started), null, birthDate, napWindow, tapped, started);
+      const plan = dayPlan(knownAt(sleeps, started), null, birthDate, rhythm, tapped, started);
       const next = plan.find((sleep) => !sleep.skipped);
-      return next ? [{ kind: isNight(entry, napWindow) ? 'bedtime' : 'nap', start: next.start, end: next.end, skipped: false, started }] : [];
+      return next ? [{ kind: isNight(entry, sleeps, rhythm) ? 'bedtime' : 'nap', start: next.start, end: next.end, skipped: false, started }] : [];
     });
   const skipped = skips
     .filter((skip) => inside(window, skip.start))
@@ -101,7 +112,8 @@ export function likelyFor(
 export type PlanCase = { day: Date; position: number; kind: NextSleep['kind']; score: ReturnType<typeof score> | null };
 
 /**
- * Plans each logged day from its morning wake, knowing only the sleeps that had ended by then, and
+ * Plans each logged day from its morning wake, as soon as it was known (the age's threshold after it),
+ * knowing only the sleeps that had ended by then, and
  * scores planned nap N against the day's Nth sleep (null if the day had fewer naps) and planned
  * bedtime against the logged one. Days without a logged bedtime are left out. Catnaps don't count.
  */
@@ -111,27 +123,27 @@ export function replayPlans(
   napWindow: NapWindow,
   tuning: NextSleepTuning = NEXT_SLEEP_TUNING,
   planTuning: DayPlanTuning = DAY_PLAN_TUNING,
+  dayTuning: DayTuning = DAY_TUNING,
 ): PlanCase[] {
-  const long = sleeps
-    .filter((entry) => Date.parse(entry.end) - Date.parse(entry.start) >= tuning.catnapUnder * MINUTE_MS)
-    .sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
-  const wakes = new Map<number, Date>();
-  for (const entry of long.filter((sleep) => isNight(sleep, napWindow))) {
-    const wake = morningWake(sleeps, napWindow, atClock(new Date(entry.end), 0, napWindow.start));
-    if (wake) wakes.set(wake.getTime(), wake);
-  }
-  return [...wakes.values()].flatMap((day) => {
-    const after = long.filter((entry) => new Date(entry.start) > day);
-    const bedIndex = after.findIndex((entry) => isNight(entry, napWindow));
-    if (bedIndex < 0) return [];
-    const naps = after.slice(0, bedIndex);
-    const bed = new Date(after[bedIndex]!.start);
-    const plan = dayPlan(knownAt(sleeps, day), null, birthDate, napWindow, [], day, planTuning, tuning);
-    return plan.map((planned, index): PlanCase => {
-      const actual = planned.kind === 'bedtime' ? bed : naps[index] && new Date(naps[index].start);
-      return { day, position: index + 1, kind: planned.kind, score: actual ? score(planned, actual) : null };
+  const isLong = (entry: Sleep) => Date.parse(entry.end) - Date.parse(entry.start) >= tuning.catnapUnder * MINUTE_MS;
+  const end = afterAll(sleeps);
+  const first = Math.min(...sleeps.map((entry) => Date.parse(entry.start)));
+  const days = Math.ceil((end.getTime() - first) / DAY_MS) + 1;
+  const rhythm = dayRhythm(sleeps, birthDate, napWindow, end, dayTuning);
+  return pastDays(sleeps, rhythm, end, days)
+    .reverse()
+    .flatMap(({ wake, naps, bedtime }) => {
+      if (!bedtime) return [];
+      const long = naps.filter(isLong);
+      // The wake is only known once the baby has been up the age's threshold.
+      const known = new Date(wake.getTime() + rhythm.band.awake * MINUTE_MS);
+      const before = knownAt(sleeps, known);
+      const plan = dayPlan(before, null, birthDate, dayRhythm(before, birthDate, napWindow, known, dayTuning), [], known, planTuning, tuning);
+      return plan.map((planned, index): PlanCase => {
+        const actual = planned.kind === 'bedtime' ? new Date(bedtime.start) : long[index] && new Date(long[index].start);
+        return { day: wake, position: index + 1, kind: planned.kind, score: actual ? score(planned, actual) : null };
+      });
     });
-  });
 }
 
 /**
@@ -163,4 +175,85 @@ function whereIn(window: { start: Date; end: Date }, started: Date): string {
 
 function inside(window: { start: Date; end: Date }, time: Date): boolean {
   return time >= window.start && time <= window.end;
+}
+
+/** Where a day started and its night began, by one rule; null where the rule found none. */
+export type DayEdges = { wake: Date | null; bedtime: Date | null };
+
+/** A calendar day (its midnight) by the rule before #14 (`old`) and by the child's rhythm (`new`). */
+export type DayCase = { day: Date; old: DayEdges; new: DayEdges };
+
+/**
+ * Each calendar day from the first logged sleep's to the last's, with its morning wake and bedtime by
+ * both rules, knowing every sleep. The new rule's rhythm is learned as on that day (from the days
+ * before it), so a day never teaches itself.
+ */
+export function replayDays(sleeps: Sleep[], birthDate: string | null, napWindow: NapWindow, dayTuning: DayTuning = DAY_TUNING): DayCase[] {
+  if (sleeps.length === 0) return [];
+  const end = afterAll(sleeps);
+  const first = new Date(Math.min(...sleeps.map((entry) => Date.parse(entry.start))));
+  const last = new Date(Math.max(...sleeps.map((entry) => Date.parse(entry.end))));
+  const days: DayCase[] = [];
+  for (let day = atClock(first, 0, '00:00'); day <= last; day = atClock(day, 1, '00:00')) {
+    const rhythm = dayRhythm(sleeps, birthDate, napWindow, atClock(day, 0, '12:00'), dayTuning);
+    days.push({ day, old: oldEdges(sleeps, napWindow, day), new: wakeAndBedtime(sleeps, rhythm, day, end) });
+  }
+  return days;
+}
+
+/**
+ * The rule before #14, for comparison: the end of a night sleep by the clock (`isNightSleep`) closest
+ * to the setting's start and within 2 h of it, then the first night sleep after it from the setting's
+ * start on, before the next morning.
+ */
+function oldEdges(sleeps: Sleep[], napWindow: NapWindow, day: Date): DayEdges {
+  const night = (entry: Sleep) => isNightSleep(new Date(entry.start), new Date(entry.end), napWindow);
+  const start = atClock(day, 0, napWindow.start).getTime();
+  const distance = (time: number) => Math.abs(time - start);
+  const ends = sleeps
+    .filter(night)
+    .map((entry) => Date.parse(entry.end))
+    .filter((end) => distance(end) <= 2 * 60 * MINUTE_MS)
+    .sort((a, b) => distance(a) - distance(b));
+  if (ends.length === 0) return { wake: null, bedtime: null };
+  const wake = ends[0]!;
+  const nextMorning = atClock(day, 1, napWindow.start).getTime();
+  const starts = sleeps
+    .filter((entry) => night(entry) && Date.parse(entry.start) > wake && Date.parse(entry.start) >= start && Date.parse(entry.start) < nextMorning)
+    .map((entry) => Date.parse(entry.start))
+    .sort((a, b) => a - b);
+  return { wake: new Date(wake), bedtime: starts.length > 0 ? new Date(starts[0]!) : null };
+}
+
+/** A day's real morning wake and bedtime, from another tracker; null where it has none. */
+export type TruthDay = { day: Date; wake: Date | null; bedtime: Date | null };
+
+export type EdgeScore = { right: number; wrong: number; none: number };
+export type DayScores = Record<'old' | 'new', { wake: EdgeScore; bedtime: EdgeScore }>;
+
+/** How far off a found time may be and still be right. */
+const RIGHT_WITHIN_MS = 5 * MINUTE_MS;
+
+/**
+ * Each rule's wakes and bedtimes against the truth, on the days it has: right (within 5 min), wrong,
+ * or none (the rule found nothing). A truth with no time for a day isn't scored.
+ */
+export function scoreDays(days: DayCase[], truth: TruthDay[]): DayScores {
+  const empty = (): EdgeScore => ({ right: 0, wrong: 0, none: 0 });
+  const scores: DayScores = { old: { wake: empty(), bedtime: empty() }, new: { wake: empty(), bedtime: empty() } };
+  for (const real of truth) {
+    const found = days.find((day) => day.day.getTime() === atClock(real.day, 0, '00:00').getTime());
+    for (const rule of ['old', 'new'] as const) {
+      for (const edge of ['wake', 'bedtime'] as const) {
+        const expected = real[edge];
+        if (!expected) continue;
+        const time = found?.[rule][edge] ?? null;
+        const score = scores[rule][edge];
+        if (!time) score.none += 1;
+        else if (Math.abs(time.getTime() - expected.getTime()) <= RIGHT_WITHIN_MS) score.right += 1;
+        else score.wrong += 1;
+      }
+    }
+  }
+  return scores;
 }

@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Pressable } from '@/components/pressable';
 import { BackLink, Panel, ScreenTitle, Spinner, Text } from '@/components/ui';
-import { useChildPrefs } from '@/features/children/use-children';
+import { useChildPrefs, useChildrenOnScreen } from '@/features/children/use-children';
 import { useRunningTimer } from '@/features/dashboard/queries';
 import { PageSkeleton, useSkeleton } from '@/features/dashboard/Skeleton';
 import { UnreachableBanner } from '@/features/dashboard/Unreachable';
@@ -45,6 +45,8 @@ function summary(window: DayWindow, entries: EntriesByKind, now: Date) {
 /** Every day and night as a clock (design `1k`), newest first, three days at a time. A tap opens one on the dashboard. */
 export default function RecentDays() {
   const { napWindow, bottle } = useChildPrefs();
+  const { current } = useChildrenOnScreen();
+  const birthDate = current?.birth_date ?? null;
   const running = useRunningTimer('sleep').data ?? null;
   const days = useDays();
   const pages = days.data?.pages;
@@ -53,10 +55,10 @@ export default function RecentDays() {
   // The clock as of the fetch, not the ticking one: the cards are worked out again only when the data changes.
   const now = useMemo(() => new Date(updatedAt), [updatedAt]);
   const { cards, entries } = useMemo(() => {
-    const { rows, entries } = daysRows(pages ?? [], napWindow, running, now);
-    const live = dayWindow(entries, running, napWindow, now);
+    const { rows, entries, rhythm } = daysRows(pages ?? [], birthDate, napWindow, running, now);
+    const live = dayWindow(entries, running, rhythm, now);
     return { cards: pages ? recentDays(live, rows) : [], entries };
-  }, [pages, napWindow, running, now]);
+  }, [pages, birthDate, napWindow, running, now]);
   const olderMayExist = olderWeeksMayExist(pages);
   const canMore = cards.length > shown || olderMayExist;
   const skeleton = useSkeleton(days.isPending);

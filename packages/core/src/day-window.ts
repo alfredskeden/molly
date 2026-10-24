@@ -1,63 +1,55 @@
 import type { Sleep, Timer } from '@molly/api';
 
+import { firstWake, minutesPast, type DayRhythm } from './day-rhythm';
 import type { EntriesByKind } from './latest';
 import { atClock, isNightSleep, type NapWindow } from './nap';
 
-/** How far from the nap-window start a night sleep may end and still be the morning wake. */
-const WAKE_RANGE_MS = 2 * 60 * 60 * 1000;
+const MINUTE_MS = 60 * 1000;
 /** The strip always runs at least this far past now. */
-const HALF_HOUR_MS = 30 * 60 * 1000;
+const HALF_HOUR_MS = 30 * MINUTE_MS;
 
-/** Epoch ms; a running sleep ends now. */
-type Span = { start: number; end: number };
 type Interval = { start: Date; end: Date };
 
 /**
  * What the Today card covers: a day from the morning wake, or a night from bedtime. `wake` is the
  * morning wake that opened the current day (for a night, the one before its bedtime). `clock` means
- * no usable wake was logged, so the nap window alone set `start` (and `wake`).
+ * no usable wake was logged, so the setting alone set `start` (and `wake`).
  */
 export type DayWindow = { kind: 'day' | 'night'; start: Date; end: Date; wake: Date; clock: boolean };
 
 /**
- * The baby's current day or night, recomputed from the entries and nap window: nothing is stored. A
- * day with a plan (`bedtime`, the plan's bedtime window) ends where that window does.
+ * The baby's current day or night, recomputed from the entries and the child's rhythm: nothing is
+ * stored. A day with a plan (`bedtime`, the plan's bedtime window) ends where that window does.
  */
 export function dayWindow(
   entries: EntriesByKind,
   running: Timer | null,
-  napWindow: NapWindow,
+  rhythm: DayRhythm,
   now: Date,
   bedtime: { end: Date } | null = null,
 ): DayWindow {
-  const sleeps = spans(entries.sleep, running, now);
-  const found = fromWake(entries, sleeps, napWindow, now) ?? byClock(napWindow, now);
+  const found = fromWake(withRunning(entries.sleep, running, now), rhythm, now) ?? byClock(rhythm.napWindow, now);
   const window = found.kind === 'day' && bedtime ? { ...found, end: bedtime.end } : found;
   const soon = new Date(now.getTime() + HALF_HOUR_MS);
   return { ...window, end: window.end > soon ? window.end : soon };
 }
 
-/** The window opened by today's morning wake, or before its range has closed, last night's. */
-function fromWake(entries: EntriesByKind, sleeps: Span[], napWindow: NapWindow, now: Date): DayWindow | null {
-  const today = napWindowOn(now, 0, napWindow);
-  const wake = morningWake(entries.sleep, napWindow, today.start);
-  if (wake) {
-    return nightAfter(sleeps, wake, today, napWindow) ?? { kind: 'day', start: wake, end: today.end, wake, clock: false };
-  }
-  if (now.getTime() >= today.start.getTime() + WAKE_RANGE_MS) return null;
-  const yesterday = napWindowOn(now, -1, napWindow);
-  const yesterdaysWake = morningWake(entries.sleep, napWindow, yesterday.start);
-  // A day never runs past midnight: yesterday's wake is only any use with a bedtime after it.
-  return yesterdaysWake && nightAfter(sleeps, yesterdaysWake, yesterday, napWindow);
+/**
+ * The window opened by today's morning wake, or before its range has closed, last night's. Yesterday's
+ * day runs on past midnight while its bedtime may still come (up to `bedtimeCut` after the usual one).
+ */
+function fromWake(sleeps: Sleep[], rhythm: DayRhythm, now: Date): DayWindow | null {
+  const today = dayOn(sleeps, rhythm, now, 0, now);
+  if (today.wake) return today.bedtime ? nightOf(today, rhythm) : dayOf(today, rhythm);
+  if (now >= today.range.end) return null;
+  const yesterday = dayOn(sleeps, rhythm, now, -1, now);
+  if (!yesterday.wake) return null;
+  if (yesterday.bedtime) return nightOf(yesterday, rhythm);
+  const bedtimeOver = minutesPast(yesterday.midnight, 0, rhythm.bedtime + rhythm.tuning.bedtimeCut);
+  return now < bedtimeOver ? dayOf(yesterday, rhythm) : null;
 }
 
-/** The night that began at the first bedtime after a morning wake, if there has been one. */
-function nightAfter(sleeps: Span[], wake: Date, nap: Interval, napWindow: NapWindow): DayWindow | null {
-  const bed = bedtime(sleeps, wake, nap, napWindow);
-  return bed && { kind: 'night', start: bed, end: nextNapStart(bed, napWindow), wake, clock: false };
-}
-
-/** No usable wake: Today during the nap window, Tonight from its last end outside it. */
+/** No usable wake: Today during the setting's day, Tonight from its last end outside it. */
 function byClock(napWindow: NapWindow, now: Date): DayWindow {
   const today = napWindowOn(now, 0, napWindow);
   if (now >= today.start && now < today.end) {
@@ -70,21 +62,21 @@ function byClock(napWindow: NapWindow, now: Date): DayWindow {
 /**
  * The days and nights before the live one, newest first (`running` is the sleep timer, as for
  * `dayWindow`), back `days` days: the Days screen's rows. A past day runs from its morning wake to
- * its bedtime; without a logged wake or bedtime the nap window stands in, as in `dayWindow`.
+ * its bedtime; without a logged wake or bedtime the setting stands in, as in `dayWindow`.
  */
 export function windowsBefore(
   entries: EntriesByKind,
-  napWindow: NapWindow,
+  rhythm: DayRhythm,
   now: Date,
   days = 7,
   running: Timer | null = null,
 ): DayWindow[] {
-  const live = dayWindow(entries, running, napWindow, now);
+  const live = dayWindow(entries, running, rhythm, now);
   // A running bedtime sleep ends the day before it, as it opened the live night.
-  const sleeps = spans(entries.sleep, running, now);
+  const sleeps = withRunning(entries.sleep, running, now);
   const pages: DayWindow[] = [];
   for (let back = 0; back <= days + 1; back++) {
-    const { day, night } = windowsOn(entries.sleep, sleeps, napWindow, napWindowOn(now, -back, napWindow));
+    const { day, night } = windowsOn(sleeps, rhythm, now, -back);
     pages.push(night, day);
   }
   // Tonight's page comes after the day that just ended, which counts on top of the 7 days.
@@ -96,72 +88,148 @@ export function windowsBefore(
  * The Today card's one past page: the newest day or night that started before the live one. Today
  * looks back to last night, Tonight to the day that just ended.
  */
-export function previousWindow(
-  entries: EntriesByKind,
-  napWindow: NapWindow,
-  now: Date,
-  running: Timer | null = null,
-): DayWindow {
-  return windowsBefore(entries, napWindow, now, 1, running)[0]!;
+export function previousWindow(entries: EntriesByKind, rhythm: DayRhythm, now: Date, running: Timer | null = null): DayWindow {
+  return windowsBefore(entries, rhythm, now, 1, running)[0]!;
 }
 
-/** A calendar day's day and night windows, from its morning wake and bedtime, or the nap window without. */
-function windowsOn(entries: Sleep[], sleeps: Span[], napWindow: NapWindow, nap: Interval) {
-  const wake = morningWake(entries, napWindow, nap.start);
-  const bed = wake && bedtime(sleeps, wake, nap, napWindow);
-  const day: DayWindow = wake
-    ? { kind: 'day', start: wake, end: bed ?? nap.end, wake, clock: false }
-    : { kind: 'day', start: nap.start, end: nap.end, wake: nap.start, clock: true };
-  const night: DayWindow = bed
-    ? { kind: 'night', start: bed, end: nextNapStart(bed, napWindow), wake: wake!, clock: false }
-    : { kind: 'night', start: nap.end, end: nextNapStart(nap.end, napWindow), wake: wake ?? nap.end, clock: true };
-  return { day, night };
-}
-
-/** The end of a night sleep (`isNightSleep`), closest to the nap-window start and within range of it. */
-export function morningWake(sleeps: Sleep[], napWindow: NapWindow, napStart: Date): Date | null {
-  const distance = (time: number) => Math.abs(time - napStart.getTime());
-  const ends = sleeps
-    .filter((entry) => isNightSleep(new Date(entry.start), new Date(entry.end), napWindow))
-    .map((entry) => Date.parse(entry.end))
-    .filter((end) => distance(end) <= WAKE_RANGE_MS)
-    .sort((a, b) => distance(a) - distance(b));
-  return ends.length > 0 ? new Date(ends[0]!) : null;
+/** A calendar day's day and night windows, from its morning wake and bedtime, or the setting without. */
+function windowsOn(sleeps: Sleep[], rhythm: DayRhythm, now: Date, days: number) {
+  const found = dayOn(sleeps, rhythm, now, days, now);
+  const nap = napWindowOn(now, days, rhythm.napWindow);
+  const clockNight: DayWindow = { kind: 'night', start: nap.end, end: nextNapStart(nap.end, rhythm.napWindow), wake: found.wake ?? nap.end, clock: true };
+  if (!found.wake) {
+    return { day: { kind: 'day', start: nap.start, end: nap.end, wake: nap.start, clock: true } satisfies DayWindow, night: clockNight };
+  }
+  const day = dayOf(found, rhythm);
+  return { day: found.bedtime ? { ...day, end: new Date(found.bedtime.start) } : day, night: found.bedtime ? nightOf(found, rhythm) : clockNight };
 }
 
 /**
- * The first night sleep (`isNightSleep`) after the wake. One that started before the window is an
- * early wake's back-to-sleep, not a bedtime; one from the next morning on belongs to a later day.
+ * A logged day: its morning wake, the sleeps after it until bedtime (`naps`) and its bedtime (the
+ * first night sleep, null if none was logged). The saved `nap` flag is never read.
  */
-function bedtime(sleeps: Span[], wake: Date, nap: Interval, napWindow: NapWindow): Date | null {
-  const nextMorning = atClock(nap.start, 1, napWindow.start);
-  const starts = sleeps
-    .filter(
-      (span) =>
-        span.start > wake.getTime() &&
-        span.start < nextMorning.getTime() &&
-        span.start >= nap.start.getTime() &&
-        isNightSleep(new Date(span.start), new Date(span.end), napWindow),
-    )
-    .map((span) => span.start)
-    .sort((a, b) => a - b);
-  return starts.length > 0 ? new Date(starts[0]!) : null;
+export type PastDay = { wake: Date; naps: Sleep[]; bedtime: Sleep | null };
+
+/** Each of the last `count` days before `now` with a logged morning wake, newest first. */
+export function pastDays(sleeps: Sleep[], rhythm: DayRhythm, now: Date, count: number): PastDay[] {
+  return Array.from({ length: count }, (_, back) => dayOn(sleeps, rhythm, now, -back - 1, now)).flatMap(({ wake, naps, bedtime }) =>
+    wake ? [{ wake, naps, bedtime }] : [],
+  );
 }
 
-/** Logged sleeps as spans, plus the running one up to now. */
-function spans(entries: Sleep[], running: Timer | null, now: Date): Span[] {
-  return [
-    ...entries.map((entry) => ({ start: Date.parse(entry.start), end: Date.parse(entry.end) })),
-    ...(running ? [{ start: Date.parse(running.start), end: now.getTime() }] : []),
-  ];
+/** A calendar day: the range its morning wake may fall in, the wake (null without one), and its naps and bedtime after it. */
+type Found = { midnight: Date; range: Interval; wake: Date | null; naps: Sleep[]; bedtime: Sleep | null };
+
+/**
+ * The day some days from `day`, as known at `now`. The morning wake is the earliest end of a sleep
+ * within the age band's range around the usual wake (`before` / `after`) after which the baby stayed
+ * awake the band's threshold (`firstWake`); an end that fails is a night waking. Then every sleep from
+ * the wake to the next day's range, in order, split at the bedtime (`isBedtime`).
+ */
+function dayOn(sleeps: Sleep[], rhythm: DayRhythm, day: Date, days: number, now: Date): Found {
+  const midnight = minutesPast(day, days, 0);
+  const range = wakeRange(rhythm, day, days);
+  const wake = firstWake(sleeps, range, rhythm.band.awake, now);
+  if (!wake) return { midnight, range, wake: null, naps: [], bedtime: null };
+  const nextMorning = wakeRange(rhythm, day, days + 1).start;
+  const after = sleeps
+    .filter((entry) => Date.parse(entry.start) > wake.getTime() && Date.parse(entry.start) < nextMorning.getTime())
+    .sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
+  const usual = minutesPast(midnight, 0, rhythm.bedtime);
+  const bed = after.findIndex((entry) => isBedtime(entry, usual, rhythm, now));
+  return { midnight, range, wake, naps: bed < 0 ? after : after.slice(0, bed), bedtime: after[bed] ?? null };
 }
 
-/** The nap window on the day some days from `day`. */
+/** The clock range a day's morning wake may fall in: around the usual wake, `before` earlier and `after` later. */
+function wakeRange(rhythm: DayRhythm, day: Date, days: number): Interval {
+  const { before, after } = rhythm.band;
+  return { start: minutesPast(day, days, rhythm.wake - before), end: minutesPast(day, days, rhythm.wake + after) };
+}
+
+/**
+ * Whether a sleep after the morning wake is the night: it starts no earlier than `bedtimeCut` before
+ * the usual bedtime, or no earlier than `eveningFrom` before it and runs the band's `long` (a running
+ * sleep up to `now`). Anything else is a nap.
+ */
+function isBedtime(entry: Sleep, usual: Date, rhythm: DayRhythm, now: Date): boolean {
+  const start = Date.parse(entry.start);
+  const { bedtimeCut, eveningFrom } = rhythm.tuning;
+  if (start >= usual.getTime() - bedtimeCut * MINUTE_MS) return true;
+  const ran = Math.min(Date.parse(entry.end), now.getTime()) - start;
+  return start >= usual.getTime() - eveningFrom * MINUTE_MS && ran >= rhythm.band.long * MINUTE_MS;
+}
+
+/**
+ * Whether a sleep (finished, or running with `end` now) is the night, by the child's rhythm and the
+ * sleeps around it as known at `now`: before its day's morning wake, or from that day's bedtime on.
+ * Without a wake to place it by (no history), the setting by the clock (`isNightSleep`). The saved
+ * flag follows it, decided once at stop or log.
+ */
+export function isNight(sleep: { start: Date; end: Date }, sleeps: Sleep[], rhythm: DayRhythm, now: Date): boolean {
+  const entries = withSleep(sleeps, sleep);
+  const start = sleep.start.getTime();
+  const day = dayOn(entries, rhythm, sleep.start, 0, now);
+  if (day.wake) return start < day.wake.getTime() || (day.bedtime !== null && start >= Date.parse(day.bedtime.start));
+  const before = dayOn(entries, rhythm, sleep.start, -1, now);
+  if (before.wake && before.bedtime && start < day.range.end.getTime()) return start >= Date.parse(before.bedtime.start);
+  return isNightSleep(sleep.start, sleep.end, rhythm.napWindow);
+}
+
+/**
+ * From when stopping the sleep running since `start` saves a night sleep (`isNight` with the stop as its
+ * end), as known at `now`: its start if it already would, else once it has run the band's `long` if it
+ * would then, else null (a nap whenever it stops). What a tap without the sleeps at hand goes by.
+ */
+export function nightFrom(start: Date, sleeps: Sleep[], rhythm: DayRhythm, now: Date): Date | null {
+  const end = now > start ? now : start;
+  if (isNight({ start, end }, sleeps, rhythm, end)) return start;
+  const long = new Date(start.getTime() + rhythm.band.long * MINUTE_MS);
+  if (long <= end) return null;
+  return isNight({ start, end: long }, sleeps, rhythm, long) ? long : null;
+}
+
+/** The morning wake and bedtime of the calendar day `day` is on, as known at `now`; null for either not found. */
+export function wakeAndBedtime(sleeps: Sleep[], rhythm: DayRhythm, day: Date, now: Date): { wake: Date | null; bedtime: Date | null } {
+  const { wake, bedtime } = dayOn(sleeps, rhythm, day, 0, now);
+  return { wake, bedtime: bedtime && new Date(bedtime.start) };
+}
+
+/** A day that began at its morning wake, until the usual bedtime. */
+function dayOf(found: Found, rhythm: DayRhythm): DayWindow {
+  const wake = found.wake!;
+  return { kind: 'day', start: wake, end: minutesPast(found.midnight, 0, rhythm.bedtime), wake, clock: false };
+}
+
+/** The night from a day's bedtime to the next usual wake. */
+function nightOf(found: Found, rhythm: DayRhythm): DayWindow {
+  const start = new Date(found.bedtime!.start);
+  return { kind: 'night', start, end: usualWakeAfter(rhythm, start), wake: found.wake!, clock: false };
+}
+
+/** The first usual morning wake after `time`. */
+export function usualWakeAfter(rhythm: DayRhythm, time: Date): Date {
+  const sameDay = minutesPast(time, 0, rhythm.wake);
+  return sameDay > time ? sameDay : minutesPast(time, 1, rhythm.wake);
+}
+
+/** Logged sleeps, plus the running one up to now. */
+function withRunning(entries: Sleep[], running: Timer | null, now: Date): Sleep[] {
+  return running ? withSleep(entries, { start: new Date(running.start), end: now }) : entries;
+}
+
+/** The sleeps with one more, unless it's among them already (same start). */
+function withSleep(entries: Sleep[], sleep: { start: Date; end: Date }): Sleep[] {
+  if (entries.some((entry) => Date.parse(entry.start) === sleep.start.getTime())) return entries;
+  const added = { id: -1, child: 0, start: sleep.start.toISOString(), end: sleep.end.toISOString(), duration: '', nap: false };
+  return [...entries, { ...added, notes: null, tags: [] }];
+}
+
+/** The setting's day on the day some days from `day`. */
 function napWindowOn(day: Date, days: number, napWindow: NapWindow): Interval {
   return { start: atClock(day, days, napWindow.start), end: atClock(day, days, napWindow.end) };
 }
 
-/** The first nap-window start after `time`: the morning a night runs to. */
+/** The first setting start after `time`: the morning a night by the clock runs to. */
 function nextNapStart(time: Date, napWindow: NapWindow): Date {
   const sameDay = atClock(time, 0, napWindow.start);
   return sameDay > time ? sameDay : atClock(time, 1, napWindow.start);

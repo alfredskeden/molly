@@ -1,4 +1,5 @@
-import { BabyBuddyError } from '@molly/api';
+import { BabyBuddyError, type Sleep } from '@molly/api';
+import { dayRhythm } from '@molly/core';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -14,6 +15,8 @@ import {
 import {
   addEntry,
   adjustTime,
+  byClock,
+  byRhythm,
   cancelTimer,
   logDiaper,
   logFeed,
@@ -25,6 +28,14 @@ import {
 } from './trackers';
 
 const napWindow = { start: '07:00', end: '19:00' };
+const on = (day: number, hours: number, minutes = 0) => new Date(2026, 8, day, hours, minutes);
+const logged = (start: Date, end: Date): Sleep => ({ ...savedSleep, start: start.toISOString(), end: end.toISOString() });
+/** Ten days before the 20th: up at `wake` after a night from `bed`, one nap 09:30–10:30. */
+const usualDays = (bed: [number, number], wake: [number, number]) =>
+  Array.from({ length: 10 }, (_, index) => 10 + index).flatMap((day) => [
+    logged(on(day - 1, ...bed), on(day, ...wake)),
+    logged(on(day, 9, 30), on(day, 10, 30)),
+  ]);
 
 describe('starting a timer', () => {
   it('with none running creates a molly timer and reports it', async () => {
@@ -70,7 +81,7 @@ describe('stopping sleep', () => {
     const client = fakeClient({ findTimer: vi.fn(async () => runningSleep), stopSleep: vi.fn(async () => savedSleep) });
 
     // When
-    const outcome = await stopSleep(client, { child: CHILD, napWindow, now: new Date(savedSleep.end) });
+    const outcome = await stopSleep(client, { child: CHILD, night: byClock(napWindow), now: new Date(savedSleep.end) });
 
     // Then
     expect(outcome).toEqual({ type: 'stopped', created: { kind: 'sleep', entry: savedSleep } });
@@ -87,10 +98,40 @@ describe('stopping sleep', () => {
     const client = fakeClient({ findTimer: vi.fn(async () => timer), stopSleep: vi.fn(async () => savedSleep) });
 
     // When
-    await stopSleep(client, { child: CHILD, napWindow, now: new Date(2026, 8, 20, to[0]!, to[1]) });
+    await stopSleep(client, { child: CHILD, night: byClock(napWindow), now: new Date(2026, 8, 20, to[0]!, to[1]) });
 
     // Then
     expect(client.stopSleep).toHaveBeenCalledWith({ timer: runningSleep.id, nap });
+  });
+
+  it.each([
+    ['the back-to-sleep after a 06:31 wake', usualDays([21, 0], [8, 10]), on(19, 20, 58), on(20, 6, 31), on(20, 8, 15), on(20, 10, 26)],
+    ['a 25 min catnap at 19:30 before a 21:45 bedtime', usualDays([21, 45], [7, 0]), on(19, 21, 45), on(20, 7, 0), on(20, 19, 30), on(20, 19, 55)],
+  ])('saves %s as a nap by the child’s rhythm', async (_case, usual, bed, wake, from, to) => {
+    // Given
+    const sleeps = [...usual, logged(bed, wake)];
+    const timer = { ...runningSleep, start: from.toISOString() };
+    const client = fakeClient({ findTimer: vi.fn(async () => timer), stopSleep: vi.fn(async () => savedSleep) });
+    const night = byRhythm(sleeps, dayRhythm(sleeps, '2026-04-20', napWindow, to), to);
+
+    // When
+    await stopSleep(client, { child: CHILD, night, now: to });
+
+    // Then
+    expect(client.stopSleep).toHaveBeenCalledWith({ timer: runningSleep.id, nap: true });
+  });
+
+  it('saves by the clock when no recent sleeps are at hand', async () => {
+    // Given
+    const timer = { ...runningSleep, start: on(20, 19, 30).toISOString() };
+    const client = fakeClient({ findTimer: vi.fn(async () => timer), stopSleep: vi.fn(async () => savedSleep) });
+    const night = byRhythm([], dayRhythm([], '2026-04-20', napWindow, on(20, 19, 55)), on(20, 19, 55));
+
+    // When
+    await stopSleep(client, { child: CHILD, night, now: on(20, 19, 55) });
+
+    // Then
+    expect(client.stopSleep).toHaveBeenCalledWith({ timer: runningSleep.id, nap: false });
   });
 
   it('with no timer running writes nothing and reports already stopped', async () => {
@@ -98,7 +139,7 @@ describe('stopping sleep', () => {
     const client = fakeClient();
 
     // When
-    const outcome = await stopSleep(client, { child: CHILD, napWindow });
+    const outcome = await stopSleep(client, { child: CHILD, night: byClock(napWindow) });
 
     // Then
     expect(outcome).toEqual({ type: 'alreadyStopped' });
@@ -113,7 +154,7 @@ describe('stopping sleep', () => {
     });
 
     // When
-    const outcome = await stopSleep(client, { child: CHILD, napWindow });
+    const outcome = await stopSleep(client, { child: CHILD, night: byClock(napWindow) });
 
     // Then
     expect(outcome).toEqual({ type: 'alreadyStopped' });
@@ -127,7 +168,7 @@ describe('stopping sleep', () => {
     });
 
     // When
-    const outcome = await stopSleep(client, { child: CHILD, napWindow });
+    const outcome = await stopSleep(client, { child: CHILD, night: byClock(napWindow) });
 
     // Then
     expect(outcome).toEqual({ type: 'permissionNeeded' });
@@ -468,7 +509,7 @@ describe('adding an entry from the Add entry sheet', () => {
     const client = fakeClient();
 
     // When
-    const outcome = await addEntry(client, { child: CHILD, napWindow, bottle, draft: { ...base, kind: 'sleep', start, end: null } });
+    const outcome = await addEntry(client, { child: CHILD, night: byClock(napWindow), bottle, draft: { ...base, kind: 'sleep', start, end: null } });
 
     // Then
     expect(client.startTimer).toHaveBeenCalledWith({ child: CHILD, name: 'molly:sleep', start: start.toISOString() });
@@ -480,7 +521,7 @@ describe('adding an entry from the Add entry sheet', () => {
     const client = fakeClient({ findTimer: vi.fn(async () => runningSleep) });
 
     // When
-    const outcome = await addEntry(client, { child: CHILD, napWindow, bottle, draft: { ...base, kind: 'sleep', start, end: null } });
+    const outcome = await addEntry(client, { child: CHILD, night: byClock(napWindow), bottle, draft: { ...base, kind: 'sleep', start, end: null } });
 
     // Then
     expect(outcome).toMatchObject({ type: 'alreadyRunning' });
@@ -492,7 +533,7 @@ describe('adding an entry from the Add entry sheet', () => {
     const client = fakeClient({ logSleep: vi.fn(async () => savedSleep) });
 
     // When
-    const outcome = await addEntry(client, { child: CHILD, napWindow: { start: '00:00', end: '23:59' }, bottle, draft: { ...base, kind: 'sleep', start, end } });
+    const outcome = await addEntry(client, { child: CHILD, night: byClock({ start: '00:00', end: '23:59' }), bottle, draft: { ...base, kind: 'sleep', start, end } });
 
     // Then
     expect(client.logSleep).toHaveBeenCalledWith({ child: CHILD, start: start.toISOString(), end: end.toISOString(), nap: true });
@@ -505,10 +546,24 @@ describe('adding an entry from the Add entry sheet', () => {
     const [from, to] = [new Date(2026, 8, 20, 18, 45), new Date(2026, 8, 21, 2, 0)];
 
     // When
-    await addEntry(client, { child: CHILD, napWindow, bottle, draft: { ...base, kind: 'sleep', start: from, end: to } });
+    await addEntry(client, { child: CHILD, night: byClock(napWindow), bottle, draft: { ...base, kind: 'sleep', start: from, end: to } });
 
     // Then
     expect(client.logSleep).toHaveBeenCalledWith({ child: CHILD, start: from.toISOString(), end: to.toISOString(), nap: false });
+  });
+
+  it('saves a back-to-sleep after a 06:31 wake as a nap by the child’s rhythm', async () => {
+    // Given
+    const sleeps = [...usualDays([21, 0], [8, 10]), logged(on(19, 20, 58), on(20, 6, 31))];
+    const client = fakeClient({ logSleep: vi.fn(async () => savedSleep) });
+    const [from, to] = [on(20, 8, 15), on(20, 10, 26)];
+    const night = byRhythm(sleeps, dayRhythm(sleeps, '2026-04-20', napWindow, on(20, 12)), on(20, 12));
+
+    // When
+    await addEntry(client, { child: CHILD, night, bottle, draft: { ...base, kind: 'sleep', start: from, end: to } });
+
+    // Then
+    expect(client.logSleep).toHaveBeenCalledWith({ child: CHILD, start: from.toISOString(), end: to.toISOString(), nap: true });
   });
 
   it("saves a finished bottle feed with the amount chosen and the last bottle's type", async () => {
@@ -516,7 +571,7 @@ describe('adding an entry from the Add entry sheet', () => {
     const client = fakeClient({ logFeeding: vi.fn(async () => savedFeeding) });
 
     // When
-    await addEntry(client, { child: CHILD, napWindow, bottle, draft: { ...base, kind: 'feed', feed: 'Bottle', start, end, amount: 135 } });
+    await addEntry(client, { child: CHILD, night: byClock(napWindow), bottle, draft: { ...base, kind: 'feed', feed: 'Bottle', start, end, amount: 135 } });
 
     // Then
     expect(client.logFeeding).toHaveBeenCalledWith({
@@ -534,7 +589,7 @@ describe('adding an entry from the Add entry sheet', () => {
     const client = fakeClient({ logFeeding: vi.fn(async () => savedFeeding) });
 
     // When
-    await addEntry(client, { child: CHILD, napWindow, bottle, draft: { ...base, kind: 'feed', feed: 'Solids', food: ' Pear ', start, end } });
+    await addEntry(client, { child: CHILD, night: byClock(napWindow), bottle, draft: { ...base, kind: 'feed', feed: 'Solids', food: ' Pear ', start, end } });
 
     // Then
     expect(client.logFeeding).toHaveBeenCalledWith({
@@ -553,7 +608,7 @@ describe('adding an entry from the Add entry sheet', () => {
     const client = fakeClient({ logChange: vi.fn(async () => savedChange) });
 
     // When
-    await addEntry(client, { child: CHILD, napWindow, bottle, draft: { ...base, kind: 'diaper', diaper: 'Both', start, end: null } });
+    await addEntry(client, { child: CHILD, night: byClock(napWindow), bottle, draft: { ...base, kind: 'diaper', diaper: 'Both', start, end: null } });
 
     // Then
     expect(client.logChange).toHaveBeenCalledWith({ child: CHILD, time: start.toISOString(), wet: true, solid: true });
@@ -564,8 +619,8 @@ describe('adding an entry from the Add entry sheet', () => {
     const client = fakeClient({ logMedication: vi.fn(async () => savedMedication) });
 
     // When
-    await addEntry(client, { child: CHILD, napWindow, bottle, draft: { ...base, kind: 'med', note: 'with the feed', start, end: null } });
-    await addEntry(client, { child: CHILD, napWindow, bottle, draft: { ...base, kind: 'med', med: 'Other', note: ' Paracetamol 2.5 ml ', start, end: null } });
+    await addEntry(client, { child: CHILD, night: byClock(napWindow), bottle, draft: { ...base, kind: 'med', note: 'with the feed', start, end: null } });
+    await addEntry(client, { child: CHILD, night: byClock(napWindow), bottle, draft: { ...base, kind: 'med', med: 'Other', note: ' Paracetamol 2.5 ml ', start, end: null } });
 
     // Then
     expect(client.logMedication).toHaveBeenNthCalledWith(1, { child: CHILD, name: 'Vitamin D', time: start.toISOString(), notes: 'with the feed' });

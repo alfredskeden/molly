@@ -257,13 +257,13 @@ test("a child's day and night is used for the next sleep and moves the ring's da
   });
   await adminFetch('sleep/', {
     method: 'POST',
-    body: JSON.stringify({ child: testEnv.childId, start: at(17, 30).toISOString(), end: at(18, 0).toISOString(), nap: true }),
+    body: JSON.stringify({ child: testEnv.childId, start: at(16, 30).toISOString(), end: at(17, 0).toISOString(), nap: true }),
   });
   await page.clock.install({ time: at(18, 20) });
   await signInAs(page, testEnv.parentB);
   await expect(page.getByText(/^Today · /).filter({ visible: true })).toBeVisible();
 
-  // When: the day ends at 17:00 now, so the 17:30 sleep was bedtime
+  // When: the day ends at 17:00 now (the usual bedtime until one is learned), so the 16:30 sleep, within 90 min of it, was bedtime
   await openChildSettings(page, 'Test');
   for (let i = 0; i < 8; i++) await button(page, 'Day ends 15 minutes earlier').click();
   await saveChanges(page);
@@ -271,7 +271,7 @@ test("a child's day and night is used for the next sleep and moves the ring's da
 
   // Then
   await expect(page.getByText(/^Tonight · /).filter({ visible: true })).toBeVisible();
-  await expect(page.getByText('Bedtime 17:30', { exact: true }).filter({ visible: true })).toBeVisible();
+  await expect(page.getByText('Bedtime 16:30', { exact: true }).filter({ visible: true })).toBeVisible();
 });
 
 test('leaving the child screen with changes drops them and says so', async ({ page }) => {

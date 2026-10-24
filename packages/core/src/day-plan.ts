@@ -1,7 +1,8 @@
 import type { Sleep, Timer } from '@molly/api';
 
+import type { DayRhythm } from './day-rhythm';
 import { clockText } from './format';
-import { atClock, type NapWindow } from './nap';
+import { atClock } from './nap';
 import {
   DAY_PLAN_TUNING,
   type DayPlanTuning,
@@ -42,13 +43,13 @@ export function dayPlan(
   sleeps: Sleep[],
   running: Timer | null,
   birthDate: string | null,
-  napWindow: NapWindow,
+  rhythm: DayRhythm,
   skips: Skip[],
   now: Date,
   tuning: DayPlanTuning = DAY_PLAN_TUNING,
   nextTuning: NextSleepTuning = NEXT_SLEEP_TUNING,
 ): PlannedSleep[] {
-  const context = sleepContext(sleeps, running, birthDate, napWindow, now, nextTuning, tuning);
+  const context = sleepContext(sleeps, running, birthDate, rhythm, now, nextTuning, tuning);
   if (!context) return [];
   const active = skips.filter((skip) => skip.at > context.anchor).sort((a, b) => a.at.getTime() - b.at.getTime());
   const plan: PlannedSleep[] = [];

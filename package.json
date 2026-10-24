@@ -20,6 +20,7 @@
     "android:release": "scripts/android-release.sh",
     "brand:export": "node scripts/export-brand.mjs",
     "replay:naps": "tsx scripts/replay-naps.ts",
+    "replay:fixtures": "tsx scripts/replay-fixtures.ts",
     "check:sources": "tsx scripts/check-sources.ts"
   },
   "devDependencies": {

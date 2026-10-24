@@ -14,9 +14,11 @@ import {
   diaperFor,
   feedingForStop,
   instantFeedTimes,
+  isNight,
   isNightSleep,
   stopFailureOutcome,
   type BottleDefaults,
+  type DayRhythm,
   type DiaperButton,
   type FeedingStopButton,
   type NapWindow,
@@ -84,7 +86,7 @@ export async function startTimer(
  */
 export async function addEntry(
   client: TrackerClient,
-  { child, draft, napWindow, bottle }: { child: number; draft: AddDraft; napWindow: NapWindow; bottle: BottleDefaults },
+  { child, draft, night, bottle }: { child: number; draft: AddDraft; night: NightRule; bottle: BottleDefaults },
 ): Promise<Outcome> {
   const [start, end] = [draft.start.toISOString(), draft.end?.toISOString()];
   if ((draft.kind === 'sleep' || draft.kind === 'feed') && !end) {
@@ -93,7 +95,7 @@ export async function addEntry(
   return reportFailures(async () => {
     switch (draft.kind) {
       case 'sleep': {
-        const nap = !isNightSleep(draft.start, draft.end!, napWindow);
+        const nap = !night({ start: draft.start, end: draft.end! });
         const entry = await client.logSleep({ child, start, end: end!, nap });
         return { type: 'stopped', created: { kind: 'sleep', entry } };
       }
@@ -126,13 +128,32 @@ export async function addEntry(
 const FEED_BUTTONS = { Left: 'left', Right: 'right', Both: 'both', Bottle: 'bottle', Solids: 'solids' } as const;
 const DIAPER_BUTTONS = { Wet: 'wet', Dirty: 'dirty', Both: 'both' } as const;
 
-/** Saved as a nap or night sleep by `isNightSleep`, ending at the stop (`now`; Baby Buddy ends it at its own now). */
+/**
+ * Whether a sleep is the night: what a stop or a logged sleep saves as `nap: false`. Decided at the tap from
+ * what's at hand, never by fetching (a tap mustn't wait on it), and never patched after.
+ */
+export type NightRule = (sleep: { start: Date; end: Date }) => boolean;
+
+/** By the setting's clock alone (`isNightSleep`): what a tap without the child's recent sleeps goes by. */
+export function byClock(napWindow: NapWindow): NightRule {
+  return ({ start, end }) => isNightSleep(start, end, napWindow);
+}
+
+/**
+ * By the child's rhythm and the recent sleeps at hand (`isNight`), known as of `now` or the sleep's end if
+ * later. With no sleeps at hand it comes out by the clock.
+ */
+export function byRhythm(sleeps: Sleep[], rhythm: DayRhythm, now: Date = new Date()): NightRule {
+  return (sleep) => isNight(sleep, sleeps, rhythm, sleep.end > now ? sleep.end : now);
+}
+
+/** Saved as a nap or night sleep by `night`, ending at the stop (`now`; Baby Buddy ends it at its own now). */
 export async function stopSleep(
   client: TrackerClient,
-  { child, napWindow, now = new Date() }: { child: number; napWindow: NapWindow; now?: Date },
+  { child, night, now = new Date() }: { child: number; night: NightRule; now?: Date },
 ): Promise<Outcome> {
   return consumeRunning(client, { child, name: TIMER_NAMES.sleep }, async (timer) => {
-    const nap = !isNightSleep(new Date(timer.start), now, napWindow);
+    const nap = !night({ start: new Date(timer.start), end: now });
     const entry = await client.stopSleep({ timer: timer.id, nap });
     return { type: 'stopped', created: { kind: 'sleep', entry } };
   });

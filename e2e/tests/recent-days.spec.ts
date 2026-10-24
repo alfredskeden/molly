@@ -91,7 +91,8 @@ test("an entry of last night in the Today sheet opens on last night's ring", asy
   await seedDaysBefore(-1);
   await post('sleep/', { start: iso(19, 5, -1), end: iso(7, 13), nap: false });
   await post('feedings/', { start: iso(22, 30, -1), end: iso(22, 50, -1), type: 'breast milk', method: 'left breast' });
-  await openAt(page, 7, 40);
+  // Over an hour after the 07:13 wake: before that it's still the night.
+  await openAt(page, 8, 20);
   await button(page, 'Today').click();
 
   // When
