@@ -41,6 +41,8 @@ Each item is a sub-step in `MAIN.md`.
 - **Taps** (step 7): `stopSleep` / `addEntry` take a `NightRule` (`actions/trackers.ts`): the dashboard's `byRhythm(loaded.sleep, rhythm)` from the cached entries (never fetched at the tap; none cached comes out by the clock), the widget and notification `nightRule(timer, napWindow)` from the cache. The widget refresh works out each running sleep's `nightFrom` (core `nightFrom`: from when a stop saves a night sleep) into the cached `sleepTimer` and `timers[].sleep`; the lock-screen "saves as" reads it. A timer started on this phone since the refresh, or a shown child whose sleeps no snapshot fetched, goes by the clock until the next refresh.
 - The development topic's sleep fetch went from 9 to 15 days so its rhythm can learn; the Vitamin D check after a stop fetches 15 days of sleeps and the children (for the birth date). `NEEDS_TUNING.rhythmVersion` bumped to 3 (the window split changed).
 
+- **Playwright** (`e2e/tests/day-night.spec.ts`): the catnap and back-to-sleep saves and the child-screen copy. Three older specs moved with the rule: two opened the dashboard less than an hour after the wake (still the night now), one put a 17:30 nap 90 min before the default 19:00, which is now a bedtime until one is learned.
+
 ## Tuning (step 5)
 
 Made-up fixtures (`packages/core/test/day-fixtures.ts`: 2 months, 4–5 months, 10 months, 18 months; early wakings, back-to-sleep mornings, evening catnaps, a long lunch nap) replayed with `pnpm replay:fixtures`, 3 seeds × 28 days, the first 3 days not scored. Right · wrong · none:

@@ -63,9 +63,9 @@ Tests come first for `packages/core` and the plain-TS app models (Vitest, Given 
 
 ## Playwright (seeded Baby Buddy, built web image)
 
-- [ ] With 4 seeded days of bedtimes around 21:45, adding a sleep 19:30–19:55 yesterday through Add entry saves it with `nap: true` (checked through the API).
-- [ ] With seeded days whose wake is around 08:00, adding yesterday's 06:31 wake and 08:15–10:26 sleep saves the sleep with `nap: true`, and the Recent days card for that day starts at 06:31.
-- [ ] The child screen shows the new "Day starts / Day ends" copy, and changing a value still saves.
+- [x] With 4 seeded days of bedtimes around 21:45, adding a sleep 19:30–19:55 yesterday through Add entry saves it with `nap: true` (checked through the API).
+- [x] With seeded days whose wake is around 08:00, adding yesterday's 06:31 wake and 08:15–10:26 sleep saves the sleep with `nap: true`, and the Recent days card for that day starts at 06:31.
+- [x] The child screen shows the new "Day starts / Day ends" copy, and changing a value still saves.
 
 ## Manual (emulator-5554)
 

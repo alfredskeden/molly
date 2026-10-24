@@ -113,9 +113,10 @@ test('with days of history, the row opens where the window came from', async ({ 
     await nap([8, 40], [9, 40], day);
   }
   await morning();
-  await clockAt(page, yesterday(7, 30));
+  // Over an hour after the 06:40 wake: before that it's still the night.
+  await clockAt(page, yesterday(7, 45));
   await signInAs(page, testEnv.parentB);
-  await expect(row(page)).toContainText('Nap 1 likely07:58in 28m');
+  await expect(row(page)).toContainText('Nap 1 likely07:58in 13m');
 
   // When
   await row(page).click();
@@ -123,7 +124,7 @@ test('with days of history, the row opens where the window came from', async ({ 
 
   // Then
   const sheet = page.getByLabel('Why this window', { exact: true });
-  await expect(sheet).toContainText('Awake for50m');
+  await expect(sheet).toContainText('Awake for1h 05m');
   await expect(sheet).toContainText('Usual first wake windowlast 14 days · 3 days1h 40m – 2h 20m');
   await expect(sheet).toContainText('Age guide4 months1h 15m – 2h 05m');
   await expect(sheet).toContainText('Weighted towardsYour logs and age');
