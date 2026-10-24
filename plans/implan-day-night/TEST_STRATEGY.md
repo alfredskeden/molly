@@ -49,10 +49,10 @@ Tests come first for `packages/core` and the plain-TS app models (Vitest, Given 
 
 ## Unit: `apps/molly`
 
-- [ ] `trackers.ts` with the fake client: `stopSleep` and `addEntry` send `nap: true` for the back-to-sleep and the catnap (given recent sleeps and birth date), and fall back to the by-clock flag with none.
-- [ ] A stop never waits on fetching recent sleeps: with the history lookup failing, the stop still goes through with the by-clock flag.
-- [ ] Widget model: the snapshot's day or night and plan follow the new rule on the back-to-sleep fixture.
-- [ ] Notification model: "saves as nap" / "saves as night sleep" match the verdict for a running back-to-sleep and a running catnap.
+- [x] `trackers.ts` with the fake client: `stopSleep` and `addEntry` send `nap: true` for the back-to-sleep and the catnap (given recent sleeps and birth date), and fall back to the by-clock flag with none.
+- [x] A stop never waits on fetching recent sleeps: with the history lookup failing, the stop still goes through with the by-clock flag.
+- [x] Widget model: the snapshot's day or night and plan follow the new rule on the back-to-sleep fixture.
+- [x] Notification model: "saves as nap" / "saves as night sleep" match the verdict for a running back-to-sleep and a running catnap.
 
 ## Replay (step 5)
 

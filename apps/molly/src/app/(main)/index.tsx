@@ -7,10 +7,10 @@ import {
   centreText,
   eatQuestion,
   editorSubtitle,
-  isNightSleep,
   isSolidFeed,
   SOLIDS_METHOD,
   dayPlan,
+  dayRhythm,
   dayWindow,
   diaperFor,
   drank,
@@ -37,12 +37,12 @@ import {
   windowStats,
   windowTitle,
   type CentreText,
+  type DayRhythm,
   type DayWindow,
   type BottleDefaults,
   type EntriesByKind,
   type FeedingStopButton,
   type LikelySlot,
-  type NapWindow,
   type PlannedSleep,
   type Skip,
 } from '@molly/core';
@@ -56,6 +56,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   addEntry,
   adjustTime,
+  byRhythm,
   cancelTimer,
   logDiaper,
   logFeed,
@@ -484,18 +485,21 @@ export default function Dashboard() {
   const loaded = entries.data;
   const last = loaded && lastOfEach(loaded);
   const birthDate = child?.birth_date ?? null;
+  // The child's usual wake and bedtime, learned from the sleeps on hand: what decides day, night and the nap flag.
+  const rhythm = dayRhythm(loaded?.sleep ?? [], birthDate, napWindow, now);
+  const night = byRhythm(loaded?.sleep ?? [], rhythm);
   const skips = (skipNotes.data ?? []).flatMap((note) => {
     const skip = parseSkip(note);
     return skip ? [{ ...skip, note }] : [];
   });
   const planWith = (withSkips: Skip[]) =>
     loaded && birthDate
-      ? dayPlan(loaded.sleep, sleepRunning, birthDate, napWindow, withSkips, now)
+      ? dayPlan(loaded.sleep, sleepRunning, birthDate, rhythm, withSkips, now)
       : [];
   const plan = planWith(skips);
   const bedtime = bedtimeOf(plan);
-  // The baby's day or night, not the clock's: recomputed every render so a nap-window change moves it at once.
-  const liveWindow = loaded && dayWindow(loaded, sleepRunning, napWindow, now, bedtime);
+  // The baby's day or night, not the clock's: recomputed every render so a setting change moves it at once.
+  const liveWindow = loaded && dayWindow(loaded, sleepRunning, rhythm, now, bedtime);
   // Life Sim's needs (null in every other theme): the sleep need drains to the window row's next sleep.
   const needs = useNeeds({
     entries: loaded,
@@ -504,6 +508,7 @@ export default function Dashboard() {
     next: plan.find((planned) => !planned.skipped) ?? null,
     window: liveWindow || null,
     birthDate,
+    day: rhythm,
     now,
   });
   const past = loaded && pastEntries.data ? mergeEntries(pastEntries.data, loaded) : null;
@@ -523,7 +528,7 @@ export default function Dashboard() {
   const olderWeeksMayExist = !oldestWeek || olderMayExist(days.data!.pages);
   // The live window, then every one before it back to the one on screen (and the one asked for), newest first.
   const daysBack = reach === Infinity ? 1 : Math.ceil((now.getTime() - reach) / DAY_MS) + 1;
-  const windows = liveWindow ? [liveWindow, ...(everything ? windowsBefore(everything, napWindow, now, daysBack, sleepRunning) : [])] : [];
+  const windows = liveWindow ? [liveWindow, ...(everything ? windowsBefore(everything, rhythm, now, daysBack, sleepRunning) : [])] : [];
   const keyOf = (window: DayWindow) => `${window.kind}-${window.start.getTime()}`;
   const viewIndex = viewKey ? windows.findIndex((window) => keyOf(window) === viewKey) : 0;
   const previous = windows[1] ?? null;
@@ -568,7 +573,7 @@ export default function Dashboard() {
     run(
       'sleep',
       'stopTimer',
-      () => stopSleep(client, { child: childId, napWindow }),
+      () => stopSleep(client, { child: childId, night }),
       () => optimistic.ended('sleep'),
       { tracker: 'sleep', timer: sleepTimer.data },
     );
@@ -698,7 +703,7 @@ export default function Dashboard() {
     setAdding(true);
     const source: Source = draft.kind === 'sleep' ? 'sleep' : draft.kind === 'feed' ? 'feeding' : draft.kind === 'diaper' ? 'diaper' : 'medication';
     try {
-      const outcome = await addEntry(client, { child: childId, draft, napWindow, bottle: lastBottle });
+      const outcome = await addEntry(client, { child: childId, draft, night, bottle: lastBottle });
       haptic(answerStrength(outcome));
       if (refused(outcome) && (await keyRejected())) return;
       if (outcome.type !== 'failed' && outcome.type !== 'permissionNeeded') {
@@ -763,7 +768,7 @@ export default function Dashboard() {
       ? () => pastCentre(shownWindow, shownEntries)
       : sleepRunning
         ? (at) => ({
-            ...centreText({ state: 'sleeping', since: new Date(sleepRunning.start), nap: !isNightSleep(new Date(sleepRunning.start), at, napWindow), now: at }),
+            ...centreText({ state: 'sleeping', since: new Date(sleepRunning.start), nap: !night({ start: new Date(sleepRunning.start), end: at }), now: at }),
             label: copy.sleeping,
             spoken: spokenDuration(at.getTime() - Date.parse(sleepRunning.start)),
           })
@@ -950,7 +955,7 @@ export default function Dashboard() {
         ...common,
         tone: sleep ? ('sleep' as const) : ('feed' as const),
         icon: sleep ? ('bedtime' as const) : ('breastfeeding' as const),
-        title: sleep ? (isNightSleep(draft.start, now, napWindow) ? 'Night sleep' : 'Nap') : 'Feed',
+        title: sleep ? (night({ start: draft.start, end: now }) ? 'Night sleep' : 'Nap') : 'Feed',
         sub: editorSubtitle({ start: draft.start, end: null }, now, windowName),
         rows: [{ label: 'Start', value: clockText(draft.start), field: 'start' as const }],
         deleteLabel: sleep ? copy.cancelSleep : copy.cancelFeed,
@@ -1057,7 +1062,7 @@ export default function Dashboard() {
   // The likely sleep's panel, while the plan still has it: it closes once that sleep starts, is skipped or the day ends.
   const detail =
     likely !== null && liveDay && loaded
-      ? likelyDetail(plan, likely, napsSoFar, sleepContext(loaded.sleep, sleepRunning, birthDate, napWindow, now)?.pastDays ?? [], now)
+      ? likelyDetail(plan, likely, napsSoFar, sleepContext(loaded.sleep, sleepRunning, birthDate, rhythm, now)?.pastDays ?? [], now)
       : null;
   if (likely !== null && !detail) setLikely(null);
   const row = !editing && !detail && panel === 'tiles' ? nextRow : null;
@@ -1295,7 +1300,7 @@ export default function Dashboard() {
         <TodaySheet
           night={liveWindow.kind === 'night'}
           now={now}
-          {...todaySheetTotals(loaded, liveWindow, sleepRunning, napWindow, bottle.amount, now)}
+          {...todaySheetTotals(loaded, liveWindow, sleepRunning, rhythm, bottle.amount, now)}
           entries={loaded}
           onEdit={(item) => {
             setAskingToday(false);
@@ -1333,11 +1338,11 @@ function todaySheetTotals(
   entries: EntriesByKind,
   live: DayWindow,
   running: Timer | null,
-  napWindow: NapWindow,
+  rhythm: DayRhythm,
   defaultMl: number | undefined,
   now: Date,
 ) {
-  const [card] = recentDays(live, windowsBefore(entries, napWindow, now, 1, running));
+  const [card] = recentDays(live, windowsBefore(entries, rhythm, now, 1, running));
   const { from, to } = cardSpan(card, now);
   return { stats: cardStats(card, entries, running, now), drank: drankText(drank(entries.feeding, from, to, defaultMl)) };
 }

@@ -3,7 +3,9 @@ import { BabyBuddyError, type Client, type FeedingMethod, type Sleep } from '@mo
 import {
   childPrefs,
   dayPlan,
+  dayRhythm,
   dayWindow,
+  isNightSleep,
   isSolidFeed,
   isVitaminD,
   lastBottle,
@@ -11,6 +13,7 @@ import {
   napReminderAt,
   newest,
   NEXT_SLEEP_TUNING,
+  nightFrom,
   parseSkip,
   SKIP_TAG,
   vitaminDCycle,
@@ -33,6 +36,7 @@ import {
   stopFeeding,
   stopSleep,
   TIMER_NAMES,
+  type NightRule,
   type Outcome,
   type TrackerClient,
 } from '@/actions/trackers';
@@ -72,15 +76,16 @@ export function parseIntent(clickAction: string | undefined): WidgetIntent | nul
 
 export type IntentContext = {
   child: number;
-  napWindow: NapWindow;
+  /** What a Stop saves the sleep as: by the last refresh's `nightFrom` for that timer, else by the clock. */
+  night: NightRule;
   bottle: BottleDefaults;
 };
 
 /**
  * What a widget or notification tap acts on: the notification's own child (`child`, from its extras), else the
- * child the widget drew (the cached snapshot's), else the app's; with that child's nap window, and as bottle the
- * child's last one as the refresh saw it (else the child's bottle). A tap never lands on whatever the app
- * switched to after the widget was drawn.
+ * child the widget drew (the cached snapshot's), else the app's; with that child's night rule (`nightRule`), and
+ * as bottle the child's last one as the refresh saw it (else the child's bottle). A tap never lands on whatever
+ * the app switched to after the widget was drawn.
  */
 export function tapContext(
   cache: WidgetCache,
@@ -91,7 +96,19 @@ export function tapContext(
   if (id === null) return null;
   const { napWindow, bottle } = childPrefs([], settings.children, id);
   const drawn = [cache.snapshot, ...cache.pinned].find((snapshot) => snapshot && (snapshot.child?.id ?? id) === id);
-  return { child: id, napWindow, bottle: drawn?.lastBottle ?? bottle };
+  const sleeping = cache.timers.find((timers) => timers.child.id === id)?.sleep ?? drawn?.sleepTimer ?? null;
+  return { child: id, night: nightRule(sleeping, napWindow), bottle: drawn?.lastBottle ?? bottle };
+}
+
+/**
+ * Whether stopping a sleep saves the night, without the child's sleeps at hand: for the running sleep the refresh
+ * saw (same start), from its `nightFrom` on; otherwise, or from a cache before it, by the clock (`isNightSleep`).
+ */
+export function nightRule(timer: RunningTimer | null, napWindow: NapWindow): NightRule {
+  return ({ start, end }) => {
+    if (timer?.nightFrom === undefined || Date.parse(timer.start) !== start.getTime()) return isNightSleep(start, end, napWindow);
+    return timer.nightFrom !== null && end.getTime() >= Date.parse(timer.nightFrom);
+  };
 }
 
 /** `now`: when a stop happens, which decides whether a sleep is saved as a nap. */
@@ -101,12 +118,12 @@ export function runIntent(
   context: IntentContext,
   now: Date = new Date(),
 ): Promise<Outcome> {
-  const { child, napWindow, bottle } = context;
+  const { child, night, bottle } = context;
   switch (intent) {
     case 'SLEEP_START':
       return startTimer(client, { child, tracker: 'sleep' });
     case 'SLEEP_STOP':
-      return stopSleep(client, { child, napWindow, now });
+      return stopSleep(client, { child, night, now });
     case 'FEED_START':
       return startTimer(client, { child, tracker: 'feeding' });
     case 'FEED_STOP_LEFT':
@@ -299,7 +316,12 @@ export type SnapshotClient = Pick<
   | 'getRecentBottles'
 >;
 
-type RunningTimer = { start: string; byMe: boolean };
+/**
+ * A running timer as a refresh found it. A sleep's `nightFrom`: from when stopping it saves a night sleep
+ * (`nightFrom` in core, null: a nap whenever), worked out by the refresh from the child's sleeps; absent where
+ * it couldn't be (a timer this phone just started, a child without its sleeps fetched, an older cache).
+ */
+type RunningTimer = { start: string; byMe: boolean; nightFrom?: string | null };
 
 /** Whose data a snapshot is, as the widget badge draws it: the first name and the colour's index. */
 export type WidgetChild = { id: number; name: string; hue: number };
@@ -363,14 +385,16 @@ async function fetchSnapshotAndChildren(
   const running = (timer: typeof sleepTimer) => timer && { start: timer.start, byMe: timer.user === userId };
   const found = children.find((candidate) => candidate.id === child);
   const birthDate = found?.birth_date ?? null;
+  const rhythm = dayRhythm(sleeps, birthDate, napWindow, now);
   const skips = notes.flatMap((note) => parseSkip(note) ?? []);
   // What the hero shows: the day plan's first sleep that isn't skipped. None while a sleep runs.
-  const plan = sleepTimer ? [] : dayPlan(sleeps, null, birthDate, napWindow, skips, now);
+  const plan = sleepTimer ? [] : dayPlan(sleeps, null, birthDate, rhythm, skips, now);
+  const night = sleepTimer && nightFrom(new Date(sleepTimer.start), sleeps, rhythm, now);
   const next = plan.find((sleep) => !sleep.skipped);
   const snapshot: WidgetSnapshot = {
     fetchedAt: now.toISOString(),
     child: found ? { id: child, name: found.first_name, hue: childPrefs(children, prefs, child).hue } : null,
-    sleepTimer: running(sleepTimer),
+    sleepTimer: sleepTimer && { ...running(sleepTimer)!, nightFrom: night ? night.toISOString() : null },
     feedingTimer: running(feedingTimer),
     lastSleep: latest.sleep?.end ?? null,
     lastFeeding: lastFeed?.start ?? null,
@@ -470,9 +494,15 @@ export async function refreshedCache(
     ]);
     const shown = shownChildren(children, prefs);
     const pinned = fetched.filter((pin) => shown.some((child) => child.id === pin.child?.id));
+    // A sleep's `nightFrom` is known for the children whose sleeps a snapshot fetched.
+    const sleepOf = (id: number) => {
+      const timer = running(sleeps.find((found) => found.child === id) ?? null);
+      const seen = [snapshot, ...pinned].find((drawn) => drawn.child?.id === id)?.sleepTimer;
+      return timer && seen?.start === timer.start && seen.nightFrom !== undefined ? { ...timer, nightFrom: seen.nightFrom } : timer;
+    };
     const timers = shown.map((child) => ({
       child: { id: child.id, name: child.first_name, hue: childPrefs(children, prefs, child.id).hue },
-      sleep: running(sleeps.find((timer) => timer.child === child.id) ?? null),
+      sleep: sleepOf(child.id),
       feeding: running(feedings.find((timer) => timer.child === child.id) ?? null),
     }));
     // A hidden (or deleted) child's reminder goes with its notifications.
@@ -520,19 +550,23 @@ const midnightBefore = (now: Date, days: number) =>
  */
 export async function remindedCache(
   base: WidgetCache,
-  client: Pick<Client, 'listEntries'>,
+  client: Pick<Client, 'listEntries' | 'listChildren'>,
   { outcome, enabled, child, napWindow, now }: { outcome: Outcome; enabled: boolean; child: number; napWindow: NapWindow; now: Date },
 ): Promise<WidgetCache> {
   if (!enabled || !endedSleep(outcome)) return base;
   try {
     // Fetched after the stop, so a morning wake just logged opens a new cycle. The cycle starts at most about a
-    // day ago; medication from two days before it can say when the last dose was.
-    const [sleeps, medication] = await Promise.all([
-      client.listEntries('sleep', { child, end_min: midnightBefore(now, 2) }),
+    // day ago; medication from two days before it can say when the last dose was. The sleeps go back as far as
+    // the child's rhythm is learned from.
+    const [sleeps, medication, children] = await Promise.all([
+      client.listEntries('sleep', { child, end_min: midnightBefore(now, PREDICTION_DAYS) }),
       client.listEntries('medication', { child, date_min: midnightBefore(now, 3) }),
+      client.listChildren(),
     ]);
-    const window = dayWindow({ sleep: sleeps, feeding: [], change: [], medication: [] }, null, napWindow, now);
-    const cycle = vitaminDCycle(window, napWindow, now);
+    const birthDate = children.find((found) => found.id === child)?.birth_date ?? null;
+    const rhythm = dayRhythm(sleeps, birthDate, napWindow, now);
+    const window = dayWindow({ sleep: sleeps, feeding: [], change: [], medication: [] }, null, rhythm, now);
+    const cycle = vitaminDCycle(window, rhythm, now);
     const { due, last } = vitaminDStatus(cycle, medication);
     const others = base.reminders.filter((reminder) => reminder.child !== child);
     const reminder = { child, cycleStart: cycle.start.toISOString(), lastGiven: last?.time ?? null, at: now.toISOString() };
@@ -578,9 +612,10 @@ type NapReminderData = {
 export function napReminderRing(reminder: NapReminder, data: NapReminderData): NapRingAt | null {
   const { sleeps, running, birthDate, napWindow, skips, allowed, now } = data;
   const timer = running && { id: 0, child: 0, name: TIMER_NAMES.sleep, start: running.start, duration: '', user: 0 };
-  const plan = dayPlan(sleeps, timer, birthDate, napWindow, skips, now);
+  const rhythm = dayRhythm(sleeps, birthDate, napWindow, now);
+  const plan = dayPlan(sleeps, timer, birthDate, rhythm, skips, now);
   const bedtime = plan.at(-1)?.kind === 'bedtime' ? plan.at(-1) : undefined;
-  const window = dayWindow({ sleep: sleeps, feeding: [], change: [], medication: [] }, timer, napWindow, now, bedtime);
+  const window = dayWindow({ sleep: sleeps, feeding: [], change: [], medication: [] }, timer, rhythm, now, bedtime);
   const napsSoFar = sleeps.filter((sleep) => Date.parse(sleep.start) >= window.start.getTime()).length + (running ? 1 : 0);
   const ring = napReminderAt({ reminder, plan, napsSoFar, window, running, sleeps, allowed, now });
   return ring && { slot: ring.slot, start: ring.start.toISOString(), end: ring.end.toISOString() };
@@ -746,7 +781,9 @@ function isChildTimers(value: unknown): value is ChildTimers {
 }
 
 function isTimerOrNull(value: unknown): value is RunningTimer | null {
-  return value === null || (isRecord(value) && typeof value.start === 'string' && typeof value.byMe === 'boolean');
+  if (value === null) return true;
+  if (!isRecord(value) || typeof value.start !== 'string' || typeof value.byMe !== 'boolean') return false;
+  return value.nightFrom === undefined || value.nightFrom === null || typeof value.nightFrom === 'string';
 }
 
 function isNote(value: unknown): value is Omit<WidgetNote, 'child'> & { child?: unknown } {

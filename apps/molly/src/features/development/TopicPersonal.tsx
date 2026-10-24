@@ -1,6 +1,7 @@
 import type { Child } from '@molly/api';
 import {
   checkUps,
+  dayRhythm,
   dayWindow,
   measurementText,
   measurementValue,
@@ -53,7 +54,8 @@ function OwnSleep({ child, now }: { child: Child; now: Date }) {
   const entries = useGuideEntries(child.id);
   const { prefsOf } = useChildrenOnScreen();
   if (!entries.data) return entries.isError ? <Text className="text-sm font-bold text-muted">{"Couldn't load the sleeps from Baby Buddy."}</Text> : null;
-  const comparison = sleepComparison(entries.data.sleep, prefsOf(child.id).napWindow, now);
+  const rhythm = dayRhythm(entries.data.sleep, child.birth_date, prefsOf(child.id).napWindow, now);
+  const comparison = sleepComparison(entries.data.sleep, rhythm, now);
   return (
     <Text className="text-sm font-extrabold text-sleep-ink">
       {comparison
@@ -109,9 +111,9 @@ function WeightRow({ child }: { child: Child }) {
 function VitaminD({ child, region, now }: Props) {
   const entries = useGuideEntries(child.id);
   const { prefsOf } = useChildrenOnScreen();
-  const napWindow = prefsOf(child.id).napWindow;
   const sleep = entries.data?.sleep ?? [];
-  const cycle = vitaminDCycle(dayWindow({ sleep, feeding: [], change: [], medication: [] }, null, napWindow, now), napWindow, now);
+  const rhythm = dayRhythm(sleep, child.birth_date, prefsOf(child.id).napWindow, now);
+  const cycle = vitaminDCycle(dayWindow({ sleep, feeding: [], change: [], medication: [] }, null, rhythm, now), rhythm, now);
   const line = vitaminDLine(region, child.birth_date, cycle, entries.data?.medication ?? [], now);
   if (!line) return null;
   return (

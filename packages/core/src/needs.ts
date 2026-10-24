@@ -12,7 +12,7 @@ const HOUR_MS = 60 * 60 * 1000;
 /** The knobs of the needs rules. */
 export const NEEDS_TUNING = {
   /** Bumped whenever these rules change what `rhythm` returns: the cached rhythm is fetched again. */
-  rhythmVersion: 2,
+  rhythmVersion: 3,
   /** Fewer gaps of a kind in a window kind than this, and the fallback stands in. */
   gapsNeeded: 5,
   /** A longer gap is a missed log, not a rhythm. */

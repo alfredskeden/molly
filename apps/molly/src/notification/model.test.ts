@@ -223,6 +223,21 @@ describe('lock-screen timer notifications', () => {
     expect(feeding?.text).toBe('Not saved: offline');
   });
 
+  it.each([
+    ['a back-to-sleep after the morning wake', '2026-09-20T06:15:00Z', null, '2026-09-20T08:20:00Z', 'nap'],
+    ['an evening catnap before the bedtime cut', '2026-09-20T17:30:00Z', null, '2026-09-20T17:45:00Z', 'nap'],
+    ['an early evening sleep once it has run long', '2026-09-20T17:00:00Z', '2026-09-20T19:00:00Z', '2026-09-20T19:05:00Z', 'night sleep'],
+  ])("says %s saves as the refresh's rhythm reading has it", (_case, start, nightFrom, now, kind) => {
+    // Given
+    const cache = withSnapshot({ sleepTimer: { start, byMe: true, nightFrom } });
+
+    // When
+    const { sleep } = byTracker(timerNotifications(cache, { ...options, now: new Date(now) }));
+
+    // Then
+    expect(sleep?.text).toMatch(new RegExp(`saves as ${kind}$`));
+  });
+
   it("keeps an error to its own tracker's notification", () => {
     // Given
     const cache: WidgetCache = {

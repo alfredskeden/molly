@@ -175,6 +175,19 @@ export function isNight(sleep: { start: Date; end: Date }, sleeps: Sleep[], rhyt
   return isNightSleep(sleep.start, sleep.end, rhythm.napWindow);
 }
 
+/**
+ * From when stopping the sleep running since `start` saves a night sleep (`isNight` with the stop as its
+ * end), as known at `now`: its start if it already would, else once it has run the band's `long` if it
+ * would then, else null (a nap whenever it stops). What a tap without the sleeps at hand goes by.
+ */
+export function nightFrom(start: Date, sleeps: Sleep[], rhythm: DayRhythm, now: Date): Date | null {
+  const end = now > start ? now : start;
+  if (isNight({ start, end }, sleeps, rhythm, end)) return start;
+  const long = new Date(start.getTime() + rhythm.band.long * MINUTE_MS);
+  if (long <= end) return null;
+  return isNight({ start, end: long }, sleeps, rhythm, long) ? long : null;
+}
+
 /** The morning wake and bedtime of the calendar day `day` is on, as known at `now`; null for either not found. */
 export function wakeAndBedtime(sleeps: Sleep[], rhythm: DayRhythm, day: Date, now: Date): { wake: Date | null; bedtime: Date | null } {
   const { wake, bedtime } = dayOn(sleeps, rhythm, day, 0, now);

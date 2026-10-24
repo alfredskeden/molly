@@ -38,6 +38,9 @@ Each item is a sub-step in `MAIN.md`.
 - **Replay**: `replayPlans` plans each day once its wake is known (the threshold after it), since before that it's still the night.
 - **Unlearned bedtime**: until 3 bedtimes are learned the setting's end is the usual bedtime, so with the default 19:00 a sleep from 17:30 is the night. Accepted: the setting's end means "usual bedtime" now, and it's learned within 3 days.
 
+- **Taps** (step 7): `stopSleep` / `addEntry` take a `NightRule` (`actions/trackers.ts`): the dashboard's `byRhythm(loaded.sleep, rhythm)` from the cached entries (never fetched at the tap; none cached comes out by the clock), the widget and notification `nightRule(timer, napWindow)` from the cache. The widget refresh works out each running sleep's `nightFrom` (core `nightFrom`: from when a stop saves a night sleep) into the cached `sleepTimer` and `timers[].sleep`; the lock-screen "saves as" reads it. A timer started on this phone since the refresh, or a shown child whose sleeps no snapshot fetched, goes by the clock until the next refresh.
+- The development topic's sleep fetch went from 9 to 15 days so its rhythm can learn; the Vitamin D check after a stop fetches 15 days of sleeps and the children (for the birth date). `NEEDS_TUNING.rhythmVersion` bumped to 3 (the window split changed).
+
 ## Tuning (step 5)
 
 Made-up fixtures (`packages/core/test/day-fixtures.ts`: 2 months, 4–5 months, 10 months, 18 months; early wakings, back-to-sleep mornings, evening catnaps, a long lunch nap) replayed with `pnpm replay:fixtures`, 3 seeds × 28 days, the first 3 days not scored. Right · wrong · none:

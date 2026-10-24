@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { sleep } from '../test/fixtures';
 import { dayRhythm } from './day-rhythm';
-import { dayWindow, isNight, previousWindow, windowsBefore } from './day-window';
+import { dayWindow, isNight, nightFrom, previousWindow, windowsBefore } from './day-window';
 import { DEFAULT_NAP_WINDOW, isNightSleep } from './nap';
 
 const none = { sleep: [], feeding: [], change: [], medication: [] };
@@ -923,5 +923,37 @@ describe('the night across the clock change', () => {
       ['night', october(24, 20, 0), october(25, 7, 0)],
       ['day', october(24, 7, 0), october(24, 20, 0)],
     ]);
+  });
+});
+
+describe('when stopping a running sleep starts to save the night', () => {
+  // Usually up at 07:00 and asleep for the night at 21:45.
+  const usual = usualDays([21, 45], [7, 0], [[[9, 0], [10, 0]], [[13, 0], [14, 30]]]);
+  const thisMorning = sleep({ start: at(19, 21, 45), end: at(20, 7, 0) });
+  const sleeps = [...usual, thisMorning];
+  const rhythmAt = (now: Date) => dayRhythm(sleeps, fiveMonths, napWindow, now);
+
+  it('is its start for a sleep near the usual bedtime', () => {
+    // When
+    const from = nightFrom(on(20, 21, 0), sleeps, rhythmAt(on(20, 21, 5)), on(20, 21, 5));
+
+    // Then
+    expect(from).toEqual(on(20, 21, 0));
+  });
+
+  it('is once it has run 2 hours for an early evening sleep', () => {
+    // When
+    const from = nightFrom(on(20, 19, 0), sleeps, rhythmAt(on(20, 19, 10)), on(20, 19, 10));
+
+    // Then
+    expect(from).toEqual(on(20, 21, 0));
+  });
+
+  it('is never for a midday nap', () => {
+    // When
+    const from = nightFrom(on(20, 12, 0), sleeps, rhythmAt(on(20, 12, 10)), on(20, 12, 10));
+
+    // Then
+    expect(from).toBeNull();
   });
 });
