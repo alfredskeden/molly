@@ -1,7 +1,9 @@
 import type { Sleep, Timer } from '@molly/api';
 
+import { dayRhythm, minutesPast } from './day-rhythm';
 import { dayWindow, pastDays as daysBefore, type PastDay } from './day-window';
-import { atClock, type NapWindow } from './nap';
+import { median } from './median';
+import type { NapWindow } from './nap';
 import { sleepGuide, wakeForSlot, type SleepGuide, type Slot, type WakeRange } from './sleep-guide';
 
 const MINUTE_MS = 60 * 1000;
@@ -23,8 +25,6 @@ export type NextSleepTuning = {
   historyFrom: number;
   /** A window starting this close to the usual bedtime, or later, is bedtime. */
   bedtimeWithin: number;
-  /** Fewer logged bedtimes than this, and the nap-window end stands in for the usual one. */
-  bedtimesNeeded: number;
   /** How much of the band's range the first and last windows of the day use. */
   slotShare: number;
 };
@@ -38,7 +38,6 @@ export const NEXT_SLEEP_TUNING: NextSleepTuning = {
   blendFrom: 3,
   historyFrom: 10,
   bedtimeWithin: 60,
-  bedtimesNeeded: 3,
   slotShare: 2 / 3,
 };
 
@@ -190,14 +189,14 @@ function awakeContext(
     .map((entry) => minutesFrom(new Date(entry.start), new Date(entry.end)));
   const isLong = (entry: Sleep) => long.includes(entry);
   const pastDays = daysBefore(sleeps, napWindow, now, tuning.historyDays).map((day) => ({ ...day, naps: day.naps.filter(isLong) }));
-  const bedtimes = pastDays.filter((day) => day.bedtime).length;
+  const rhythm = dayRhythm(sleeps, birthDate, napWindow, now);
   return {
     anchor,
     slot: naps.length + 1,
     band,
     pastDays,
-    bedtime: usualBedtime(pastDays, napWindow, now, tuning.bedtimesNeeded),
-    bedtimeKnown: bedtimes >= tuning.bedtimesNeeded,
+    bedtime: minutesPast(now, 0, rhythm.bedtime),
+    bedtimeKnown: rhythm.bedtimeLearned,
     usualNaps: usualNapCount(pastDays, planTuning.napCountFrom),
     naps,
     earlier: shortNapsEarlier(naps, pastDays, planTuning),
@@ -330,21 +329,6 @@ function bedtimeAwake(day: PastDay): number | null {
   return day.bedtime ? awakeBefore(day, day.bedtime, day.naps.length) : null;
 }
 
-/** Today at the median clock time of past bedtimes, or at the nap-window end with too few. */
-function usualBedtime(pastDays: PastDay[], napWindow: NapWindow, now: Date, needed: number): Date {
-  const minutes = pastDays.flatMap((day) => {
-    return day.bedtime ? [clockMinutes(new Date(day.bedtime.start), day.wake)] : [];
-  });
-  if (minutes.length < needed) return atClock(now, 0, napWindow.end);
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, median(minutes));
-}
-
-/** Wall-clock minutes since the midnight that began `day`, so a bedtime after midnight is late, not early. */
-function clockMinutes(time: Date, day: Date): number {
-  const nextDay = time.getDate() !== day.getDate() ? 24 * 60 : 0;
-  return nextDay + time.getHours() * 60 + time.getMinutes();
-}
-
 /** Minutes from the wake before a day's sleep (after `index` naps) to that sleep's start. */
 function awakeBefore(day: PastDay, sleep: Sleep, index: number): number {
   const before = index === 0 ? day.wake.getTime() : Date.parse(day.naps[index - 1]!.end);
@@ -373,10 +357,4 @@ function historyWeight(samples: number, { blendFrom, historyFrom }: NextSleepTun
 function blend(guide: WakeRange, history: WakeRange, weight: number): WakeRange {
   const mix = (a: number, b: number) => a * (1 - weight) + b * weight;
   return { min: mix(guide.min, history.min), max: mix(guide.max, history.max) };
-}
-
-export function median(values: number[]): number {
-  const sorted = [...values].sort((a, b) => a - b);
-  const middle = Math.floor(sorted.length / 2);
-  return sorted.length % 2 === 1 ? sorted[middle]! : (sorted[middle - 1]! + sorted[middle]!) / 2;
 }

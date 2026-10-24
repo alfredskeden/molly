@@ -10,11 +10,11 @@ Tests come first for `packages/core` and the plain-TS app models (Vitest, Given 
 
 ### The child's rhythm (step 2)
 
-- [ ] Usual wake: the median of the past wakes; fewer than 3, the setting's start; a median outside 05:00–11:00 is clamped.
-- [ ] Usual bedtime: the median of past bedtimes, with a bedtime after midnight counted as late (00:15 is later than 23:00); fewer than 3, the setting's end; clamped to 18:00–00:30.
-- [ ] Usual first wake window: the median of wake → first nap; none with no days.
-- [ ] Age band by birth date: 2 months, 4 months, 8 months and 18 months each get their band; no birth date gets the 3–6 month band.
-- [ ] The anchor doesn't drift: on a 21-day fixture where every morning has an early waking just inside the range, the learned usual wake stays within 30 min of the fixture's real wake on every day.
+- [x] Usual wake: the median of the past wakes; fewer than 3, the setting's start; a median outside 05:00–11:00 is clamped.
+- [x] Usual bedtime: the median of past bedtimes, with a bedtime after midnight counted as late (00:15 is later than 23:00); fewer than 3, the setting's end; clamped to 18:00–00:30.
+- [x] Usual first wake window: the median of wake → first nap; none with no days.
+- [x] Age band by birth date: 2 months, 4 months, 8 months and 18 months each get their band; no birth date gets the 3–6 month band.
+- [x] The anchor doesn't drift: on a 21-day fixture where every morning has an early waking just inside the range, the learned usual wake stays within 30 min of the fixture's real wake on every day.
 
 ### Morning wake (step 3)
 
