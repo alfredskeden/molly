@@ -1,11 +1,19 @@
+import type { Sleep, Timer } from '@molly/api';
 import { describe, expect, it } from 'vitest';
 
 import { sleep } from '../test/fixtures';
-import { DAY_PLAN_TUNING, dayPlan, parseSkip, skipNote, type Skip } from './day-plan';
-import { DEFAULT_NAP_WINDOW } from './nap';
-import { nextSleep } from './next-sleep';
+import { DAY_PLAN_TUNING, dayPlan as planWith, parseSkip, skipNote, type Skip } from './day-plan';
+import { dayRhythm } from './day-rhythm';
+import { DEFAULT_NAP_WINDOW, type NapWindow } from './nap';
+import { nextSleep as predictWith } from './next-sleep';
 
 const napWindow = DEFAULT_NAP_WINDOW;
+type Rest = Parameters<typeof planWith> extends [unknown, unknown, unknown, unknown, unknown, unknown, ...infer R] ? R : never;
+/** `dayPlan` and `nextSleep` with the rhythm learned from the same sleeps, as the app calls them. */
+const dayPlan = (sleeps: Sleep[], running: Timer | null, birthDate: string | null, setting: NapWindow, skips: Skip[], now: Date, ...rest: Rest) =>
+  planWith(sleeps, running, birthDate, dayRhythm(sleeps, birthDate, setting, now), skips, now, ...rest);
+const nextSleep = (sleeps: Sleep[], running: Timer | null, birthDate: string | null, setting: NapWindow, now: Date) =>
+  predictWith(sleeps, running, birthDate, dayRhythm(sleeps, birthDate, setting, now), now);
 const noTimer = null;
 const noSkips: Skip[] = [];
 /** Four months old all through September 2026: the 3–5 month band, 1:15–2:30 awake (first 1:15–2:05, last 1:40–2:30). */
@@ -87,7 +95,7 @@ describe('the whole day ahead', () => {
   it("assumes a nap lasts that slot's median length on past days", () => {
     // Given
     const sleeps = [...threeNapDays, thisMorning];
-    const now = on(20, 7, 0);
+    const now = on(20, 7, 45);
 
     // When
     const plan = dayPlan(sleeps, noTimer, born, napWindow, noSkips, now);
@@ -104,7 +112,7 @@ describe('the whole day ahead', () => {
     // Given
     // One nap a day for ten days: the age guide alone would plan three more.
     const sleeps = [...tenPastDays, thisMorning];
-    const now = on(20, 7, 0);
+    const now = on(20, 7, 45);
 
     // When
     const plan = dayPlan(sleeps, noTimer, born, napWindow, noSkips, now);
@@ -125,7 +133,7 @@ describe('the whole day ahead', () => {
       ...Array.from({ length: 10 }, (_, index) => nap(19 - index, [17, 30], [18, 30])),
     ];
     const sleeps = [...twoNapDays, night(19, [19, 30], [5, 10])];
-    const now = on(20, 5, 30);
+    const now = on(20, 6, 15);
 
     // When
     const plan = dayPlan(sleeps, noTimer, born, napWindow, noSkips, now);
@@ -167,8 +175,9 @@ describe('the whole day ahead', () => {
 
   it('never has bedtime start more than an hour after the usual one', () => {
     // Given
-    // Three naps a day, the last ending 16:15, bed 19:30: up 3h 15m before bed. Today the last nap ran to 18:30.
-    const sleeps = [...threeNapDays, thisMorning, nap(20, [8, 40], [9, 40]), nap(20, [12, 30], [13, 30]), nap(20, [16, 30], [18, 30])];
+    // Three naps a day, the last ending 16:15, bed 19:30: up 3h 15m before bed. Today the last nap ran 16:45–18:30
+    // (under 2 h, so not an early bedtime).
+    const sleeps = [...threeNapDays, thisMorning, nap(20, [8, 40], [9, 40]), nap(20, [12, 30], [13, 30]), nap(20, [16, 45], [18, 30])];
     const now = on(20, 18, 45);
 
     // When
@@ -186,7 +195,7 @@ describe('the whole day ahead', () => {
     const wakings = Array.from({ length: 4 }, (_, index) =>
       sleep({ start: on(11 + index, 26, 20).toISOString(), end: on(12 + index, 6, 40).toISOString(), nap: false }),
     );
-    const sleeps = [...gaps, ...wakings, thisMorning, nap(20, [8, 40], [9, 40]), nap(20, [12, 30], [13, 30]), nap(20, [16, 30], [18, 30])];
+    const sleeps = [...gaps, ...wakings, thisMorning, nap(20, [8, 40], [9, 40]), nap(20, [12, 30], [13, 30]), nap(20, [16, 45], [18, 30])];
     const now = on(20, 18, 45);
 
     // When
@@ -686,5 +695,47 @@ describe('short naps', () => {
 
     // Then
     expect(bedtimeOf(plan)).toBe(bedtimeOf(unmoved) - minutes(60));
+  });
+});
+
+describe('the day plan by the child’s rhythm', () => {
+  const plan = (sleeps: Sleep[], running: Timer | null, now: Date) => dayPlan(sleeps, running, born, napWindow, noSkips, now);
+  const sleepTimer = (start: Date) => ({ id: 1, child: 1, name: 'molly:sleep', start: start.toISOString(), duration: '', user: 1 });
+
+  it('plans from a 06:31 wake and takes the 08:15–10:26 back-to-sleep as the first nap', () => {
+    // Given
+    // Usually up at 08:10 after a night from 21:00, napping 09:40–10:40 and 13:30–14:30.
+    const usual = Array.from({ length: 10 }, (_, index) => [
+      night(18 - index, [21, 0], [8, 10]),
+      nap(19 - index, [9, 40], [10, 40]),
+      nap(19 - index, [13, 30], [14, 30]),
+    ]).flat();
+    const sleeps = [...usual, night(19, [20, 58], [6, 31]), nap(20, [8, 15], [10, 26])];
+    const now = on(20, 10, 40);
+
+    // When
+    const planned = plan(sleeps, noTimer, now);
+
+    // Then
+    expect(planned[0]).toMatchObject({ kind: 'nap', slot: 'middle', anchor: on(20, 10, 26) });
+  });
+
+  it('keeps the plan through an evening catnap, with bedtime still to come', () => {
+    // Given
+    // Usually up at 07:00, three naps, asleep for the night at 21:45.
+    const usual = Array.from({ length: 10 }, (_, index) => [
+      night(18 - index, [21, 45], [7, 0]),
+      nap(19 - index, [9, 0], [10, 0]),
+      nap(19 - index, [13, 0], [14, 30]),
+      nap(19 - index, [17, 0], [17, 30]),
+    ]).flat();
+    const today = [night(19, [21, 45], [7, 0]), nap(20, [9, 0], [10, 0]), nap(20, [13, 0], [14, 30]), nap(20, [17, 0], [17, 30])];
+    const now = on(20, 19, 45);
+
+    // When
+    const planned = plan([...usual, ...today], sleepTimer(on(20, 19, 30)), now);
+
+    // Then
+    expect(planned.map((sleep) => sleep.kind)).toEqual(['bedtime']);
   });
 });

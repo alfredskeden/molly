@@ -1,8 +1,16 @@
+import type { Sleep } from '@molly/api';
 import { describe, expect, it } from 'vitest';
 
 import { sleep } from '../test/fixtures';
-import { DEFAULT_NAP_WINDOW } from './nap';
-import { accuracySummary, knownAt, likelyFor, replay, replayPlans, score, type LikelySleep } from './replay';
+import { dayRhythm } from './day-rhythm';
+import type { DayWindow } from './day-window';
+import { DEFAULT_NAP_WINDOW, type NapWindow } from './nap';
+import { accuracySummary, knownAt, likelyFor as likelyWith, replay, replayPlans, score, type LikelySleep } from './replay';
+import type { Skip } from './day-plan';
+
+/** `likelyFor` with the rhythm learned from every sleep, as the app calls it for a past day. */
+const likelyFor = (window: DayWindow, sleeps: Sleep[], skips: Skip[], birthDate: string, setting: NapWindow) =>
+  likelyWith(window, sleeps, skips, birthDate, dayRhythm(sleeps, birthDate, setting, new Date(window.end.getTime() + 24 * 60 * 60 * 1000)));
 
 const on = (day: number, hours: number, minutes = 0) => new Date(2026, 8, day, hours, minutes);
 const logged = (from: Date, to: Date, nap = true) => sleep({ start: from.toISOString(), end: to.toISOString(), nap });

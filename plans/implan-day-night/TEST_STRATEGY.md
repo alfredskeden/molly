@@ -18,34 +18,34 @@ Tests come first for `packages/core` and the plain-TS app models (Vitest, Given 
 
 ### Morning wake (step 3)
 
-- [ ] **The back-to-sleep morning**: bedtime 20:58, woke 06:31, back asleep 08:15–10:26, usual wake 08:10, 5 months. The wake is 06:31, and 08:15–10:26 is a nap.
-- [ ] An early waking that is back asleep within the threshold (05:10, 20 min) is a night waking; the later wake is the morning.
-- [ ] A long waking more than 2 h before the usual wake is a night waking.
-- [ ] A late wake up to 3 h after the usual wake still counts.
-- [ ] "Woke, then napped within the threshold": stays night, and the end of that nap is the wake.
-- [ ] Live: 30 min after a 06:31 wake the window is still the night; 61 min after it is a day that starts at 06:31.
-- [ ] The threshold is never more than ⅔ of the child's usual first wake window (a child whose first window is 60 min needs 40 min awake).
-- [ ] Under 3 months: the range comes from the setting's start, with the 75 min threshold.
-- [ ] No wake in range once the range has closed: the clock fallback (`clock: true`), as today.
+- [x] **The back-to-sleep morning**: bedtime 20:58, woke 06:31, back asleep 08:15–10:26, usual wake 08:10, 5 months. The wake is 06:31, and 08:15–10:26 is a nap.
+- [x] An early waking that is back asleep within the threshold (05:10, 20 min) is a night waking; the later wake is the morning.
+- [x] A long waking more than 2 h before the usual wake is a night waking.
+- [x] A late wake up to 3 h after the usual wake still counts.
+- [x] "Woke, then napped within the threshold": stays night, and the end of that nap is the wake.
+- [x] Live: 30 min after a 06:31 wake the window is still the night; 61 min after it is a day that starts at 06:31.
+- [x] The threshold is never more than ⅔ of the child's usual first wake window (a child whose first window is 60 min needs 40 min awake).
+- [x] Under 3 months: the range comes from the setting's start, with the 75 min threshold.
+- [x] No wake in range once the range has closed: the clock fallback (`clock: true`), as today.
 
 ### Bedtime and the nap-or-night verdict (step 4)
 
-- [ ] **The evening catnap**: usual bedtime 21:45, a 25 min sleep at 19:30 is a nap. The card is Today during and after it, and the verdict is nap.
-- [ ] A sleep starting 21:00 (within 90 min of 21:45) is bedtime from its start, even if it ended after 50 min (night waking); the sleep after it is still the night.
-- [ ] A sleep starting 19:00 that runs past 2 h becomes bedtime from 19:00. Live, it's Today until 2 h in, then Tonight from 19:00.
-- [ ] A 2½ h lunch nap is never bedtime.
-- [ ] A bedtime after midnight (00:20, usual 23:50) is found and belongs to the day before.
-- [ ] A running sleep gets the verdict stopping it now would save.
-- [ ] No history at all: the verdict equals today's by-clock rule (old `isNightSleep` cases pass through the fallback).
-- [ ] Across the clock change (night of 25 Oct 2026, Europe/Stockholm): the usual wake and bedtime are clock times on either side, and the night spanning the change has one bedtime and one wake.
+- [x] **The evening catnap**: usual bedtime 21:45, a 25 min sleep at 19:30 is a nap. The card is Today during and after it, and the verdict is nap.
+- [x] A sleep starting 21:00 (within 90 min of 21:45) is bedtime from its start, even if it ended after 50 min (night waking); the sleep after it is still the night.
+- [x] A sleep starting 19:00 that runs past 2 h becomes bedtime from 19:00. Live, it's Today until 2 h in, then Tonight from 19:00.
+- [x] A 2½ h lunch nap is never bedtime.
+- [x] A bedtime after midnight (00:20, usual 23:50) is found and belongs to the day before.
+- [x] A running sleep gets the verdict stopping it now would save.
+- [x] No history at all: the verdict equals today's by-clock rule (old `isNightSleep` cases pass through the fallback).
+- [x] Across the clock change (night of 25 Oct 2026, Europe/Stockholm): the usual wake and bedtime are clock times on either side, and the night spanning the change has one bedtime and one wake.
 
 ### Callers (step 6)
 
-- [ ] `nextSleep` / `dayPlan`: on the back-to-sleep fixture, the day plans from 06:31, with 08:15 as nap 1. On the catnap fixture, the plan is still shown at 19:45.
-- [ ] `sleepingSpan`: a running night lasts to the learned usual wake.
-- [ ] `vitaminDCycle` counts from the new morning wake.
-- [ ] `sleepComparison` splits naps and nights by the new verdict and still groups by calendar days.
-- [ ] Every core suite is green, including `needs-seeded.test.ts` and `replay.test.ts`.
+- [x] `nextSleep` / `dayPlan`: on the back-to-sleep fixture, the day plans from 06:31, with 08:15 as nap 1. On the catnap fixture, the plan is still shown at 19:45.
+- [x] `sleepingSpan`: a running night lasts to the learned usual wake.
+- [x] `vitaminDCycle` counts from the new morning wake.
+- [x] `sleepComparison` splits naps and nights by the new verdict and still groups by calendar days.
+- [x] Every core suite is green, including `needs-seeded.test.ts` and `replay.test.ts`.
 
 ## Unit: `apps/molly`
 

@@ -3,15 +3,15 @@ export type NapWindow = { start: string; end: string };
 
 export const DEFAULT_NAP_WINDOW: NapWindow = { start: '07:00', end: '19:00' };
 
-export function isNap(start: Date, window: NapWindow = DEFAULT_NAP_WINDOW): boolean {
+function isNap(start: Date, window: NapWindow = DEFAULT_NAP_WINDOW): boolean {
   const minute = start.getHours() * 60 + start.getMinutes();
   return minute >= minutesOf(window.start) && minute <= minutesOf(window.end);
 }
 
 /**
- * Whether a sleep is the night, by when it happened: it started outside the nap window (on its start
- * day), or started inside and was still going at the window's end. Otherwise it's a nap. A running
- * sleep passes now as `end`: what stopping it now would save.
+ * Whether a sleep is the night by the clock alone: it started outside the setting's day (on its start
+ * day), or started inside and was still going at its end. Otherwise it's a nap. Only the fallback of
+ * `isNight` (no history to place the sleep by) and of a tap with no recent sleeps at hand.
  */
 export function isNightSleep(start: Date, end: Date, window: NapWindow = DEFAULT_NAP_WINDOW): boolean {
   return !isNap(start, window) || end > atClock(start, 0, window.end);

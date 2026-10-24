@@ -1,10 +1,9 @@
 import type { Change, Feeding, Sleep, Timer } from '@molly/api';
 
-import { dayRhythm, minutesPast, type DayRhythm } from './day-rhythm';
-import { dayWindow, type DayWindow } from './day-window';
+import type { DayRhythm } from './day-rhythm';
+import { isNight, usualWakeAfter, type DayWindow } from './day-window';
 import { milkFeeds, newest, type EntriesByKind } from './latest';
 import { median } from './median';
-import { isNightSleep, type NapWindow } from './nap';
 import { DAY_PLAN_TUNING, sleepContext } from './next-sleep';
 import { isVitaminD } from './vitamin-d';
 
@@ -239,22 +238,14 @@ const MINUTE_MS = 60 * 1000;
 export type Sleeping = { start: Date; wake: Date };
 
 /**
- * The running sleep from its start to when the child likely wakes. A night's sleep (it started outside the
- * nap window or ran past its end, or the day has turned into the night) to the child's usual morning
- * wake (`dayRhythm`). A nap to its slot's usual length (`sleepContext`'s assumed wake), or `napLength` without
+ * The running sleep from its start to when the child likely wakes. A night's sleep (`isNight`: what
+ * stopping it now would save) to the child's usual morning wake (`dayRhythm`). A nap to its slot's usual length (`sleepContext`'s assumed wake), or `napLength` without
  * a prediction. Never before now: a sleep that runs longer is full.
  */
-export function sleepingSpan(sleeps: Sleep[], running: Timer, birthDate: string | null, napWindow: NapWindow, now: Date): Sleeping {
+export function sleepingSpan(sleeps: Sleep[], running: Timer, birthDate: string | null, rhythm: DayRhythm, now: Date): Sleeping {
   const start = new Date(running.start);
-  const entries = { sleep: sleeps, feeding: [], change: [], medication: [] };
-  const night = isNightSleep(start, now, napWindow) || dayWindow(entries, running, napWindow, now).kind === 'night';
-  const nap = night ? null : sleepContext(sleeps, running, birthDate, napWindow, now);
-  const wake = night ? usualWakeAfter(dayRhythm(sleeps, birthDate, napWindow, now), start) : (nap?.anchor ?? after(start, DAY_PLAN_TUNING.napLength * MINUTE_MS));
+  const night = isNight({ start, end: now }, sleeps, rhythm, now);
+  const nap = night ? null : sleepContext(sleeps, running, birthDate, rhythm, now);
+  const wake = night ? usualWakeAfter(rhythm, start) : (nap?.anchor ?? after(start, DAY_PLAN_TUNING.napLength * MINUTE_MS));
   return { start, wake: wake > now ? wake : now };
-}
-
-/** The first usual morning wake after `time`. */
-function usualWakeAfter(rhythm: DayRhythm, time: Date): Date {
-  const sameDay = minutesPast(time, 0, rhythm.wake);
-  return sameDay > time ? sameDay : minutesPast(time, 1, rhythm.wake);
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { DEFAULT_NAP_WINDOW, isNap, isNightSleep } from './nap';
+import { DEFAULT_NAP_WINDOW, isNightSleep } from './nap';
 
 describe('the nap rule', () => {
   it('the default window is 07:00 to 19:00', () => {
@@ -19,7 +19,7 @@ describe('the nap rule', () => {
     const start = new Date(2026, 8, 20, 13, 0);
 
     // When
-    const nap = isNap(start);
+    const nap = !isNightSleep(start, start);
 
     // Then
     expect(nap).toBe(true);
@@ -30,7 +30,7 @@ describe('the nap rule', () => {
     const start = new Date(2026, 8, 20, 21, 30);
 
     // When
-    const nap = isNap(start);
+    const nap = !isNightSleep(start, start);
 
     // Then
     expect(nap).toBe(false);
@@ -41,7 +41,7 @@ describe('the nap rule', () => {
     const start = new Date(2026, 8, 20, 7, 0);
 
     // When
-    const nap = isNap(start);
+    const nap = !isNightSleep(start, start);
 
     // Then
     expect(nap).toBe(true);
@@ -52,7 +52,7 @@ describe('the nap rule', () => {
     const start = new Date(2026, 8, 20, 19, 0);
 
     // When
-    const nap = isNap(start);
+    const nap = !isNightSleep(start, start);
 
     // Then
     expect(nap).toBe(true);
@@ -66,7 +66,7 @@ describe('the nap rule', () => {
     const start = new Date(2026, 8, 20, hours, minutes);
 
     // When
-    const nap = isNap(start);
+    const nap = !isNightSleep(start, start);
 
     // Then
     expect(nap).toBe(false);
@@ -78,7 +78,7 @@ describe('the nap rule', () => {
     const start = new Date(2026, 8, 20, 8, 0);
 
     // When
-    const nap = isNap(start, window);
+    const nap = !isNightSleep(start, start, window);
 
     // Then
     expect(nap).toBe(false);

@@ -1,10 +1,12 @@
-import type { Timer } from '@molly/api';
+import type { Sleep, Timer } from '@molly/api';
 import { describe, expect, it } from 'vitest';
 
 import { change, feeding, sleep } from '../test/fixtures';
-import { dayWindow, windowsBefore } from './day-window';
-import { DEFAULT_NAP_WINDOW } from './nap';
-import { needs, rhythm, sleepingSpan } from './needs';
+import { dayRhythm } from './day-rhythm';
+import { dayWindow as windowWith, windowsBefore as windowsWith } from './day-window';
+import type { EntriesByKind } from './latest';
+import { DEFAULT_NAP_WINDOW, type NapWindow } from './nap';
+import { needs, rhythm, sleepingSpan as spanWith } from './needs';
 
 // A seeded two weeks of a five-month-old who sleeps 21:30 – 06:30 without a night feed, three naps,
 // six feeds and five changes a day: what the needs should make of a real rhythm, without real logs.
@@ -12,6 +14,14 @@ const napWindow = DEFAULT_NAP_WINDOW;
 const on = (day: number, hours: number, minutes = 0) => new Date(2026, 9, day, hours, minutes);
 const at = (day: number, hours: number, minutes = 0) => on(day, hours, minutes).toISOString();
 const BIRTH = '2026-05-10';
+/** The day functions with the rhythm learned from the same sleeps, as the app calls them. */
+const learned = (sleeps: Sleep[], setting: NapWindow, now: Date, birthDate: string | null = BIRTH) => dayRhythm(sleeps, birthDate, setting, now);
+const dayWindow = (entries: EntriesByKind, running: Timer | null, setting: NapWindow, now: Date) =>
+  windowWith(entries, running, learned(entries.sleep, setting, now), now);
+const windowsBefore = (entries: EntriesByKind, setting: NapWindow, now: Date, days?: number, running?: Timer | null) =>
+  windowsWith(entries, learned(entries.sleep, setting, now), now, days, running);
+const sleepingSpan = (sleeps: Sleep[], running: Timer, birthDate: string | null, setting: NapWindow, now: Date) =>
+  spanWith(sleeps, running, birthDate, learned(sleeps, setting, now, birthDate), now);
 const HOUR = 60 * 60 * 1000;
 
 type Clock = [hours: number, minutes: number];

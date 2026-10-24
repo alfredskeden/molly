@@ -1,8 +1,8 @@
 import type { Medication } from '@molly/api';
 
+import { minutesPast, type DayRhythm } from './day-rhythm';
 import type { DayWindow } from './day-window';
 import { newest } from './latest';
-import { atClock, type NapWindow } from './nap';
 
 const CYCLE_MS = 24 * 60 * 60 * 1000;
 
@@ -10,11 +10,11 @@ const CYCLE_MS = 24 * 60 * 60 * 1000;
 export type VitaminDCycle = { start: Date; end: Date };
 
 /**
- * The cycle `now` is in. Without a logged wake the nap window's latest start stands in: `byClock`'s own
+ * The cycle `now` is in. Without a logged wake the latest usual wake stands in: `byClock`'s own
  * `wake` is the evening at night, which would start the cycle at bedtime.
  */
-export function vitaminDCycle(window: DayWindow, napWindow: NapWindow, now: Date): VitaminDCycle {
-  return vitaminDCycleFrom(window.clock ? latestNapStart(napWindow, now) : window.wake);
+export function vitaminDCycle(window: DayWindow, rhythm: DayRhythm, now: Date): VitaminDCycle {
+  return vitaminDCycleFrom(window.clock ? latestUsualWake(rhythm, now) : window.wake);
 }
 
 /** The cycle that starts at `start`. */
@@ -22,9 +22,9 @@ export function vitaminDCycleFrom(start: Date): VitaminDCycle {
   return { start, end: new Date(start.getTime() + CYCLE_MS) };
 }
 
-function latestNapStart(napWindow: NapWindow, now: Date): Date {
-  const today = atClock(now, 0, napWindow.start);
-  return today <= now ? today : atClock(now, -1, napWindow.start);
+function latestUsualWake(rhythm: DayRhythm, now: Date): Date {
+  const today = minutesPast(now, 0, rhythm.wake);
+  return today <= now ? today : minutesPast(now, -1, rhythm.wake);
 }
 
 /** `Vitamin D` followed by nothing, a space or a digit (`Vitamin D3`, `vitamin d 10 µg`), case ignored. */

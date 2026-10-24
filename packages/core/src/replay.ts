@@ -1,8 +1,9 @@
 import type { Sleep } from '@molly/api';
 
 import { DAY_PLAN_TUNING, dayPlan, type DayPlanTuning, type Skip } from './day-plan';
-import { morningWake, type DayWindow } from './day-window';
-import { atClock, isNightSleep, type NapWindow } from './nap';
+import { DAY_TUNING, dayRhythm, type DayRhythm, type DayTuning } from './day-rhythm';
+import { isNight as isNightIn, pastDays, type DayWindow } from './day-window';
+import type { NapWindow } from './nap';
 import { NEXT_SLEEP_TUNING, nextSleep, type NextSleep, type NextSleepTuning } from './next-sleep';
 
 /** The sleeps that had ended by `now`: all a prediction made then could have known. */
@@ -11,10 +12,16 @@ export function knownAt(sleeps: Sleep[], now: Date): Sleep[] {
 }
 
 const MINUTE_MS = 60 * 1000;
+const DAY_MS = 24 * 60 * MINUTE_MS;
 
-/** Night sleep or nap by when it happened (`isNightSleep`), as the plan tells them; the saved flag isn't read. */
-function isNight(entry: Sleep, napWindow: NapWindow): boolean {
-  return isNightSleep(new Date(entry.start), new Date(entry.end), napWindow);
+/** Night sleep or nap by the child's rhythm (`isNight`), knowing every sleep; the saved flag isn't read. */
+function isNight(entry: Sleep, sleeps: Sleep[], rhythm: DayRhythm): boolean {
+  return isNightIn({ start: new Date(entry.start), end: new Date(entry.end) }, sleeps, rhythm, afterAll(sleeps));
+}
+
+/** A moment after every sleep has ended: all of them are known. */
+function afterAll(sleeps: Sleep[]): Date {
+  return new Date(Math.max(0, ...sleeps.map((entry) => Date.parse(entry.end))) + DAY_MS);
 }
 
 /** Whether the sleep started inside the window, how many minutes outside it if not, and its width. */
@@ -47,8 +54,10 @@ export function replay(
   birthDate: string,
   napWindow: NapWindow,
   tuning: NextSleepTuning = NEXT_SLEEP_TUNING,
+  dayTuning: DayTuning = DAY_TUNING,
 ): ReplayCase[] {
   const sorted = [...sleeps].sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
+  const known = dayRhythm(sorted, birthDate, napWindow, afterAll(sorted), dayTuning);
   return sorted.flatMap((target, index) => {
     if (index === 0) return [];
     const start = Date.parse(target.start);
@@ -56,9 +65,11 @@ export function replay(
     const long = Date.parse(target.end) - start >= tuning.catnapUnder * MINUTE_MS;
     if (!long || start - woke < 15 * MINUTE_MS) return [];
     const now = new Date(Math.max(start - LEAD_MS, woke));
-    const prediction = nextSleep(knownAt(sorted, now), null, birthDate, napWindow, now, tuning);
+    const before = knownAt(sorted, now);
+    const prediction = nextSleep(before, null, birthDate, dayRhythm(before, birthDate, napWindow, now, dayTuning), now, tuning);
     const started = new Date(start);
-    const kind = !isNight(target, napWindow) ? 'nap' : isNight(sorted[index - 1]!, napWindow) ? 'night' : 'bedtime';
+    const night = (entry: Sleep) => isNight(entry, sorted, known);
+    const kind = !night(target) ? 'nap' : night(sorted[index - 1]!) ? 'night' : 'bedtime';
     return [{ started, target: kind, now, prediction, score: prediction && score(prediction, started) }];
   });
 }
@@ -80,16 +91,16 @@ export function likelyFor(
   sleeps: Sleep[],
   skips: Skip[],
   birthDate: string | null,
-  napWindow: NapWindow,
+  rhythm: DayRhythm,
 ): LikelySleep[] {
   const shown = sleeps
     .filter((entry) => inside(window, new Date(entry.start)))
     .flatMap((entry): LikelySleep[] => {
       const started = new Date(entry.start);
       const tapped = skips.filter((skip) => skip.at <= started);
-      const plan = dayPlan(knownAt(sleeps, started), null, birthDate, napWindow, tapped, started);
+      const plan = dayPlan(knownAt(sleeps, started), null, birthDate, rhythm, tapped, started);
       const next = plan.find((sleep) => !sleep.skipped);
-      return next ? [{ kind: isNight(entry, napWindow) ? 'bedtime' : 'nap', start: next.start, end: next.end, skipped: false, started }] : [];
+      return next ? [{ kind: isNight(entry, sleeps, rhythm) ? 'bedtime' : 'nap', start: next.start, end: next.end, skipped: false, started }] : [];
     });
   const skipped = skips
     .filter((skip) => inside(window, skip.start))
@@ -101,7 +112,8 @@ export function likelyFor(
 export type PlanCase = { day: Date; position: number; kind: NextSleep['kind']; score: ReturnType<typeof score> | null };
 
 /**
- * Plans each logged day from its morning wake, knowing only the sleeps that had ended by then, and
+ * Plans each logged day from its morning wake, as soon as it was known (the age's threshold after it),
+ * knowing only the sleeps that had ended by then, and
  * scores planned nap N against the day's Nth sleep (null if the day had fewer naps) and planned
  * bedtime against the logged one. Days without a logged bedtime are left out. Catnaps don't count.
  */
@@ -111,27 +123,27 @@ export function replayPlans(
   napWindow: NapWindow,
   tuning: NextSleepTuning = NEXT_SLEEP_TUNING,
   planTuning: DayPlanTuning = DAY_PLAN_TUNING,
+  dayTuning: DayTuning = DAY_TUNING,
 ): PlanCase[] {
-  const long = sleeps
-    .filter((entry) => Date.parse(entry.end) - Date.parse(entry.start) >= tuning.catnapUnder * MINUTE_MS)
-    .sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
-  const wakes = new Map<number, Date>();
-  for (const entry of long.filter((sleep) => isNight(sleep, napWindow))) {
-    const wake = morningWake(sleeps, napWindow, atClock(new Date(entry.end), 0, napWindow.start));
-    if (wake) wakes.set(wake.getTime(), wake);
-  }
-  return [...wakes.values()].flatMap((day) => {
-    const after = long.filter((entry) => new Date(entry.start) > day);
-    const bedIndex = after.findIndex((entry) => isNight(entry, napWindow));
-    if (bedIndex < 0) return [];
-    const naps = after.slice(0, bedIndex);
-    const bed = new Date(after[bedIndex]!.start);
-    const plan = dayPlan(knownAt(sleeps, day), null, birthDate, napWindow, [], day, planTuning, tuning);
-    return plan.map((planned, index): PlanCase => {
-      const actual = planned.kind === 'bedtime' ? bed : naps[index] && new Date(naps[index].start);
-      return { day, position: index + 1, kind: planned.kind, score: actual ? score(planned, actual) : null };
+  const isLong = (entry: Sleep) => Date.parse(entry.end) - Date.parse(entry.start) >= tuning.catnapUnder * MINUTE_MS;
+  const end = afterAll(sleeps);
+  const first = Math.min(...sleeps.map((entry) => Date.parse(entry.start)));
+  const days = Math.ceil((end.getTime() - first) / DAY_MS) + 1;
+  const rhythm = dayRhythm(sleeps, birthDate, napWindow, end, dayTuning);
+  return pastDays(sleeps, rhythm, end, days)
+    .reverse()
+    .flatMap(({ wake, naps, bedtime }) => {
+      if (!bedtime) return [];
+      const long = naps.filter(isLong);
+      // The wake is only known once the baby has been up the age's threshold.
+      const known = new Date(wake.getTime() + rhythm.band.awake * MINUTE_MS);
+      const before = knownAt(sleeps, known);
+      const plan = dayPlan(before, null, birthDate, dayRhythm(before, birthDate, napWindow, known, dayTuning), [], known, planTuning, tuning);
+      return plan.map((planned, index): PlanCase => {
+        const actual = planned.kind === 'bedtime' ? new Date(bedtime.start) : long[index] && new Date(long[index].start);
+        return { day: wake, position: index + 1, kind: planned.kind, score: actual ? score(planned, actual) : null };
+      });
     });
-  });
 }
 
 /**

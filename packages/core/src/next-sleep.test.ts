@@ -1,10 +1,15 @@
+import type { Sleep, Timer } from '@molly/api';
 import { describe, expect, it } from 'vitest';
 
 import { sleep } from '../test/fixtures';
-import { DEFAULT_NAP_WINDOW } from './nap';
-import { nextSleep } from './next-sleep';
+import { dayRhythm } from './day-rhythm';
+import { DEFAULT_NAP_WINDOW, type NapWindow } from './nap';
+import { nextSleep as predictWith } from './next-sleep';
 
 const napWindow = DEFAULT_NAP_WINDOW;
+/** `nextSleep` with the rhythm learned from the same sleeps, as the app calls it. */
+const nextSleep = (sleeps: Sleep[], running: Timer | null, birthDate: string | null, setting: NapWindow, now: Date) =>
+  predictWith(sleeps, running, birthDate, dayRhythm(sleeps, birthDate, setting, now), now);
 const noTimer = null;
 /** Four months old all through September 2026: the 3–5 month band, 1:15–2:30 awake. */
 const born = '2026-05-10';
@@ -282,7 +287,8 @@ describe("the next sleep from the baby's own history", () => {
   it('sits halfway between the age guide and the history with 6 days', () => {
     // Given
     const sleeps = [...pastDays(6, [8, 40]), thisMorning];
-    const now = on(20, 7, 30);
+    // An hour after the wake: before that it's still the night.
+    const now = on(20, 7, 45);
 
     // When
     const prediction = nextSleep(sleeps, noTimer, born, napWindow, now);
@@ -294,7 +300,8 @@ describe("the next sleep from the baby's own history", () => {
   it('follows the history alone from 10 days', () => {
     // Given
     const sleeps = [...pastDays(10, [8, 40]), thisMorning];
-    const now = on(20, 7, 30);
+    // An hour after the wake: before that it's still the night.
+    const now = on(20, 7, 45);
 
     // When
     const prediction = nextSleep(sleeps, noTimer, born, napWindow, now);
@@ -318,7 +325,8 @@ describe("the next sleep from the baby's own history", () => {
   it('looks back 14 days, no further', () => {
     // Given
     const sleeps = [...pastDay(5, [9, 40]), ...pastDays(14, [8, 40]), thisMorning];
-    const now = on(20, 7, 30);
+    // An hour after the wake: before that it's still the night.
+    const now = on(20, 7, 45);
 
     // When
     const prediction = nextSleep(sleeps, noTimer, born, napWindow, now);
@@ -514,7 +522,7 @@ describe('the next sleep around a clock change', () => {
     ];
     const lastNight = sleep({ start: october(25, 19, 30).toISOString(), end: october(26, 6, 40).toISOString() });
     const sleeps = [...octoberDay(24), ...octoberDay(25), lastNight];
-    const now = october(26, 7, 30);
+    const now = october(26, 7, 45);
 
     // When
     const prediction = nextSleep(sleeps, noTimer, born, napWindow, now);
