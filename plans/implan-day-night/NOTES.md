@@ -26,6 +26,37 @@ Each item is a sub-step in `MAIN.md`.
 - `replay.ts` and `scripts/replay-naps.ts --reflag` call `isNightSleep` / `morningWake` directly (steps 5–6).
 - Docs naming the old rule as current: `CLAUDE.md:63`, `README.md:19`, `plans/implan-molly/NOTES.md:83,231`, child screen copy `app/(main)/child/[id]/index.tsx:197` (steps 8–9).
 
+## Implementation (2026-10-24)
+
+- **Shape**: every day function takes a `DayRhythm` (`dayRhythm(sleeps, birthDate, napWindow, now)`) where it took the `NapWindow`: `dayWindow`, `windowsBefore`, `previousWindow`, `pastDays`, `nextSleep`, `sleepContext`, `dayPlan`, `sleepingSpan`, `vitaminDCycle`, `likelyFor`, `sleepComparison`. The rhythm carries the setting for the clock fallback. Callers learn it once per render / refresh from the same sleeps they pass.
+- **Verdict**: `isNight({ start, end }, sleeps, rhythm, now)` in `day-window.ts`. Running sleep: `end = now`. No wake to place it by: `isNightSleep` (by clock), which is now only that fallback; `isNap` is private.
+- **Learning pass** (`dayRhythm`, `firstWake`): a day's wake is the earliest sleep end in 05:00–11:00 followed by the band's awake threshold (uncapped), only after a sleep that started since 11:00 the day before. Bedtime is the first sleep starting 18:00–00:30 that, with the sleeps after it while the baby was back asleep within the threshold, runs the band's `long`: a waking an hour after bedtime doesn't move the learned bedtime, a catnap never is one. Only days before today count.
+- **Morning wake, "after a night"**: the same `firstWake`, in the band's range around the usual wake, only after a sleep that started since the range's end the day before (so an unlogged night with a morning nap has no wake).
+- **Day end / night end**: a day runs to the usual bedtime (was the setting's end); a night to the next usual wake (was the setting's start). Clock fallback unchanged.
+- **Past midnight**: yesterday's day keeps going after midnight while its bedtime may still come (up to `bedtimeCut` after the usual bedtime); then the clock.
+- **Running sleep and the plan**: `sleepContext` now treats a running sleep as the current nap unless `isNight` says it's the night (was: "bedtime was next when it started"), so the evening catnap keeps the plan with bedtime to come.
+- **Replay**: `replayPlans` plans each day once its wake is known (the threshold after it), since before that it's still the night.
+- **Unlearned bedtime**: until 3 bedtimes are learned the setting's end is the usual bedtime, so with the default 19:00 a sleep from 17:30 is the night. Accepted: the setting's end means "usual bedtime" now, and it's learned within 3 days.
+
+## Tuning (step 5)
+
+Made-up fixtures (`packages/core/test/day-fixtures.ts`: 2 months, 4–5 months, 10 months, 18 months; early wakings, back-to-sleep mornings, evening catnaps, a long lunch nap) replayed with `pnpm replay:fixtures`, 3 seeds × 28 days, the first 3 days not scored. Right · wrong · none:
+
+| Setting | Profile | Old wake | New wake | Old bedtime | New bedtime |
+| --- | --- | --- | --- | --- | --- |
+| 07:00–19:00 | 2 months | 73 · 2 · 0 | 73 · 1 · 1 | 25 · 50 · 0 | 71 · 3 · 1 |
+| | 4–5 months | 74 · 1 · 0 | 75 · 0 · 0 | 60 · 15 · 0 | 75 · 0 · 0 |
+| | 10 months | 72 · 3 · 0 | 75 · 0 · 0 | 75 · 0 · 0 | 75 · 0 · 0 |
+| | 18 months | 75 · 0 · 0 | 75 · 0 · 0 | 75 · 0 · 0 | 75 · 0 · 0 |
+| 06:00–18:00 | 2 months | 63 · 12 · 0 | 73 · 1 · 1 | 3 · 72 · 0 | 71 · 3 · 1 |
+| | 4–5 months | 62 · 13 · 0 | 75 · 0 · 0 | 30 · 45 · 0 | 75 · 0 · 0 |
+| 08:30–20:00 | 2 months | 37 · 38 · 0 | 73 · 1 · 1 | 56 · 19 · 0 | 71 · 3 · 1 |
+| | 10 months | 31 · 8 · 36 | 73 · 2 · 0 | 39 · 0 · 36 | 75 · 0 · 0 |
+
+The new rule doesn't depend on the setting once it has learned the child. Single-knob sweeps (`--set`): the awake thresholds, the range (`before` 90, `after` 120) and `eveningFrom` 150 change nothing on these fixtures; `bedtimeCut` 60 lifts the 2-month bedtimes to 74 (a catnap 90 min before bedtime was being taken for it) and 120 drops every age (65 / 70 / 72). **Final numbers: the starting values, unchanged** (the fixtures can't tell 60 from 90 for the cut, and 90 is what the investigation's real evenings supported).
+
+The fixtures are a check that the rule does what it says, not evidence about real children; the developer's own logs are the sanity check (`pnpm replay:naps <file> <birth> --days [--truth <file>]`, never committed).
+
 ## Open
 
-- None yet. The final tuning numbers and replay scores go here in step 5.
+- Sanity run on the developer's own logs (step 5): theirs to do; record anything worse than the old rule here with a reason.

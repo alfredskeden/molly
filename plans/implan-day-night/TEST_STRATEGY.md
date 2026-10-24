@@ -56,9 +56,9 @@ Tests come first for `packages/core` and the plain-TS app models (Vitest, Given 
 
 ## Replay (step 5)
 
-- [ ] `pnpm replay:naps <file> <birth> --days` prints each day's wake and bedtime by the old and new rule, and lists where they differ.
-- [ ] `--truth` scores right / wrong / none. `--set` takes the new tuning keys, and `--reflag` uses the new verdict.
-- [ ] Made-up fixtures for under 3 months, 4–5 months, 9–12 months and a toddler score at least as well as the old rule on wakes and bedtimes. The final tuning numbers and scores are in `NOTES.md`.
+- [x] `pnpm replay:naps <file> <birth> --days` prints each day's wake and bedtime by the old and new rule, and lists where they differ.
+- [x] `--truth` scores right / wrong / none. `--set` takes the new tuning keys, and `--reflag` uses the new verdict.
+- [x] Made-up fixtures for under 3 months, 4–5 months, 9–12 months and a toddler score at least as well as the old rule on wakes and bedtimes. The final tuning numbers and scores are in `NOTES.md`.
 - [ ] Sanity check on the developer's own logs (not committed): no day gets worse than the old rule without a written reason in `NOTES.md`.
 
 ## Playwright (seeded Baby Buddy, built web image)

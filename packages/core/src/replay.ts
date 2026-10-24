@@ -2,8 +2,8 @@ import type { Sleep } from '@molly/api';
 
 import { DAY_PLAN_TUNING, dayPlan, type DayPlanTuning, type Skip } from './day-plan';
 import { DAY_TUNING, dayRhythm, type DayRhythm, type DayTuning } from './day-rhythm';
-import { isNight as isNightIn, pastDays, type DayWindow } from './day-window';
-import type { NapWindow } from './nap';
+import { isNight as isNightIn, pastDays, wakeAndBedtime, type DayWindow } from './day-window';
+import { atClock, isNightSleep, type NapWindow } from './nap';
 import { NEXT_SLEEP_TUNING, nextSleep, type NextSleep, type NextSleepTuning } from './next-sleep';
 
 /** The sleeps that had ended by `now`: all a prediction made then could have known. */
@@ -175,4 +175,85 @@ function whereIn(window: { start: Date; end: Date }, started: Date): string {
 
 function inside(window: { start: Date; end: Date }, time: Date): boolean {
   return time >= window.start && time <= window.end;
+}
+
+/** Where a day started and its night began, by one rule; null where the rule found none. */
+export type DayEdges = { wake: Date | null; bedtime: Date | null };
+
+/** A calendar day (its midnight) by the rule before #14 (`old`) and by the child's rhythm (`new`). */
+export type DayCase = { day: Date; old: DayEdges; new: DayEdges };
+
+/**
+ * Each calendar day from the first logged sleep's to the last's, with its morning wake and bedtime by
+ * both rules, knowing every sleep. The new rule's rhythm is learned as on that day (from the days
+ * before it), so a day never teaches itself.
+ */
+export function replayDays(sleeps: Sleep[], birthDate: string | null, napWindow: NapWindow, dayTuning: DayTuning = DAY_TUNING): DayCase[] {
+  if (sleeps.length === 0) return [];
+  const end = afterAll(sleeps);
+  const first = new Date(Math.min(...sleeps.map((entry) => Date.parse(entry.start))));
+  const last = new Date(Math.max(...sleeps.map((entry) => Date.parse(entry.end))));
+  const days: DayCase[] = [];
+  for (let day = atClock(first, 0, '00:00'); day <= last; day = atClock(day, 1, '00:00')) {
+    const rhythm = dayRhythm(sleeps, birthDate, napWindow, atClock(day, 0, '12:00'), dayTuning);
+    days.push({ day, old: oldEdges(sleeps, napWindow, day), new: wakeAndBedtime(sleeps, rhythm, day, end) });
+  }
+  return days;
+}
+
+/**
+ * The rule before #14, for comparison: the end of a night sleep by the clock (`isNightSleep`) closest
+ * to the setting's start and within 2 h of it, then the first night sleep after it from the setting's
+ * start on, before the next morning.
+ */
+function oldEdges(sleeps: Sleep[], napWindow: NapWindow, day: Date): DayEdges {
+  const night = (entry: Sleep) => isNightSleep(new Date(entry.start), new Date(entry.end), napWindow);
+  const start = atClock(day, 0, napWindow.start).getTime();
+  const distance = (time: number) => Math.abs(time - start);
+  const ends = sleeps
+    .filter(night)
+    .map((entry) => Date.parse(entry.end))
+    .filter((end) => distance(end) <= 2 * 60 * MINUTE_MS)
+    .sort((a, b) => distance(a) - distance(b));
+  if (ends.length === 0) return { wake: null, bedtime: null };
+  const wake = ends[0]!;
+  const nextMorning = atClock(day, 1, napWindow.start).getTime();
+  const starts = sleeps
+    .filter((entry) => night(entry) && Date.parse(entry.start) > wake && Date.parse(entry.start) >= start && Date.parse(entry.start) < nextMorning)
+    .map((entry) => Date.parse(entry.start))
+    .sort((a, b) => a - b);
+  return { wake: new Date(wake), bedtime: starts.length > 0 ? new Date(starts[0]!) : null };
+}
+
+/** A day's real morning wake and bedtime, from another tracker; null where it has none. */
+export type TruthDay = { day: Date; wake: Date | null; bedtime: Date | null };
+
+export type EdgeScore = { right: number; wrong: number; none: number };
+export type DayScores = Record<'old' | 'new', { wake: EdgeScore; bedtime: EdgeScore }>;
+
+/** How far off a found time may be and still be right. */
+const RIGHT_WITHIN_MS = 5 * MINUTE_MS;
+
+/**
+ * Each rule's wakes and bedtimes against the truth, on the days it has: right (within 5 min), wrong,
+ * or none (the rule found nothing). A truth with no time for a day isn't scored.
+ */
+export function scoreDays(days: DayCase[], truth: TruthDay[]): DayScores {
+  const empty = (): EdgeScore => ({ right: 0, wrong: 0, none: 0 });
+  const scores: DayScores = { old: { wake: empty(), bedtime: empty() }, new: { wake: empty(), bedtime: empty() } };
+  for (const real of truth) {
+    const found = days.find((day) => day.day.getTime() === atClock(real.day, 0, '00:00').getTime());
+    for (const rule of ['old', 'new'] as const) {
+      for (const edge of ['wake', 'bedtime'] as const) {
+        const expected = real[edge];
+        if (!expected) continue;
+        const time = found?.[rule][edge] ?? null;
+        const score = scores[rule][edge];
+        if (!time) score.none += 1;
+        else if (Math.abs(time.getTime() - expected.getTime()) <= RIGHT_WITHIN_MS) score.right += 1;
+        else score.wrong += 1;
+      }
+    }
+  }
+  return scores;
 }

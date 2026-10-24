@@ -175,9 +175,10 @@ export function isNight(sleep: { start: Date; end: Date }, sleeps: Sleep[], rhyt
   return isNightSleep(sleep.start, sleep.end, rhythm.napWindow);
 }
 
-/** The morning wake of the calendar day `day` is on, as known at `now`; null without one. */
-export function morningWake(sleeps: Sleep[], rhythm: DayRhythm, day: Date, now: Date): Date | null {
-  return dayOn(sleeps, rhythm, day, 0, now).wake;
+/** The morning wake and bedtime of the calendar day `day` is on, as known at `now`; null for either not found. */
+export function wakeAndBedtime(sleeps: Sleep[], rhythm: DayRhythm, day: Date, now: Date): { wake: Date | null; bedtime: Date | null } {
+  const { wake, bedtime } = dayOn(sleeps, rhythm, day, 0, now);
+  return { wake, bedtime: bedtime && new Date(bedtime.start) };
 }
 
 /** A day that began at its morning wake, until the usual bedtime. */
