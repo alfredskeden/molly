@@ -1,6 +1,6 @@
 # Day and night from the child's rhythm
 
-GitHub issue #14. The investigation (data, research, the production case, the questions answered here) is in the issue body. Branch `feature/day-night` from `develop`, PR with `--base develop`.
+GitHub issue #14 (the agreed spec, in Gherkin). The original investigation (data, research, the production case) is in the issue's edit history; its key numbers are in `NOTES.md`. Branch `feature/day-night` from `develop`, PR with `--base develop`.
 
 ## Outcome
 
@@ -84,11 +84,11 @@ TDD in `packages/core` (Vitest, Given / When / Then, zero → one → many, then
 - [ ] **2. Age bands and `dayRhythm`.** The tuning object, band by age, and the learning pass: usual wake, usual bedtime, usual first wake window, clamps, fallback to the setting under 3 days. It replaces `usualMorningAfter` (`needs.ts`) and `usualBedtime` (`next-sleep.ts`); remove both, and fold `NEEDS_TUNING.wakesNeeded` and `NEXT_SLEEP_TUNING.bedtimesNeeded` into the new tuning.
 - [ ] **3. Morning wake.** New `morningWake` per the rule, including the live first hour (night until the threshold passes, then day from the wake). Cases: the back-to-sleep morning, an early waking under the threshold, an early waking before the range, a late wake after a bad night, a short "woke then napped within the threshold" morning (stays night, as decided), under 3 months, no wake by the range's end (clock fallback). Remove `WAKE_RANGE_MS`; rewrite the `day-window.test.ts` cases that assert "closest to the window start, ±2 h".
 - [ ] **4. Bedtime and the nap-or-night verdict.** New `bedtime`, and one context-aware verdict for a single sleep (finished or running) that replaces `isNightSleep` for every caller. Keep the by-clock rule only as the fallback with no history; un-export `isNap`, which only `isNightSleep` uses. Cases: the evening catnap, a bedtime with a waking an hour later, a long lunch nap, a 2 h evening sleep 2½ h before the usual bedtime, a bedtime after midnight, the night across the clock change (25 Oct 2026, Europe/Stockholm).
-- [ ] **5. Replay days mode and tuning.** `pnpm replay:naps <sleeps.json> <birth> --days` prints, per day, the morning wake and bedtime by the old and the new rule, and the mornings and evenings where they differ. An optional `--truth <file>` (wake / bedtime times from another tracker) scores them as right, wrong or none, like the issue's tables. `--set` overrides the new tuning keys too, and `--reflag` uses the new verdict. Tune the starting values on the made-up fixtures; run the developer's logs as a sanity check only (never committed, never the tuning target). Record the final numbers and scores in `NOTES.md`.
+- [ ] **5. Replay days mode and tuning.** `pnpm replay:naps <sleeps.json> <birth> --days` prints, per day, the morning wake and bedtime by the old and the new rule, and the mornings and evenings where they differ. An optional `--truth <file>` (wake / bedtime times from another tracker) scores them as right, wrong or none, like the investigation's scores in `NOTES.md`. `--set` overrides the new tuning keys too, and `--reflag` uses the new verdict. Tune the starting values on the made-up fixtures; run the developer's logs as a sanity check only (never committed, never the tuning target). Record the final numbers and scores in `NOTES.md`.
 - [ ] **6. Core callers.** `next-sleep.ts`, `day-plan.ts`, `needs.ts`, `vitamin-d.ts`, `replay.ts`, `development/sleep.ts` on the new rule. Full core suite green, including `needs-seeded.test.ts`.
 - [ ] **7. App callers.** Everything listed under "What depends on it". Writes: `stopSleep` and `addEntry` get the recent sleeps and birth date from the caller (dashboard: `useRecentSleeps` and the child; widget and notification actions: what their refresh already fetches), with the by-clock fallback. The lock-screen label is computed where the widget cache is built and read by `notification/model.ts`, unless the notification already has the sleeps at hand.
 - [ ] **8. The setting.** The child screen (`app/(main)/child/[id]/index.tsx`, about line 197) keeps "Day starts" / "Day ends", reworded as starting values: Molly uses them until it has learned the child's usual wake and bedtime (a few days), and for babies under 3 months. Replace the line "The day starts at the wake-up closest to the start time." Same storage key, no migration.
-- [ ] **9. Docs.** `CLAUDE.md` (the next-sleep bullet names `isNightSleep`; add a short day-and-night bullet), `README.md` line 19 ("nap window"), `plans/implan-molly/NOTES.md` where it calls the setting the nap window as current, `plans/README.md` row, and the issue rewritten as the agreed spec.
+- [ ] **9. Docs.** `CLAUDE.md` (the next-sleep bullet names `isNightSleep`; add a short day-and-night bullet), `README.md` line 19 ("nap window"), `plans/implan-molly/NOTES.md` where it calls the setting the nap window as current, and the `plans/README.md` row's status.
 
 ## Decisions and why
 
@@ -103,7 +103,7 @@ TDD in `packages/core` (Vitest, Given / When / Then, zero → one → many, then
 
 ## Not in this plan
 
-- Development sleep comparison, weeks and History stay on calendar days (issue question 6). Only their nap-or-night split moves to the new rule.
+- Development sleep comparison, weeks and History stay on calendar days (a separate question). Only their nap-or-night split moves to the new rule.
 - No explicit wake / bedtime taps.
 - Baby Buddy's own nap window (server side) is untouched; Molly always sends `nap`.
 
