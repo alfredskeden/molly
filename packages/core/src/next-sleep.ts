@@ -1,7 +1,7 @@
 import type { Sleep, Timer } from '@molly/api';
 
-import { dayWindow, morningWake } from './day-window';
-import { atClock, isNightSleep, type NapWindow } from './nap';
+import { dayWindow, pastDays as daysBefore, type PastDay } from './day-window';
+import { atClock, type NapWindow } from './nap';
 import { sleepGuide, wakeForSlot, type SleepGuide, type Slot, type WakeRange } from './sleep-guide';
 
 const MINUTE_MS = 60 * 1000;
@@ -188,7 +188,8 @@ function awakeContext(
   const naps = long
     .filter((entry) => new Date(entry.start) > today.wake && new Date(entry.end) <= anchor)
     .map((entry) => minutesFrom(new Date(entry.start), new Date(entry.end)));
-  const pastDays = daysBefore(long, sleeps, napWindow, now, tuning.historyDays);
+  const isLong = (entry: Sleep) => long.includes(entry);
+  const pastDays = daysBefore(sleeps, napWindow, now, tuning.historyDays).map((day) => ({ ...day, naps: day.naps.filter(isLong) }));
   const bedtimes = pastDays.filter((day) => day.bedtime).length;
   return {
     anchor,
@@ -288,12 +289,6 @@ function startBetween<T extends { start: Date; end: Date }>(window: T, earliest:
   return { ...window, start, end: new Date(start.getTime() + window.end.getTime() - window.start.getTime()) };
 }
 
-/**
- * A logged past day: its morning wake, its naps of 15 min or more and its bedtime (the first night
- * sleep by `isNightSleep`, null if none was logged). The saved `nap` flag is never read.
- */
-export type PastDay = { wake: Date; naps: Sleep[]; bedtime: Sleep | null };
-
 /** The window for a sleep, from the age guide for its slot blended with minutes awake on past days. */
 function candidate(
   kind: NextSleep['kind'],
@@ -320,20 +315,6 @@ function candidate(
     history,
     samples: awake.length,
   };
-}
-
-/** Each of the last `count` days with a logged morning wake. */
-function daysBefore(long: Sleep[], sleeps: Sleep[], napWindow: NapWindow, now: Date, count: number): PastDay[] {
-  const days: PastDay[] = [];
-  for (let back = 1; back <= count; back++) {
-    const wake = morningWake(sleeps, napWindow, atClock(now, -back, napWindow.start));
-    if (!wake) continue;
-    const nextMorning = atClock(wake, 1, napWindow.start);
-    const day = long.filter((entry) => new Date(entry.start) > wake && new Date(entry.start) < nextMorning);
-    const bed = day.findIndex((entry) => isNightSleep(new Date(entry.start), new Date(entry.end), napWindow));
-    days.push({ wake, naps: bed < 0 ? day : day.slice(0, bed), bedtime: day[bed] ?? null });
-  }
-  return days;
 }
 
 /** Minutes awake before the nap in this slot, on a day that had one. */

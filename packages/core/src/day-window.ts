@@ -81,10 +81,10 @@ export function windowsBefore(
 ): DayWindow[] {
   const live = dayWindow(entries, running, napWindow, now);
   // A running bedtime sleep ends the day before it, as it opened the live night.
-  const sleeps = spans(entries.sleep, running, now);
+  const sleeps = withRunning(entries.sleep, running, now);
   const pages: DayWindow[] = [];
   for (let back = 0; back <= days + 1; back++) {
-    const { day, night } = windowsOn(entries.sleep, sleeps, napWindow, napWindowOn(now, -back, napWindow));
+    const { day, night } = windowsOn(sleeps, napWindow, napWindowOn(now, -back, napWindow));
     pages.push(night, day);
   }
   // Tonight's page comes after the day that just ended, which counts on top of the 7 days.
@@ -106,9 +106,10 @@ export function previousWindow(
 }
 
 /** A calendar day's day and night windows, from its morning wake and bedtime, or the nap window without. */
-function windowsOn(entries: Sleep[], sleeps: Span[], napWindow: NapWindow, nap: Interval) {
-  const wake = morningWake(entries, napWindow, nap.start);
-  const bed = wake && bedtime(sleeps, wake, nap, napWindow);
+function windowsOn(sleeps: Sleep[], napWindow: NapWindow, nap: Interval) {
+  const split = dayOn(sleeps, napWindow, nap);
+  const wake = split?.wake ?? null;
+  const bed = split?.bedtime ? new Date(split.bedtime.start) : null;
   const day: DayWindow = wake
     ? { kind: 'day', start: wake, end: bed ?? nap.end, wake, clock: false }
     : { kind: 'day', start: nap.start, end: nap.end, wake: nap.start, clock: true };
@@ -116,6 +117,37 @@ function windowsOn(entries: Sleep[], sleeps: Span[], napWindow: NapWindow, nap: 
     ? { kind: 'night', start: bed, end: nextNapStart(bed, napWindow), wake: wake!, clock: false }
     : { kind: 'night', start: nap.end, end: nextNapStart(nap.end, napWindow), wake: wake ?? nap.end, clock: true };
   return { day, night };
+}
+
+/**
+ * A logged day: its morning wake, the sleeps after it until bedtime (`naps`) and its bedtime (the
+ * first night sleep, null if none was logged). The saved `nap` flag is never read.
+ */
+export type PastDay = { wake: Date; naps: Sleep[]; bedtime: Sleep | null };
+
+/** Each of the last `count` days before `now` with a logged morning wake, newest first. */
+export function pastDays(sleeps: Sleep[], napWindow: NapWindow, now: Date, count: number): PastDay[] {
+  return Array.from({ length: count }, (_, back) => dayOn(sleeps, napWindow, napWindowOn(now, -back - 1, napWindow))).filter(
+    (day) => day !== null,
+  );
+}
+
+/**
+ * The day in a calendar day's nap window: the morning wake, then every sleep from it to the next
+ * morning in order, split at the bedtime. One that started before the window is an early wake's
+ * back-to-sleep, not a bedtime. Null without a wake.
+ */
+function dayOn(sleeps: Sleep[], napWindow: NapWindow, nap: Interval): PastDay | null {
+  const wake = morningWake(sleeps, napWindow, nap.start);
+  if (!wake) return null;
+  const nextMorning = atClock(nap.start, 1, napWindow.start);
+  const after = sleeps
+    .filter((entry) => new Date(entry.start) > wake && new Date(entry.start) < nextMorning)
+    .sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
+  const bed = after.findIndex(
+    (entry) => new Date(entry.start) >= nap.start && isNightSleep(new Date(entry.start), new Date(entry.end), napWindow),
+  );
+  return { wake, naps: bed < 0 ? after : after.slice(0, bed), bedtime: after[bed] ?? null };
 }
 
 /** The end of a night sleep (`isNightSleep`), closest to the nap-window start and within range of it. */
@@ -154,6 +186,13 @@ function spans(entries: Sleep[], running: Timer | null, now: Date): Span[] {
     ...entries.map((entry) => ({ start: Date.parse(entry.start), end: Date.parse(entry.end) })),
     ...(running ? [{ start: Date.parse(running.start), end: now.getTime() }] : []),
   ];
+}
+
+/** Logged sleeps, plus the running one up to now. */
+function withRunning(entries: Sleep[], running: Timer | null, now: Date): Sleep[] {
+  if (!running) return entries;
+  const sleeping = { id: running.id, child: running.child, start: running.start, end: now.toISOString(), duration: '', nap: false };
+  return [...entries, { ...sleeping, notes: null, tags: [] }];
 }
 
 /** The nap window on the day some days from `day`. */

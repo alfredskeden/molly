@@ -3,8 +3,9 @@
 
 import type { Sleep } from '@molly/api';
 
+import type { PastDay } from './day-window';
 import { clockText, durationText, whenText } from './format';
-import { median, type PastDay } from './next-sleep';
+import { median } from './next-sleep';
 
 /** A likely sleep of the plan, as `dayPlan` gives it. */
 export type PlanSleep = { kind: 'nap' | 'bedtime'; start: Date; end: Date; skipped: boolean };

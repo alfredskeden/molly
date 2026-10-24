@@ -6,7 +6,7 @@ Tests come first for `packages/core` and the plain-TS app models (Vitest, Given 
 
 ### Refactor first (step 1)
 
-- [ ] The prediction's past days (wake, naps, bedtime) come from the same function as the Recent days windows. `next-sleep`, `day-plan`, `needs` and `day-window` suites pass unchanged.
+- [x] The prediction's past days (wake, naps, bedtime) come from the same function as the Recent days windows. `next-sleep`, `day-plan`, `needs` and `day-window` suites pass unchanged.
 
 ### The child's rhythm (step 2)
 
