@@ -41,3 +41,4 @@ How Molly was built, one folder per plan. Each has `MAIN.md` (the steps, with `[
 | [implan-ring-day-nav](implan-ring-day-nav/MAIN.md) | Past ring header becomes a pager (‹ ›, `Today ›`) with stat boxes, issue #3 | Done |
 | [implan-web-sheets](implan-web-sheets/MAIN.md) | Web sheets keep their surface and sit on the bottom; wide windows get a centred column, issue #5 | Open items left |
 | [implan-solid-food](implan-solid-food/MAIN.md) | Per-child Solid food setting: Solids under Feed, the food in the feeding's notes, issue #1 | Done |
+| [implan-day-night](implan-day-night/MAIN.md) | Day and night from the child's rhythm: learned usual wake and bedtime, age-based thresholds, nap flag on save, issue #14 | Done (sanity run on own logs and device checks open) |

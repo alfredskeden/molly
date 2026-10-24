@@ -2,6 +2,7 @@ export * from './adjust';
 export * from './bottle-amount';
 export * from './children';
 export * from './day-plan';
+export * from './day-rhythm';
 export * from './day-window';
 export * from './development';
 export * from './diaper';

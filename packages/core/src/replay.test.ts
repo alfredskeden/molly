@@ -1,8 +1,26 @@
+import type { Sleep } from '@molly/api';
 import { describe, expect, it } from 'vitest';
 
 import { sleep } from '../test/fixtures';
-import { DEFAULT_NAP_WINDOW } from './nap';
-import { accuracySummary, knownAt, likelyFor, replay, replayPlans, score, type LikelySleep } from './replay';
+import { dayRhythm } from './day-rhythm';
+import type { DayWindow } from './day-window';
+import { DEFAULT_NAP_WINDOW, type NapWindow } from './nap';
+import {
+  accuracySummary,
+  knownAt,
+  likelyFor as likelyWith,
+  replay,
+  replayDays,
+  replayPlans,
+  score,
+  scoreDays,
+  type LikelySleep,
+} from './replay';
+import type { Skip } from './day-plan';
+
+/** `likelyFor` with the rhythm learned from every sleep, as the app calls it for a past day. */
+const likelyFor = (window: DayWindow, sleeps: Sleep[], skips: Skip[], birthDate: string, setting: NapWindow) =>
+  likelyWith(window, sleeps, skips, birthDate, dayRhythm(sleeps, birthDate, setting, new Date(window.end.getTime() + 24 * 60 * 60 * 1000)));
 
 const on = (day: number, hours: number, minutes = 0) => new Date(2026, 8, day, hours, minutes);
 const logged = (from: Date, to: Date, nap = true) => sleep({ start: from.toISOString(), end: to.toISOString(), nap });
@@ -272,5 +290,47 @@ describe('replaying whole-day plans by when sleeps happened', () => {
     // Then
     expect(cases.map((entry) => entry.kind)).toEqual(['nap', 'nap', 'nap', 'nap', 'bedtime']);
     expect(cases.every((entry) => entry.score !== null)).toBe(true);
+  });
+});
+
+describe('replaying where days and nights start', () => {
+  /** Ten days up at 08:10 after a night from 21:00, napping 09:40–10:40, then a 06:31 wake and an 08:15–10:26 sleep. */
+  const usual = Array.from({ length: 10 }, (_, index) => 9 + index).flatMap((day) => [
+    logged(on(day, 21, 0), on(day + 1, 8, 10), false),
+    logged(on(day + 1, 9, 40), on(day + 1, 10, 40)),
+  ]);
+  const sleeps = [...usual, logged(on(19, 20, 58), on(20, 6, 31), false), logged(on(20, 8, 15), on(20, 10, 26), false), logged(on(20, 21, 0), on(21, 8, 0), false)];
+  /** A setting whose day starts at 08:30: by the clock the 08:15 sleep is still the night. */
+  const late = { start: '08:30', end: '20:00' };
+
+  it('gives each day its morning wake and bedtime by the old and the new rule', () => {
+    // When
+    const days = replayDays(sleeps, '2026-04-20', late);
+
+    // Then
+    expect(days.find((day) => day.day.getTime() === on(20, 0).getTime())).toEqual({
+      day: on(20, 0),
+      old: { wake: on(20, 10, 26), bedtime: on(20, 21, 0) },
+      new: { wake: on(20, 6, 31), bedtime: on(20, 21, 0) },
+    });
+  });
+
+  it('scores them right, wrong or none against the times from another tracker', () => {
+    // Given
+    const days = replayDays(sleeps, '2026-04-20', late).filter((day) => day.day >= on(19, 0));
+    const truth = [
+      { day: on(19, 0), wake: on(19, 8, 10), bedtime: on(19, 20, 58) },
+      { day: on(20, 0), wake: on(20, 6, 31), bedtime: on(20, 21, 0) },
+      { day: on(21, 0), wake: on(21, 7, 0), bedtime: null },
+    ];
+
+    // When
+    const scores = scoreDays(days, truth);
+
+    // Then
+    expect(scores).toEqual({
+      old: { wake: { right: 1, wrong: 2, none: 0 }, bedtime: { right: 2, wrong: 0, none: 0 } },
+      new: { wake: { right: 2, wrong: 1, none: 0 }, bedtime: { right: 2, wrong: 0, none: 0 } },
+    });
   });
 });

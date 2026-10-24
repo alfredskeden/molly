@@ -1,9 +1,10 @@
 import type { Change, Feeding, Sleep, Timer } from '@molly/api';
 
-import { dayWindow, morningWake, type DayWindow } from './day-window';
+import type { DayRhythm } from './day-rhythm';
+import { isNight, usualWakeAfter, type DayWindow } from './day-window';
 import { milkFeeds, newest, type EntriesByKind } from './latest';
-import { atClock, isNightSleep, type NapWindow } from './nap';
-import { DAY_PLAN_TUNING, median, NEXT_SLEEP_TUNING, sleepContext } from './next-sleep';
+import { median } from './median';
+import { DAY_PLAN_TUNING, sleepContext } from './next-sleep';
 import { isVitaminD } from './vitamin-d';
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -11,7 +12,7 @@ const HOUR_MS = 60 * 60 * 1000;
 /** The knobs of the needs rules. */
 export const NEEDS_TUNING = {
   /** Bumped whenever these rules change what `rhythm` returns: the cached rhythm is fetched again. */
-  rhythmVersion: 2,
+  rhythmVersion: 3,
   /** Fewer gaps of a kind in a window kind than this, and the fallback stands in. */
   gapsNeeded: 5,
   /** A longer gap is a missed log, not a rhythm. */
@@ -22,8 +23,6 @@ export const NEEDS_TUNING = {
   medicine: 24 * HOUR_MS,
   /** A running feed shows this value (filling up, never empty), and so does the mood while asleep. */
   running: 82,
-  /** Fewer logged morning wakes than this, and the nap-window start stands in for the usual one. */
-  wakesNeeded: 3,
   /** Mood thresholds on the average need, from the top. */
   moods: { giggly: 70, content: 45, fussy: 25 },
   /** The baby wants the lowest need under this. */
@@ -239,33 +238,14 @@ const MINUTE_MS = 60 * 1000;
 export type Sleeping = { start: Date; wake: Date };
 
 /**
- * The running sleep from its start to when the child likely wakes. A night's sleep (it started outside the
- * nap window or ran past its end, or the day has turned into the night) to the usual morning wake: the
- * median clock time of the last two weeks' (`morningWake`), the nap-window start with fewer than
- * `wakesNeeded`. A nap to its slot's usual length (`sleepContext`'s assumed wake), or `napLength` without
+ * The running sleep from its start to when the child likely wakes. A night's sleep (`isNight`: what
+ * stopping it now would save) to the child's usual morning wake (`dayRhythm`). A nap to its slot's usual length (`sleepContext`'s assumed wake), or `napLength` without
  * a prediction. Never before now: a sleep that runs longer is full.
  */
-export function sleepingSpan(sleeps: Sleep[], running: Timer, birthDate: string | null, napWindow: NapWindow, now: Date): Sleeping {
+export function sleepingSpan(sleeps: Sleep[], running: Timer, birthDate: string | null, rhythm: DayRhythm, now: Date): Sleeping {
   const start = new Date(running.start);
-  const entries = { sleep: sleeps, feeding: [], change: [], medication: [] };
-  const night = isNightSleep(start, now, napWindow) || dayWindow(entries, running, napWindow, now).kind === 'night';
-  const nap = night ? null : sleepContext(sleeps, running, birthDate, napWindow, now);
-  const wake = night ? usualMorningAfter(sleeps, napWindow, start) : (nap?.anchor ?? after(start, DAY_PLAN_TUNING.napLength * MINUTE_MS));
+  const night = isNight({ start, end: now }, sleeps, rhythm, now);
+  const nap = night ? null : sleepContext(sleeps, running, birthDate, rhythm, now);
+  const wake = night ? usualWakeAfter(rhythm, start) : (nap?.anchor ?? after(start, DAY_PLAN_TUNING.napLength * MINUTE_MS));
   return { start, wake: wake > now ? wake : now };
-}
-
-/** The first usual morning wake after `time`, as a clock time in minutes past midnight. */
-function usualMorningAfter(sleeps: Sleep[], napWindow: NapWindow, time: Date): Date {
-  const wakes = Array.from({ length: NEXT_SLEEP_TUNING.historyDays }, (_, back) =>
-    morningWake(sleeps, napWindow, atClock(time, -back, napWindow.start)),
-  ).flatMap((wake) => (wake && wake < time ? [wake.getHours() * 60 + wake.getMinutes()] : []));
-  const usual = wakes.length >= NEEDS_TUNING.wakesNeeded ? median(wakes) : minutesOf(napWindow.start);
-  const sameDay = new Date(time.getFullYear(), time.getMonth(), time.getDate(), 0, usual);
-  return sameDay > time ? sameDay : new Date(time.getFullYear(), time.getMonth(), time.getDate() + 1, 0, usual);
-}
-
-/** `HH:MM` as minutes past midnight. */
-function minutesOf(clock: string): number {
-  const [hours, minutes] = clock.split(':').map(Number);
-  return hours! * 60 + minutes!;
 }

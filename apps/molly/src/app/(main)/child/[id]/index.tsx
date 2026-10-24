@@ -194,7 +194,8 @@ function ChildForm({ child, prefs, all }: { child: Child; prefs: ChildPrefs; all
             <View>
               <Text className="text-base font-display">Day and night</Text>
               <Text className="text-caption font-bold text-muted">
-                Naps start in the day. The day starts at the wake-up closest to the start time.
+                Molly learns when this child usually wakes up and goes to bed. Until it has a few days to go by, it starts
+                from these times. Under 3 months, the morning always goes by Day starts.
               </Text>
             </View>
             {(['start', 'end'] as const).map((edge) => {

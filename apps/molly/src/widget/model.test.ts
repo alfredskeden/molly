@@ -1,7 +1,8 @@
 import { BabyBuddyError } from '@molly/api';
-import { dayPlan } from '@molly/core';
+import { dayPlan, dayRhythm } from '@molly/core';
 import { describe, expect, it, vi } from 'vitest';
 
+import { byClock } from '@/actions/trackers';
 import { CHILD, fakeClient, runningSleep, savedChange, savedFeeding, savedMedication, savedSleep } from '@/test/fake-client';
 import { formatClock } from '@/lib/time';
 import { COPY, PLAIN } from '@/theme/copy';
@@ -54,7 +55,7 @@ const NOW = new Date('2026-09-20T08:00:00Z');
 const napWindow = { start: '07:00', end: '19:00' };
 const context = {
   child: CHILD,
-  napWindow,
+  night: byClock(napWindow),
   bottle: { type: 'formula', amount: 120 } as const,
 };
 
@@ -198,7 +199,7 @@ describe('the widget snapshot', () => {
     expect(snapshot).toEqual({
       fetchedAt: NOW.toISOString(),
       child: { id: CHILD, name: 'Molly', hue: 0 },
-      sleepTimer: { start: runningSleep.start, byMe: true },
+      sleepTimer: { start: runningSleep.start, byMe: true, nightFrom: null },
       feedingTimer: null,
       lastSleep: '2026-09-20T06:30:00Z',
       lastFeeding: '2026-09-20T07:10:00Z',
@@ -207,6 +208,58 @@ describe('the widget snapshot', () => {
       nextSleep: null,
       lastBottle: { type: 'formula', amount: 120 },
     });
+  });
+
+  it('says from when stopping the running sleep saves a night sleep, by the child’s rhythm', async () => {
+    // Given
+    const on = (day: number, hours: number, minutes = 0) => new Date(2026, 8, day, hours, minutes);
+    const entry = (from: Date, to: Date) => ({ ...savedSleep, start: from.toISOString(), end: to.toISOString() });
+    // Ten days up at 07:00 after a night from 21:45, then today's sleep from 19:00.
+    const sleeps = Array.from({ length: 11 }, (_, index) => entry(on(9 + index, 21, 45), on(10 + index, 7, 0)));
+    const evening = { ...runningSleep, start: on(20, 19, 0).toISOString() };
+    const client = {
+      findTimer: vi.fn(async ({ name }: { name: string }) => (name === 'molly:sleep' ? evening : null)),
+      getLatestEntries: vi.fn(async () => ({ sleep: null, feeding: null, change: null })),
+      listEntries: vi.fn(async () => sleeps),
+      listChildren: vi.fn(async () => [{ id: CHILD, first_name: 'Molly', birth_date: '2026-05-10' }]),
+      listNotes: vi.fn(async () => []),
+      getRecentBottles: async () => [],
+      getRecentFeedings: async () => [],
+    };
+
+    // When
+    const snapshot = await fetchSnapshot(client as never, { child: CHILD, userId: 2, napWindow, now: on(20, 19, 20) });
+
+    // Then
+    expect(snapshot.sleepTimer).toMatchObject({ start: evening.start, nightFrom: on(20, 21, 0).toISOString() });
+  });
+
+  it('plans the day from a 06:31 wake with the 08:15–10:26 back-to-sleep as its first nap', async () => {
+    // Given
+    const on = (day: number, hours: number, minutes = 0) => new Date(2026, 8, day, hours, minutes);
+    const entry = (from: Date, to: Date) => ({ ...savedSleep, start: from.toISOString(), end: to.toISOString() });
+    // Ten days up at 08:10 after a night from 21:00, napping 09:40–10:40 and 13:30–14:30; a setting whose day starts at 08:30.
+    const usual = Array.from({ length: 10 }, (_, index) => [
+      entry(on(9 + index, 21, 0), on(10 + index, 8, 10)),
+      entry(on(10 + index, 9, 40), on(10 + index, 10, 40)),
+      entry(on(10 + index, 13, 30), on(10 + index, 14, 30)),
+    ]).flat();
+    const sleeps = [...usual, entry(on(19, 20, 58), on(20, 6, 31)), entry(on(20, 8, 15), on(20, 10, 26))];
+    const client = {
+      findTimer: vi.fn(async () => null),
+      getLatestEntries: vi.fn(async () => ({ sleep: null, feeding: null, change: null })),
+      listEntries: vi.fn(async () => sleeps),
+      listChildren: vi.fn(async () => [{ id: CHILD, first_name: 'Molly', birth_date: '2026-04-20' }]),
+      listNotes: vi.fn(async () => []),
+      getRecentBottles: async () => [],
+      getRecentFeedings: async () => [],
+    };
+
+    // When
+    const snapshot = await fetchSnapshot(client as never, { child: CHILD, userId: 2, napWindow: { start: '08:30', end: '20:00' }, now: on(20, 10, 40) });
+
+    // Then
+    expect(snapshot.nextSleep).toMatchObject({ kind: 'nap' });
   });
 
   it('keeps the last milk feed as the last feeding when a meal is newer', async () => {
@@ -1020,6 +1073,7 @@ describe('the Vitamin D check after a stop', () => {
   const dose = (name: string, time: string) => ({ ...savedMedication, name, time });
   const clientWith = (medication: (typeof savedMedication)[]) => ({
     listEntries: vi.fn(async (kind: string) => (kind === 'sleep' ? [night, nap] : medication)),
+    listChildren: vi.fn(async () => []),
   });
   const check = { outcome: sleepStopped, enabled: true, child: CHILD, napWindow, now: NOW };
   const reminderFor = (child: number) => ({ child, cycleStart: '2026-09-20T04:40:00.000Z', lastGiven: null, at: '2026-09-20T05:00:00.000Z' });
@@ -1111,7 +1165,7 @@ describe('the Vitamin D check after a stop', () => {
 
   it("leaves the cache as it was when Baby Buddy can't be reached", async () => {
     // Given
-    const client = { listEntries: vi.fn(() => Promise.reject(new BabyBuddyError('unreachable'))) };
+    const client = { listEntries: vi.fn(() => Promise.reject(new BabyBuddyError('unreachable'))), listChildren: vi.fn(async () => []) };
 
     // When
     const cache = await remindedCache(EMPTY_CACHE, client as never, check);
@@ -1457,15 +1511,30 @@ describe('the child a tap acts on', () => {
     children: { [CHILD]: { napWindow: { start: '08:00', end: '18:00' }, bottle: { type: 'breast milk' as const, amount: 90 } } },
   };
 
-  it("is the child the widget drew, with that child's nap window and bottle, after the app switched child", () => {
+  it("is the child the widget drew, with that child's setting and bottle, after the app switched child", () => {
     // Given
     const cache = { ...EMPTY_CACHE, snapshot };
+    const evening = { start: new Date(2026, 8, 20, 18, 15), end: new Date(2026, 8, 20, 18, 40) };
 
     // When
     const context = tapContext(cache, settings);
 
     // Then
-    expect(context).toEqual({ child: CHILD, napWindow: { start: '08:00', end: '18:00' }, bottle: { type: 'breast milk', amount: 90 } });
+    expect(context).toMatchObject({ child: CHILD, bottle: { type: 'breast milk', amount: 90 } });
+    expect(context?.night(evening)).toBe(true);
+  });
+
+  it("saves a stop by the refresh's nightFrom for the running sleep it saw", () => {
+    // Given
+    const start = new Date(2026, 8, 20, 19, 30);
+    const sleep = { start: start.toISOString(), byMe: true, nightFrom: new Date(2026, 8, 20, 21, 30).toISOString() };
+    const cache = { ...EMPTY_CACHE, snapshot, timers: [{ child: { id: CHILD, name: 'Molly', hue: 0 }, sleep, feeding: null }] };
+
+    // When
+    const night = tapContext(cache, settings)!.night;
+
+    // Then
+    expect([night({ start, end: new Date(2026, 8, 20, 19, 55) }), night({ start, end: new Date(2026, 8, 20, 21, 30) })]).toEqual([false, true]);
   });
 
   it("saves a bottle as the drawn child's last bottle when the widget knows one", () => {
@@ -1499,7 +1568,7 @@ describe('the child a tap acts on', () => {
     const context = tapContext(cache, settings, OTTO);
 
     // Then
-    expect(context).toMatchObject({ child: OTTO, napWindow: { start: '07:00', end: '19:00' }, bottle: { type: 'formula', amount: 120 } });
+    expect(context).toMatchObject({ child: OTTO, bottle: { type: 'formula', amount: 120 } });
   });
 
   it("is the app's child when the cached snapshot doesn't say whose it is", () => {
@@ -1692,7 +1761,7 @@ describe('the nap reminder in the widget cache', () => {
   const sleeps = [entry(on(19, 30, 23), on(6, 40), false), entry(on(8, 40), on(9, 25), true)];
   const born = '2026-05-19';
   const now = on(10, 0);
-  const plan = dayPlan(sleeps, null, born, napWindow, [], now);
+  const plan = dayPlan(sleeps, null, born, dayRhythm(sleeps, born, napWindow, now), [], now);
   const data = { sleeps, running: null, birthDate: born, napWindow, skips: [], allowed: true, now };
   /** Set at 09:50 for nap 2 of the day that woke at 06:40. */
   const stored = { place: 2, day: on(6, 40).toISOString(), setAt: on(9, 50).toISOString() };

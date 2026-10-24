@@ -1,7 +1,9 @@
 import type { Sleep } from '@molly/api';
 
+import type { DayRhythm } from '../day-rhythm';
+import { isNight } from '../day-window';
 import { counted, durationText } from '../format';
-import { atClock, isNightSleep, type NapWindow } from '../nap';
+import { atClock } from '../nap';
 import { sleptBetween } from '../totals';
 import type { GuidePage } from './pages';
 import type { SourceId } from './sources';
@@ -14,12 +16,12 @@ export type SleepComparison = { days: number; perDayMs: number; naps: number; te
 
 /**
  * The child's own sleep over the last 7 full days, to show beside the typical range: sleep per day (a
- * sleep across midnight split between its days) and naps per day (by `isNightSleep`, counted on the day
+ * sleep across midnight split between its days) and naps per day (by `isNight`, counted on the day
  * they start). Today isn't full, so a sleep still running never counts. A day counts when some sleep is
  * logged on it and it's after the day of the first sleep known (which may have started part way). Nothing
  * with fewer than 3 such days. Numbers only, never a verdict.
  */
-export function sleepComparison(sleeps: readonly Sleep[], napWindow: NapWindow, now: Date): SleepComparison | null {
+export function sleepComparison(sleeps: readonly Sleep[], rhythm: DayRhythm, now: Date): SleepComparison | null {
   if (sleeps.length === 0) return null;
   const firstDay = atClock(new Date(Math.min(...sleeps.map((entry) => Date.parse(entry.start)))), 1, '00:00');
   const days = Array.from({ length: DAYS }, (_, index) => ({
@@ -31,7 +33,7 @@ export function sleepComparison(sleeps: readonly Sleep[], napWindow: NapWindow, 
       slept: sleeps.reduce((total, entry) => total + sleptBetween(entry, from, to), 0),
       naps: sleeps.filter((entry) => {
         const start = new Date(entry.start);
-        return start.getTime() >= from && start.getTime() < to && !isNightSleep(start, new Date(entry.end), napWindow);
+        return start.getTime() >= from && start.getTime() < to && !isNight({ start, end: new Date(entry.end) }, [...sleeps], rhythm, now);
       }).length,
     }))
     .filter(({ slept }) => slept > 0);

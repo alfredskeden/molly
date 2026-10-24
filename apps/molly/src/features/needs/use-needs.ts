@@ -1,5 +1,5 @@
 import type { Timer } from '@molly/api';
-import { mood, moodlets, needs, sleepingSpan, wants, type DayWindow, type EntriesByKind, type Mood, type Moodlet, type Needs } from '@molly/core';
+import { mood, moodlets, needs, sleepingSpan, wants, type DayRhythm, type DayWindow, type EntriesByKind, type Mood, type Moodlet, type Needs } from '@molly/core';
 
 import { useChildPrefs } from '@/features/children/use-children';
 import { useRhythm, useSettings } from '@/features/dashboard/queries';
@@ -28,6 +28,8 @@ type NeedsSource = {
   window: DayWindow | null;
   /** The child's, for how long a running nap usually lasts. */
   birthDate: string | null;
+  /** The child's day rhythm, as the dashboard learned it. */
+  day: DayRhythm;
   now: Date;
 };
 
@@ -35,19 +37,19 @@ type NeedsSource = {
  * The needs layer for the dashboard, or null when the theme has no `needs` slot (then nothing is fetched or
  * computed). Recomputed every render, so it drains with the dashboard's clock; the rhythm comes once per window.
  */
-export function useNeeds({ entries, sleepRunning, feedRunning, next, window, birthDate, now }: NeedsSource): NeedsView | null {
+export function useNeeds({ entries, sleepRunning, feedRunning, next, window, birthDate, day, now }: NeedsSource): NeedsView | null {
   const { look, scheme, playful } = useTheme();
   const slot = THEMES[look][scheme].needs;
-  const { napWindow, vitaminDReminder } = useChildPrefs();
-  // Until the settings load, the nap window is the default one: a window from it would fetch under the wrong key.
+  const { vitaminDReminder } = useChildPrefs();
+  // Until the settings load, the setting is the default one: a window from it would fetch under the wrong key.
   const settled = useSettings().isSuccess;
-  const rhythm = useRhythm(window, entries?.sleep, napWindow, slot !== null && settled);
+  const rhythm = useRhythm(window, entries?.sleep, day, slot !== null && settled);
   if (!slot || !entries) return null;
   const input = {
     entries,
     running: {
       // Filling up to the usual morning wake, or the nap's usual length.
-      sleep: sleepRunning && sleepingSpan(entries.sleep, sleepRunning, birthDate, napWindow, now),
+      sleep: sleepRunning && sleepingSpan(entries.sleep, sleepRunning, birthDate, day, now),
       feeding: feedRunning !== null,
     },
     next,

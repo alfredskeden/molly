@@ -1,9 +1,13 @@
 import type { Sleep } from '@molly/api';
 import { describe, expect, it } from 'vitest';
 
-import { sleepComparison, typicalSleep } from './sleep';
+import { dayRhythm } from '../day-rhythm';
+import type { NapWindow } from '../nap';
+import { sleepComparison as compareWith, typicalSleep } from './sleep';
 
 const NAP_WINDOW = { start: '07:00', end: '19:00' };
+/** `sleepComparison` with the rhythm learned from the same sleeps, as the app calls it. */
+const sleepComparison = (sleeps: Sleep[], setting: NapWindow, now: Date) => compareWith(sleeps, dayRhythm(sleeps, null, setting, now), now);
 const NOW = new Date(2026, 9, 12, 12, 0);
 
 let nextId = 1;
@@ -185,5 +189,23 @@ describe('the words for the typical sleep', () => {
       'Many children this age sleep 14–18 hours in 24 hours, naps included. Sleep varies a lot at this age.',
       'Sleep experts suggest 14–17 hours in 24 hours at this age, naps included. Sleep varies a lot at this age.',
     ]);
+  });
+});
+
+describe("the child's own naps by their rhythm", () => {
+  it('counts an evening catnap well before the usual bedtime as a nap, not a night', () => {
+    // Given
+    // Bedtime 21:45 every day, with a 25 min catnap at 19:30 after the setting's 19:00.
+    const days = Array.from({ length: 6 }, (_, index) => 5 + index).flatMap((day) => [
+      sleep(at(day, 9), at(day, 10)),
+      sleep(at(day, 19, 30), at(day, 19, 55)),
+      sleep(at(day, 21, 45), at(day + 1, 7)),
+    ]);
+
+    // When
+    const comparison = sleepComparison(days, NAP_WINDOW, NOW);
+
+    // Then
+    expect(comparison?.naps).toBe(2);
   });
 });

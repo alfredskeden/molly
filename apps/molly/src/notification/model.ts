@@ -1,11 +1,12 @@
 // Lock-screen notification content, without the native module, so it can be unit-tested.
 import type { FeedingMethod } from '@molly/api';
-import { isNightSleep, type NapWindow } from '@molly/core';
+import type { NapWindow } from '@molly/core';
 
 import { formatClock } from '@/lib/time';
 import {
   freshPending,
   initialOf,
+  nightRule,
   NOTE_MS,
   pendingLabel,
   rowOf,
@@ -82,8 +83,9 @@ export function timerNotifications(
     const list: ChildTimerNotification[] = [];
     if (sleepTimer) {
       const sleepSent = sent('sleep');
-      // What stopping now would save.
-      const kind = isNightSleep(new Date(sleepTimer.start), now, napWindowOf(child.id)) ? 'night sleep' : 'nap';
+      // What stopping now would save: by the refresh's reading of the child's rhythm, else by the clock.
+      const night = nightRule(sleepTimer, napWindowOf(child.id))({ start: new Date(sleepTimer.start), end: now });
+      const kind = night ? 'night sleep' : 'nap';
       list.push({
         tracker: 'sleep',
         child: child.id,

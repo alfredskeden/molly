@@ -9,7 +9,7 @@ import {
   type BottleDefaults,
   type DayWindow,
   type EntriesByKind,
-  type NapWindow,
+  type DayRhythm,
 } from '@molly/core';
 import { useQuery, useQueryClient, type Query } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
@@ -189,7 +189,7 @@ export const RHYTHM_DAYS = 14;
  * them never reuses a rhythm worked out the old way. Only the two medians are kept, no entries. Enabled only while the
  * theme draws needs.
  */
-export function useRhythm(window: DayWindow | null, sleeps: EntriesByKind['sleep'] | undefined, napWindow: NapWindow, enabled: boolean) {
+export function useRhythm(window: DayWindow | null, sleeps: EntriesByKind['sleep'] | undefined, day: DayRhythm, enabled: boolean) {
   const client = useClient();
   const { childId } = useSignedInSession();
   return useQuery({
@@ -204,7 +204,7 @@ export function useRhythm(window: DayWindow | null, sleeps: EntriesByKind['sleep
         client.listEntries('change', { child: childId, date_min: since }, { signal }),
       ]);
       const entries = { sleep: sleeps!, feeding: [], change: [], medication: [] };
-      const windows = [window!, ...windowsBefore(entries, napWindow, now, RHYTHM_DAYS)];
+      const windows = [window!, ...windowsBefore(entries, day, now, RHYTHM_DAYS)];
       return rhythm({ feeding, change }, windows, window!.kind);
     },
   });
