@@ -62,6 +62,13 @@ Matches the `implan-day-night` "Tuning" numbers. The feared case (an early setti
 
 `minutesOf` (`HH:MM` → minutes) was private in both `nap.ts` and `day-rhythm.ts`; it's now exported from `nap.ts` and used by both and by `wakeRange`.
 
+## Wrap-up (2026-10-25)
+
+- Playwright: the issue's morning end to end works with the seed (usual days up at 08:30, setting 08:00, wake 06:03, a sleep 08:38–09:30 added → `nap: true`, "Day started 06:03").
+- Cleanup sweep: one stale comment (`dayOn` in `day-window.ts` described the range as around the usual wake only), fixed. Nothing to remove. Spotted, not in scope: the child screen's `shiftClock` and core's private `clockOf` both format minutes as `HH:MM` with a wrap; could share one core helper.
+- `pnpm check` green; `pnpm e2e` 233 passed.
+- Look review: web at 412 px, default theme light and dark, both states fit one line. Other themes and the emulator still to look at.
+
 ## Open
 
 - None.

@@ -121,7 +121,7 @@ export function pastDays(sleeps: Sleep[], rhythm: DayRhythm, now: Date, count: n
 type Found = { midnight: Date; range: Interval; wake: Date | null; naps: Sleep[]; bedtime: Sleep | null };
 
 /**
- * The day some days from `day`, as known at `now`. The morning wake is the earliest end of a sleep
+ * within the age band's range around the usual wake and "Day starts" (`wakeRange`) after which the baby stayed
  * within the age band's range around the usual wake (`before` / `after`) after which the baby stayed
  * awake the band's threshold (`firstWake`); an end that fails is a night waking. Then every sleep from
  * the wake to the next day's range, in order, split at the bedtime (`isBedtime`).

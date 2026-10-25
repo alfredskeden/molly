@@ -51,7 +51,7 @@ TDD in `packages/core` (Vitest, Given / When / Then, zero → one → many, then
   - new: with no sleeps seeded the panel says "Still learning"; with 3+ days of seeded made-up sleeps it shows the learned times
   - new: the issue's morning end to end (setting 08:00, seeded days that learn a later wake, a wake at 06:03, a sleep from 08:38 stopped → saved `nap: true`), if the seed can place a learned wake later than the setting; otherwise covered by core step 1 and noted in `NOTES.md`.
 - [x] **6. Docs.** `CLAUDE.md` line 63 ("The morning wake is the first sleep end near the usual wake…" → near the usual wake or "Day starts"); a line in `plans/implan-day-night/NOTES.md` pointing here (its MAIN.md is history, left as it was); `plans/README.md` row; `plans/implan-molly/NOTES.md` only if it describes the morning range.
-- [ ] **7. Wrap-up.** `implan-cleanup` wrap-up sweep, `pnpm check` and `pnpm e2e` green, PR into `develop`, issue #18 updated with anything that changed during the work.
+- [x] **7. Wrap-up.** `implan-cleanup` wrap-up sweep, `pnpm check` and `pnpm e2e` green, PR into `develop`, issue #18 updated with anything that changed during the work.
 
 ## Decisions and why
 
