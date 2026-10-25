@@ -1,5 +1,5 @@
 import type { Child, FeedingType, MeasurementKind } from '@molly/api';
-import { ageLabel, shownChildren, type ChildPrefs, type Sex } from '@molly/core';
+import { ageLabel, dayRhythm, learnedTimes, shownChildren, type ChildPrefs, type Sex } from '@molly/core';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
@@ -13,6 +13,7 @@ import { Avatar, childBg } from '@/features/children/Avatar';
 import { useChildrenOnScreen, useSetChildPrefs } from '@/features/children/use-children';
 import { useSettings } from '@/features/dashboard/queries';
 import { DevelopmentCard } from '@/features/development/DevelopmentCard';
+import { useGuideEntries } from '@/features/development/queries';
 import { useNow } from '@/features/dashboard/use-now';
 import { MeasurementSheet } from '@/features/measurements/MeasurementSheet';
 import { MeasurementsCard } from '@/features/measurements/MeasurementsCard';
@@ -59,6 +60,12 @@ function shiftClock(clock: string, minutes: number): string {
   return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
 }
 
+/** What Molly has learned of the child's day, from the last sleeps; "Still learning" until it has (or without them). */
+function learnedLine(times: { wake: string | null; bedtime: string | null } | null): string {
+  const parts = [times?.wake && `wakes about ${times.wake}`, times?.bedtime && `bed about ${times.bedtime}`].filter(Boolean);
+  return parts.length ? `Molly has learned: ${parts.join(', ')}` : 'Still learning';
+}
+
 /** Back to Settings, as its label says: popped when it's underneath, put there after a reload (the dashboard under it). */
 const back = () => router.dismissTo('/settings');
 
@@ -94,6 +101,8 @@ function ChildForm({ child, prefs, all }: { child: Child; prefs: ChildPrefs; all
   const [draft, setDraft] = useState(prefs);
   const [saving, setSaving] = useState(false);
   const measurements = useMeasurements(child.id);
+  const sleeps = useGuideEntries(child.id).data?.sleep;
+  const learned = sleeps && learnedTimes(dayRhythm(sleeps, child.birth_date, draft.napWindow, now));
   const [adding, setAdding] = useState<MeasurementKind | null>(null);
   const set = (changes: Partial<ChildPrefs>) => setDraft((current) => ({ ...current, ...changes }));
   const dirty = JSON.stringify(draft) !== JSON.stringify(prefs);
@@ -194,9 +203,10 @@ function ChildForm({ child, prefs, all }: { child: Child; prefs: ChildPrefs; all
             <View>
               <Text className="text-base font-display">Day and night</Text>
               <Text className="text-caption font-bold text-muted">
-                Molly learns when this child usually wakes up and goes to bed. Until it has a few days to go by, it starts
-                from these times. Under 3 months, the morning always goes by Day starts.
+                Molly learns when this child usually wakes up and goes to bed, and starts from these times until it has a
+                few days to go by. A morning wake near Day starts or the learned wake starts the day.
               </Text>
+              <Text className="mt-1.5 text-caption font-bold">{learnedLine(learned ?? null)}</Text>
             </View>
             {(['start', 'end'] as const).map((edge) => {
               const label = edge === 'start' ? 'Day starts' : 'Day ends';
