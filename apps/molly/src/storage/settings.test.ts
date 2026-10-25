@@ -32,6 +32,7 @@ describe('device settings', () => {
       guideRegion: 'sweden',
       guideNoteSeen: false,
       feedTimer: false,
+      todoSeen: null,
     });
     expect(settings).toEqual(DEFAULT_SETTINGS);
   });
@@ -405,11 +406,25 @@ describe('settings stored before several children', () => {
   });
 });
 
+describe('the to-do seen mark', () => {
+  it('reads back what was stored, and nothing from a malformed value', () => {
+    // Given
+    const stored = [JSON.stringify({ todoSeen: { mark: 40, saved: [41, 42] } }), JSON.stringify({ todoSeen: { mark: '40' } })];
+
+    // When
+    const seen = stored.map((value) => parseSettings(value).todoSeen);
+
+    // Then
+    expect(seen).toEqual([{ mark: 40, saved: [41, 42] }, null]);
+  });
+});
+
 describe('signing out', () => {
-  it("drops the child on screen and every child's preferences, and keeps the device's choices", () => {
+  it("drops the child on screen, every child's preferences and the to-do seen mark, and keeps the device's choices", () => {
     // Given
     const settings = {
       ...DEFAULT_SETTINGS,
+      todoSeen: { mark: 40, saved: [41] },
       childId: 4,
       children: { 4: { hue: 2, vitaminDReminder: true } },
       theme: 'night' as const,

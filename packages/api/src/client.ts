@@ -78,9 +78,7 @@ function noteBody(fields: NotePatch & { child?: number }): unknown {
     if (value === undefined) continue;
     for (const item of Array.isArray(value) ? value : [value]) form.append(key, String(item));
   }
-  if ('blob' in image) form.append('image', image.blob, image.name);
-  // React Native's FormData takes a file as { uri, name, type }.
-  else form.append('image', image as unknown as Blob);
+  form.append('image', image.blob, image.name);
   return form;
 }
 

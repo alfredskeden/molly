@@ -145,10 +145,10 @@ export type NewMedication = { child: number; name: string; time?: string; notes?
 export type Note = { id: number; child: number; note: string; time: string; tags: string[]; image: string | null };
 
 /**
- * A photo to upload: a `Blob` (web, tests) or a React Native file (`{ uri, type }`). `name` is the
- * file name Baby Buddy saves it under.
+ * A photo to upload, saved by Baby Buddy under `name`. `blob`: a web `Blob`, or on React Native an
+ * `expo-file-system` `File` (Expo's fetch can't send React Native's `{ uri }` form parts).
  */
-export type NoteImage = { name: string } & ({ blob: Blob } | { uri: string; type: string });
+export type NoteImage = { name: string; blob: Blob };
 
 /** Omit `time` for "now". */
 export type NewNote = { child: number; note: string; time?: string; tags: string[]; image?: NoteImage };

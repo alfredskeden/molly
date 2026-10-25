@@ -280,6 +280,7 @@ export function IconButton({
   size,
   disabled,
   pending,
+  badge,
 }: {
   icon: OutlinedSymbol;
   /** Spoken: the button shows only its glyph. */
@@ -291,6 +292,8 @@ export function IconButton({
   disabled?: boolean;
   /** Waiting on what the press asked for: a spinner in place of the glyph. */
   pending?: boolean;
+  /** A count in the accent on the top corner (To-do's new items); none at 0. `label` says it too. */
+  badge?: number;
 }) {
   return (
     <Pressable
@@ -302,6 +305,17 @@ export function IconButton({
       className={`h-12 w-12 items-center justify-center rounded-button ${disabled ? 'opacity-30' : 'active:scale-[0.97]'} ${ink ? 'bg-accent shadow-button' : 'border-card border-edge bg-surface'}`}
     >
       {pending ? <Spinner color={ink ? 'on-accent' : 'ink'} /> : <Glyph name={icon} size={size ?? (ink ? 26 : 22)} color={ink ? 'on-accent' : 'ink'} />}
+      {!!badge && (
+        <View
+          aria-hidden
+          testID="badge"
+          className="absolute -right-1.5 -top-1.5 h-[22px] min-w-[22px] items-center justify-center rounded-full border-2 border-bg bg-accent px-1"
+        >
+          <Text maxFontSizeMultiplier={FIXED_SCALE} className="text-[11px] font-extrabold leading-[14px] text-on-accent">
+            {badge > 9 ? '9+' : badge}
+          </Text>
+        </View>
+      )}
     </Pressable>
   );
 }
