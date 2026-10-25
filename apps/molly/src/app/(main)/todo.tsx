@@ -27,6 +27,7 @@ import { useTodoItems, useTodoLabels, useTodoSeen } from '@/features/todo/querie
 import { TodoSheet } from '@/features/todo/TodoSheet';
 import { useTodoWrites } from '@/features/todo/use-todo-writes';
 import { hasNotifications } from '@/notification/sync';
+import { useNotificationState } from '@/notification/use-state';
 import { useSignedInSession } from '@/session/session';
 import { Glyph } from '@/theme/Glyph';
 
@@ -43,6 +44,7 @@ export default function Todo() {
   const labels = useTodoLabels();
   const { seen, save: saveSeen } = useTodoSeen();
   const writes = useTodoWrites();
+  const notifications = useNotificationState();
   const [editing, setEditing] = useState<TodoItem | 'new' | null>(null);
   const [viewing, setViewing] = useState<TodoItem | null>(null);
   const skeleton = useSkeleton(todo.isPending);
@@ -127,7 +129,12 @@ export default function Todo() {
           photo={editingItem ? photoOf(editingItem) : null}
           labels={labels.data === undefined ? ['Buy', 'Appointments'] : labels.data}
           now={now}
-          onSave={(save) => writes.save(save, editingItem ?? undefined)}
+          onSave={async (save) => {
+            const saved = await writes.save(save, editingItem ?? undefined);
+            // A dated item rings a reminder on Android: ask for notifications once there's one to ring.
+            if (saved && save.due && hasNotifications && notifications.state === 'off') await notifications.turnOn();
+            return saved;
+          }}
           onClose={() => setEditing(null)}
         />
       )}
