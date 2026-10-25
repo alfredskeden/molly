@@ -135,3 +135,28 @@ test('a wake near Day starts starts the day though Molly has learned a later wak
   expect(await latest('sleep')).toMatchObject({ nap: true });
   await expect(page.getByText('Day started 06:03', { exact: true })).toBeVisible();
 });
+
+test("last night ends at an early wake: the morning's feed and diaper count on Today, not on last night", async ({ page }) => {
+  // Given
+  // Usually up at 08:30; the 06:03 wake starts the day, so last night ends there.
+  await seedUsualDays([21, 0], [8, 30], [[[10, 0], [11, 0]], [[14, 0], [15, 0]]]);
+  await post('sleep/', { start: yesterday(22, 42, -1).toISOString(), end: yesterday(6, 3).toISOString(), nap: false });
+  await post('feedings/', { start: yesterday(6, 20).toISOString(), end: yesterday(6, 35).toISOString(), type: 'breast milk', method: 'left breast' });
+  await post('changes/', { time: yesterday(6, 30).toISOString(), wet: true, solid: false });
+  await clockAt(page, yesterday(9, 50));
+  await signInAs(page, testEnv.parentB, { napWindow: { start: '08:00', end: '19:00' } });
+  await expect(page.getByText('Day started 06:03', { exact: true })).toBeVisible();
+
+  // When
+  await button(page, 'Switch to last night').click();
+
+  // Then
+  await expect(page.getByLabel('Last night: 7h 21m slept, 0 feeds, 0 diapers, 0 medicine', { exact: true })).toBeVisible();
+
+  // When
+  await button(page, 'Back to now').click();
+  await button(page, 'Today').click();
+
+  // Then
+  await expect(page.getByLabel('Today', { exact: true }).getByLabel(/^Today: 7h 21m slept, 1 sleep, 1 feed, 1 diaper/)).toBeVisible();
+});

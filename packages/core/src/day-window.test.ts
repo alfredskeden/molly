@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { sleep } from '../test/fixtures';
+import { change, feeding, sleep } from '../test/fixtures';
 import { dayRhythm } from './day-rhythm';
 import { dayWindow, isNight, nightFrom, previousWindow, windowsBefore } from './day-window';
 import { DEFAULT_NAP_WINDOW, isNightSleep } from './nap';
+import { windowStats } from './ring';
 
 const none = { sleep: [], feeding: [], change: [], medication: [] };
 const noTimer = null;
@@ -466,7 +467,7 @@ describe('the past pages of the Today card', () => {
     // Then
     expect(pages.slice(0, 3).map(span)).toEqual([
       { kind: 'day', start: on(20, 6, 40), end: on(20, 19, 25) },
-      { kind: 'night', start: on(19, 19, 30), end: on(20, 7, 0) },
+      { kind: 'night', start: on(19, 19, 30), end: on(20, 6, 40) },
       { kind: 'day', start: on(19, 6, 40), end: on(19, 19, 30) },
     ]);
   });
@@ -479,7 +480,7 @@ describe('the past pages of the Today card', () => {
     const pages = windowsBefore(entries, setting, on(20, 12, 0));
 
     // Then
-    expect(span(pages[0]!)).toEqual({ kind: 'night', start: on(19, 19, 30), end: on(20, 7, 0) });
+    expect(span(pages[0]!)).toEqual({ kind: 'night', start: on(19, 19, 30), end: on(20, 6, 40) });
   });
 
   it('go back 7 days and no further', () => {
@@ -506,7 +507,7 @@ describe('the past pages of the Today card', () => {
 
     // Then
     expect(pages.slice(2, 5)).toMatchObject([
-      { kind: 'night', start: on(18, 19, 0), end: on(19, 7, 0), clock: true },
+      { kind: 'night', start: on(18, 19, 0), end: on(19, 6, 40), clock: true },
       { kind: 'day', start: on(18, 7, 0), end: on(18, 19, 0), clock: true },
       { kind: 'night', start: on(17, 19, 30), end: on(18, 7, 0), clock: false },
     ]);
@@ -521,7 +522,7 @@ describe('the past pages of the Today card', () => {
 
     // Then
     expect(pages.slice(2, 6).map(span)).toEqual([
-      { kind: 'night', start: on(18, 19, 0), end: on(19, 7, 0) },
+      { kind: 'night', start: on(18, 19, 0), end: on(19, 6, 40) },
       { kind: 'day', start: on(18, 7, 0), end: on(18, 19, 0) },
       { kind: 'night', start: on(17, 19, 0), end: on(18, 7, 0) },
       { kind: 'day', start: on(17, 6, 40), end: on(17, 19, 0) },
@@ -545,7 +546,7 @@ describe("the Today card's previous page", () => {
     const previous = previousWindow(entries, setting, on(21, 12, 0));
 
     // Then
-    expect(span(previous)).toEqual({ kind: 'night', start: on(20, 19, 30), end: on(21, 7, 0) });
+    expect(span(previous)).toEqual({ kind: 'night', start: on(20, 19, 30), end: on(21, 6, 40) });
   });
 
   it("is today's day, just ended, on Tonight in the evening", () => {
@@ -1105,5 +1106,169 @@ describe('an early morning wake near "Day starts"', () => {
     expect(windows.map((window) => window.kind)).toEqual(['night', 'day', 'day']);
     expect(windows.slice(1).map((window) => window.start)).toEqual([on(20, 6, 3), on(20, 6, 3)]);
     expect(savedNight).toBe(false);
+  });
+});
+
+describe('a past night ends where the next day starts', () => {
+  // Usually asleep at 22:40 and up at 07:30, napping 09:30–10:30 and 14:00–15:00.
+  const usual = usualDays([22, 40], [7, 30], [[[9, 30], [10, 30]], [[14, 0], [15, 0]]]);
+  const rhythm = dayRhythm(usual, fiveMonths, napWindow, on(20, 12));
+  const lastNight = (wake: [number, number]) => sleep({ start: at(19, 22, 40), end: at(20, ...wake) });
+  const span = (window: { kind: string; start: Date; end: Date }) => ({ kind: window.kind, start: window.start, end: window.end });
+
+  it('ends last night at a 06:00 wake, earlier than the usual one, where Today starts', () => {
+    // Given
+    const entries = { ...none, sleep: [...usual, lastNight([6, 0])] };
+
+    // When
+    const previous = previousWindow(entries, rhythm, on(20, 12));
+    const today = dayWindow(entries, noTimer, rhythm, on(20, 12));
+
+    // Then
+    expect(span(previous)).toEqual({ kind: 'night', start: on(19, 22, 40), end: on(20, 6, 0) });
+    expect(today.start).toEqual(on(20, 6, 0));
+  });
+
+  it('ends last night at an 08:15 wake, later than the usual one, where Today starts', () => {
+    // Given
+    const entries = { ...none, sleep: [...usual, lastNight([8, 15])] };
+
+    // When
+    const previous = previousWindow(entries, rhythm, on(20, 12));
+    const today = dayWindow(entries, noTimer, rhythm, on(20, 12));
+
+    // Then
+    expect(span(previous)).toEqual({ kind: 'night', start: on(19, 22, 40), end: on(20, 8, 15) });
+    expect(today.start).toEqual(on(20, 8, 15));
+  });
+
+  it('tiles a week of past days and nights with no overlap and no gap', () => {
+    // Given
+    // Up at 06:00 on the 14th and 17th, at 08:15 on the 16th and 19th.
+    const wakes = new Map([
+      [at(14, 7, 30), at(14, 6, 0)],
+      [at(16, 7, 30), at(16, 8, 15)],
+      [at(17, 7, 30), at(17, 6, 0)],
+      [at(19, 7, 30), at(19, 8, 15)],
+    ]);
+    const varied = usual.map((entry) => ({ ...entry, end: wakes.get(entry.end) ?? entry.end }));
+    const entries = { ...none, sleep: [...varied, lastNight([6, 0])] };
+
+    // When
+    const live = dayWindow(entries, noTimer, rhythm, on(20, 12));
+    const pages = windowsBefore(entries, rhythm, on(20, 12));
+
+    // Then
+    expect(pages[0]!.end).toEqual(live.start);
+    expect(pages.slice(1).map((page) => page.end)).toEqual(pages.slice(0, -1).map((page) => page.start));
+    expect(pages.slice(0, 9).map((page) => page.end)).toEqual([
+      on(20, 6, 0),
+      on(19, 22, 40),
+      on(19, 8, 15),
+      on(18, 22, 40),
+      on(18, 7, 30),
+      on(17, 22, 40),
+      on(17, 6, 0),
+      on(16, 22, 40),
+      on(16, 8, 15),
+    ]);
+  });
+
+  it('ends a night at "Day starts" when the next morning has no wake', () => {
+    // Given
+    // The night ran to 11:00, past the wake range.
+    const entries = { ...none, sleep: [...usual, lastNight([11, 0])] };
+
+    // When
+    const previous = previousWindow(entries, rhythm, on(20, 12));
+
+    // Then
+    expect(previous).toMatchObject({ kind: 'night', start: on(19, 22, 40), end: on(20, 7, 0), clock: false });
+  });
+
+  it('keeps the live night running to the usual wake', () => {
+    // Given
+    const tonight = sleep({ start: at(20, 22, 40), end: at(20, 23, 30) });
+    const entries = { ...none, sleep: [...usual, lastNight([6, 0]), tonight] };
+
+    // When
+    const window = dayWindow(entries, noTimer, rhythm, on(21, 2));
+
+    // Then
+    expect(span(window)).toEqual({ kind: 'night', start: on(20, 22, 40), end: on(21, 7, 30) });
+  });
+
+  it("counts a morning's feed, diaper and nap after a 06:00 wake on Today, not on last night", () => {
+    // Given
+    const nap = sleep({ start: at(20, 7, 10), end: at(20, 7, 25) });
+    const entries = {
+      ...none,
+      sleep: [...usual, lastNight([6, 0]), nap],
+      feeding: [feeding({ start: at(20, 6, 20), end: at(20, 6, 35) })],
+      change: [change({ time: at(20, 6, 30) })],
+    };
+
+    // When
+    const night = windowStats(previousWindow(entries, rhythm, on(20, 12)), entries);
+    const today = windowStats(dayWindow(entries, noTimer, rhythm, on(20, 12)), entries);
+
+    // Then
+    expect(night).toMatchObject({ sleptMs: (7 * 60 + 20) * 60 * 1000, feeds: 0, diapers: 0 });
+    expect(today).toMatchObject({ feeds: 1, diapers: 1, naps: 1 });
+  });
+});
+
+describe('a night with no bedtime logged', () => {
+  /** Usually up at 07:00 and asleep at `bed`, with no bedtime logged on the 19th (so the 20th has no wake). */
+  const unlogged = (bed: [number, number]) =>
+    usualDays(bed, [7, 0], [[[9, 30], [10, 30]], [[14, 0], [15, 0]]]).filter((entry) => entry.start !== at(19, ...bed));
+  const span = (window: { kind: string; start: Date; end: Date }) => ({ kind: window.kind, start: window.start, end: window.end });
+
+  it('starts at the usual bedtime its day ended at, 21:00 after "Day ends" at 19:00', () => {
+    // Given
+    const sleeps = unlogged([21, 0]);
+    const rhythm = dayRhythm(sleeps, fiveMonths, napWindow, on(20, 12));
+
+    // When
+    const pages = windowsBefore({ ...none, sleep: sleeps }, rhythm, on(20, 12));
+
+    // Then
+    expect(pages.slice(0, 3).map(span)).toEqual([
+      { kind: 'night', start: on(19, 21, 0), end: on(20, 7, 0) },
+      { kind: 'day', start: on(19, 7, 0), end: on(19, 21, 0) },
+      { kind: 'night', start: on(18, 21, 0), end: on(19, 7, 0) },
+    ]);
+  });
+
+  it('starts Tonight at 21:00 after midnight, listed once', () => {
+    // Given
+    const sleeps = unlogged([21, 0]);
+    const rhythm = dayRhythm(sleeps, fiveMonths, napWindow, on(20, 2));
+
+    // When
+    const live = dayWindow({ ...none, sleep: sleeps }, noTimer, rhythm, on(20, 2));
+    const pages = windowsBefore({ ...none, sleep: sleeps }, rhythm, on(20, 2));
+
+    // Then
+    expect(live).toMatchObject({ kind: 'night', start: on(19, 21, 0), end: on(20, 7, 0), clock: true });
+    expect(pages.slice(0, 2).map(span)).toEqual([
+      { kind: 'day', start: on(19, 7, 0), end: on(19, 21, 0) },
+      { kind: 'night', start: on(18, 21, 0), end: on(19, 7, 0) },
+    ]);
+  });
+
+  it('starts at an 18:30 usual bedtime, earlier than "Day ends", with no gap', () => {
+    // Given
+    const sleeps = unlogged([18, 30]);
+    const rhythm = dayRhythm(sleeps, fiveMonths, napWindow, on(20, 12));
+
+    // When
+    const pages = windowsBefore({ ...none, sleep: sleeps }, rhythm, on(20, 12));
+
+    // Then
+    expect(pages.slice(0, 2).map(span)).toEqual([
+      { kind: 'night', start: on(19, 18, 30), end: on(20, 7, 0) },
+      { kind: 'day', start: on(19, 7, 0), end: on(19, 18, 30) },
+    ]);
   });
 });
