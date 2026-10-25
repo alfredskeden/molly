@@ -8,9 +8,9 @@ server {
     server_tokens off;
 
     # An add_header inside a location replaces all of these there, so the hashed-assets block repeats
-    # what it needs. connect-src is the one Baby Buddy origin Molly may call; style-src allows the inline styles
-    # react-native-web injects.
-    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src ${BABY_BUDDY_ORIGIN}; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
+    # what it needs. connect-src is the one Baby Buddy origin Molly may call, img-src adds it for to-do photos
+    # (/media/); style-src allows the inline styles react-native-web injects.
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: ${BABY_BUDDY_ORIGIN}; font-src 'self' data:; connect-src ${BABY_BUDDY_ORIGIN}; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
     add_header X-Content-Type-Options nosniff always;
     add_header Referrer-Policy no-referrer always;
 

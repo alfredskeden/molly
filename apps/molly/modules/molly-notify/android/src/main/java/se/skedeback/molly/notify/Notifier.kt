@@ -11,6 +11,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Typeface
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import androidx.core.app.NotificationCompat
@@ -23,16 +24,19 @@ import org.json.JSONObject
  * One ongoing notification per child and running timer (sleep, feeding), ticking with the system chronometer,
  * one Vitamin D reminder per child (`tracker` "reminder") and one nap reminder per child ("napReminder", rung by
  * an alarm at the window's start), both swipeable with no chronometer. The id says the tracker, the tag the child
- * (Baby Buddy's child id), so two sleeping children never share a notification.
+ * (Baby Buddy's child id), so two sleeping children never share a notification. To-do reminders ("todoReminder")
+ * are tagged with the item's note id instead, on their own channel.
  */
 object Notifier {
   // Importance can't change once a channel exists: rename the id if it ever has to.
   private const val CHANNEL_ID = "molly.timers"
   private const val REMINDER_CHANNEL_ID = "molly.reminders"
+  private const val TODO_CHANNEL_ID = "molly.todo"
   private const val PREFS = "molly.notify"
   const val WORK_NOTIFICATION_ID = 3
   const val REMINDER = "reminder"
   const val NAP_REMINDER = "napReminder"
+  const val TODO_REMINDER = "todoReminder"
 
   const val ACTION_RUN = "se.skedeback.molly.notify.RUN"
   const val ACTION_DISMISSED = "se.skedeback.molly.notify.DISMISSED"
@@ -40,6 +44,8 @@ object Notifier {
   const val ACTION_DISMISS = "se.skedeback.molly.notify.DISMISS"
   /** A nap reminder's alarm going off: posts it from what JS last scheduled. */
   const val ACTION_NAP_ALARM = "se.skedeback.molly.notify.NAP_ALARM"
+  /** A to-do reminder's alarm going off; `EXTRA_CHILD` holds the note id. */
+  const val ACTION_TODO_ALARM = "se.skedeback.molly.notify.TODO_ALARM"
   const val EXTRA_TRACKER = "tracker"
   const val EXTRA_INTENT = "intent"
   const val EXTRA_START = "start"
@@ -112,6 +118,7 @@ object Notifier {
     "feeding" -> 2
     REMINDER -> 4
     NAP_REMINDER -> 5
+    TODO_REMINDER -> 6
     else -> throw IllegalArgumentException("Unknown tracker $tracker")
   }
 
@@ -212,71 +219,108 @@ object Notifier {
     rememberDismissed(context, tracker, child, key)
   }
 
-  /** What the child's nap reminder posts when its alarm goes off, as JS last scheduled it. */
-  private fun napKey(child: Int) = "nap:$child"
+  /**
+   * A reminder rung by an alarm: `key` names its stored content and "rang" mark (`nap:<child>`, `napRung:<child>`),
+   * `tracker` the notification it posts. `id` is the child for a nap reminder, the note id for a to-do one.
+   */
+  private enum class Alarm(val key: String, val tracker: String, val action: String) {
+    NAP("nap", NAP_REMINDER, ACTION_NAP_ALARM),
+    TODO("todo", TODO_REMINDER, ACTION_TODO_ALARM),
+  }
 
-  /** The key of the child's nap reminder that already rang, so a reschedule into the past doesn't ring it twice. */
-  private fun napRungKey(child: Int) = "napRung:$child"
+  /** What the reminder posts when its alarm goes off, as JS last scheduled it. */
+  private fun alarmKey(alarm: Alarm, id: Int) = "${alarm.key}:$id"
 
-  /** The alarms' request slots: two per child (on time, and through Doze), replaced on every schedule. */
-  private const val NAP_ALARM_SLOT = 7
-  private const val NAP_IDLE_ALARM_SLOT = 6
+  /** The key of the reminder that already rang, so a reschedule into the past doesn't ring it twice. */
+  private fun rungKey(alarm: Alarm, id: Int) = "${alarm.key}Rung:$id"
+
+  /** The alarms' request slots: two per reminder (on time, and through Doze), replaced on every schedule. */
+  private const val ALARM_SLOT = 7
+  private const val IDLE_ALARM_SLOT = 6
 
   /** How late the on-time alarm may ring: the shortest window Android 12+ keeps without the exact-alarm permission. */
-  private const val NAP_ALARM_WINDOW_MS = 10 * 60_000L
+  private const val ALARM_WINDOW_MS = 10 * 60_000L
 
-  private fun napAlarm(context: Context, child: Int, slot: Int = NAP_ALARM_SLOT) =
-    broadcast(context, requestCode(child, idOf(NAP_REMINDER), slot), ACTION_NAP_ALARM) {
-      putExtra(EXTRA_TRACKER, NAP_REMINDER)
-      putExtra(EXTRA_CHILD, child)
+  private fun alarmIntent(context: Context, alarm: Alarm, id: Int, slot: Int) =
+    broadcast(context, requestCode(id, idOf(alarm.tracker), slot), alarm.action) {
+      putExtra(EXTRA_TRACKER, alarm.tracker)
+      putExtra(EXTRA_CHILD, id)
     }
 
   /**
-   * Sets (or moves) the child's nap reminder alarms to `at`, with no exact-alarm permission: one within 10 minutes
-   * after it (`setWindow`, held back in Doze), and one that rings in Doze too (`setAndAllowWhileIdle`, which Android
-   * may hold back by most of the time until `at`). Whichever rings first posts it; the other finds it rang. At a
-   * time already past, it rings at once, unless this same reminder (`key`) has rung already.
+   * Sets (or moves) a reminder's alarms to `at`, with no exact-alarm permission: one within 10 minutes after it
+   * (`setWindow`, held back in Doze), and one that rings in Doze too (`setAndAllowWhileIdle`, which Android may hold
+   * back by most of the time until `at`). Whichever rings first posts it; the other finds it rang. At a time already
+   * past, it rings at once, unless this same reminder (`content.start`, its key) has rung already.
    */
-  fun scheduleNapReminder(context: Context, child: Int, reminder: NapReminderNotification) {
-    val content = Content(
-      reminder.title,
-      reminder.text,
-      reminder.key.toLong(),
-      reminder.color,
-      reminder.actions.map { Action(it.intent, it.label, it.pending) },
-      reminder.avatar,
-      reminder.avatarColor,
-    )
+  private fun scheduleAlarm(context: Context, alarm: Alarm, id: Int, at: Long, content: Content) {
     val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-    prefs.edit().putString(napKey(child), content.toJson()).apply()
-    if (prefs.getLong(napRungKey(child), -1) == content.start) return
+    prefs.edit().putString(alarmKey(alarm, id), content.toJson()).apply()
+    if (prefs.getLong(rungKey(alarm, id), -1) == content.start) return
     val alarms = context.getSystemService(AlarmManager::class.java)
-    val at = reminder.at.toLong()
-    alarms.setWindow(AlarmManager.RTC_WAKEUP, at, NAP_ALARM_WINDOW_MS, napAlarm(context, child))
-    alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, napAlarm(context, child, NAP_IDLE_ALARM_SLOT))
+    alarms.setWindow(AlarmManager.RTC_WAKEUP, at, ALARM_WINDOW_MS, alarmIntent(context, alarm, id, ALARM_SLOT))
+    alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, alarmIntent(context, alarm, id, IDLE_ALARM_SLOT))
   }
 
   /** The alarm went off: posts the reminder JS last scheduled, and remembers it rang. */
-  fun ringNapReminder(context: Context, child: Int) {
+  private fun ringAlarm(context: Context, alarm: Alarm, id: Int) {
     val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-    val content = prefs.getString(napKey(child), null)?.let(::contentOf) ?: return
-    if (prefs.getLong(napRungKey(child), -1) == content.start) return
-    prefs.edit().putLong(napRungKey(child), content.start).apply()
-    post(context, NAP_REMINDER, child, content)
+    val content = prefs.getString(alarmKey(alarm, id), null)?.let(::contentOf) ?: return
+    if (prefs.getLong(rungKey(alarm, id), -1) == content.start) return
+    prefs.edit().putLong(rungKey(alarm, id), content.start).apply()
+    post(context, alarm.tracker, id, content)
   }
+
+  /** Cancels the alarms (and stored content) of every reminder not in `ids`; their notifications stay. */
+  private fun keepOnlyAlarms(context: Context, alarm: Alarm, ids: List<Int>) {
+    val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    val alarms = context.getSystemService(AlarmManager::class.java)
+    val prefix = "${alarm.key}:"
+    val scheduled = prefs.all.keys.filter { it.startsWith(prefix) }.mapNotNull { it.removePrefix(prefix).toIntOrNull() }
+    for (id in scheduled.filter { it !in ids }) {
+      alarms.cancel(alarmIntent(context, alarm, id, ALARM_SLOT))
+      alarms.cancel(alarmIntent(context, alarm, id, IDLE_ALARM_SLOT))
+      prefs.edit().remove(alarmKey(alarm, id)).remove(rungKey(alarm, id)).apply()
+    }
+  }
+
+  private fun contentOf(reminder: NapReminderNotification) = Content(
+    reminder.title,
+    reminder.text,
+    reminder.key.toLong(),
+    reminder.color,
+    reminder.actions.map { Action(it.intent, it.label, it.pending) },
+    reminder.avatar,
+    reminder.avatarColor,
+  )
+
+  /** Sets (or moves) the child's nap reminder alarms to `reminder.at`; see `scheduleAlarm`. */
+  fun scheduleNapReminder(context: Context, child: Int, reminder: NapReminderNotification) {
+    scheduleAlarm(context, Alarm.NAP, child, reminder.at.toLong(), contentOf(reminder))
+  }
+
+  fun ringNapReminder(context: Context, child: Int) = ringAlarm(context, Alarm.NAP, child)
 
   /** Cancels the nap reminders (alarm and notification) of every child not in `children`. */
   fun keepOnlyNapReminders(context: Context, children: List<Int>) {
-    val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-    val alarms = context.getSystemService(AlarmManager::class.java)
-    val scheduled = prefs.all.keys.filter { it.startsWith("nap:") }.mapNotNull { it.removePrefix("nap:").toIntOrNull() }
-    for (child in scheduled.filter { it !in children }) {
-      alarms.cancel(napAlarm(context, child))
-      alarms.cancel(napAlarm(context, child, NAP_IDLE_ALARM_SLOT))
-      prefs.edit().remove(napKey(child)).remove(napRungKey(child)).apply()
-    }
+    keepOnlyAlarms(context, Alarm.NAP, children)
     keepOnly(context, NAP_REMINDER, children)
   }
+
+  /**
+   * Schedules the to-do reminders still ahead and drops every other one: alarm and notification of items not in
+   * `keep` (ticked off, undated, gone). A reminder that rang stays while its item is kept.
+   */
+  fun syncTodoReminders(context: Context, reminders: List<TodoReminderNotification>, keep: List<Int>) {
+    for (reminder in reminders) {
+      val content = Content(reminder.title, reminder.text, reminder.at.toLong(), reminder.color, emptyList())
+      scheduleAlarm(context, Alarm.TODO, reminder.id, reminder.at.toLong(), content)
+    }
+    keepOnlyAlarms(context, Alarm.TODO, keep)
+    keepOnly(context, TODO_REMINDER, keep)
+  }
+
+  fun ringTodoReminder(context: Context, id: Int) = ringAlarm(context, Alarm.TODO, id)
 
   private fun post(context: Context, tracker: String, child: Int, content: Content, pending: Boolean = false) {
     val start = content.start
@@ -290,8 +334,13 @@ object Notifier {
     if (!manager.areNotificationsEnabled()) return
     ensureChannels(context)
     val id = idOf(tracker)
-    val reminder = tracker == REMINDER || tracker == NAP_REMINDER
-    val builder = if (reminder) reminderBuilder(context, content) else timerBuilder(context, content)
+    val reminder = tracker == REMINDER || tracker == NAP_REMINDER || tracker == TODO_REMINDER
+    val builder = when (tracker) {
+      // "Molly · To-do · 13:30" in the header: `when` is the reminder's time.
+      TODO_REMINDER -> reminderBuilder(context, content, TODO_CHANNEL_ID).setSubText("To-do")
+      REMINDER, NAP_REMINDER -> reminderBuilder(context, content)
+      else -> timerBuilder(context, content)
+    }
     // A nap reminder's `when` is when it was set, not worth showing: its text says the window.
     if (tracker == NAP_REMINDER) builder.setShowWhen(false)
     // Several children: the child's initial on its colour replaces the tracker icon, so whose it is shows first.
@@ -309,7 +358,7 @@ object Notifier {
       .setOnlyAlertOnce(true)
       .setSilent(true)
       .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-      .setContentIntent(launchApp(context))
+      .setContentIntent(if (tracker == TODO_REMINDER) openLink(context, TODO_LINK) else launchApp(context))
       .setDeleteIntent(
         broadcast(context, requestCode(child, id, 9), ACTION_DISMISSED) {
           putExtra(EXTRA_TRACKER, tracker)
@@ -372,7 +421,8 @@ object Notifier {
 
   // Not ongoing and not promoted: a reminder the parent may swipe away. `when` is the check that posted it (Vitamin D)
   // or when it was set (nap).
-  private fun reminderBuilder(context: Context, content: Content) = NotificationCompat.Builder(context, REMINDER_CHANNEL_ID)
+  private fun reminderBuilder(context: Context, content: Content, channel: String = REMINDER_CHANNEL_ID) =
+    NotificationCompat.Builder(context, channel)
     .setWhen(content.start)
     .setShowWhen(true)
     .setCategory(NotificationCompat.CATEGORY_REMINDER)
@@ -439,6 +489,7 @@ object Notifier {
       "Reminders",
       "Vitamin D not given today, and the nap reminders set on this phone",
     )
+    ensureChannel(context, TODO_CHANNEL_ID, "To-do reminders", "Dated items on the shared to-do list, before they're due")
   }
 
   private fun ensureChannel(context: Context, id: String, name: String, description: String) {
@@ -458,6 +509,16 @@ object Notifier {
   private fun launchApp(context: Context): PendingIntent? {
     val intent = context.packageManager.getLaunchIntentForPackage(context.packageName) ?: return null
     return PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+  }
+
+  /** The to-do list, opened by Expo Router from the app's scheme. */
+  private const val TODO_LINK = "molly://todo"
+
+  private fun openLink(context: Context, link: String): PendingIntent {
+    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(link))
+      .setPackage(context.packageName)
+      .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+    return PendingIntent.getActivity(context, 1, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
   }
 
   private fun broadcast(context: Context, requestCode: Int, action: String, extras: Intent.() -> Unit): PendingIntent {

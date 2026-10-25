@@ -1,8 +1,8 @@
-import { createClient } from '@molly/api';
-import { childPrefs, type NapReminder } from '@molly/core';
+import { createClient, type Client } from '@molly/api';
+import { childPrefs, TODO_QUERY_TAGS, todoItems, type NapReminder } from '@molly/core';
 
 import type { Outcome } from '@/actions/trackers';
-import { notificationsAllowed, syncNotifications } from '@/notification/sync';
+import { notificationsAllowed, syncNotifications, syncTodoReminders } from '@/notification/sync';
 import { loadCredentials } from '@/storage/credentials';
 import { loadSettings } from '@/storage/settings';
 import { prefsOnScreen } from '@/storage/types';
@@ -36,6 +36,18 @@ async function session() {
 }
 
 /**
+ * This phone's to-do reminders follow the list as the refresh finds it, so a tick on the other parent's phone
+ * drops the alarm here too. A failed fetch leaves the alarms as they were.
+ */
+async function refreshTodoReminders(client: Client) {
+  try {
+    await syncTodoReminders(todoItems(await client.listNotes({ tags: TODO_QUERY_TAGS })));
+  } catch (error) {
+    tapLog(`to-do reminders not refreshed: ${String(error)}`);
+  }
+}
+
+/**
  * Fetches fresh snapshots (the app's child and every pinned one); on failure keeps the cached one and marks it stale (or the key rejected). The lock-screen
  * notifications follow the result, so every widget refresh, app write and foreground updates them too.
  */
@@ -44,6 +56,7 @@ export async function refreshWidget(cache?: WidgetCache): Promise<WidgetState> {
   if (!current) {
     await saveWidgetCache(EMPTY_CACHE);
     await syncNotifications(EMPTY_CACHE, null);
+    await syncTodoReminders(null);
     return { cache: EMPTY_CACHE, signedIn: false };
   }
   const base = cache ?? (await loadWidgetCache());
@@ -53,7 +66,10 @@ export async function refreshWidget(cache?: WidgetCache): Promise<WidgetState> {
     ...base,
     reminders: base.reminders.filter((reminder) => childPrefs([], children, reminder.child).vitaminDReminder),
   };
-  const next = await refreshedCache(kept, createClient(current.credentials), {
+  const client = createClient(current.credentials);
+  // Alongside the snapshots, not after: the widgets shouldn't wait for it.
+  const todo = refreshTodoReminders(client);
+  const next = await refreshedCache(kept, client, {
     child: current.childId,
     userId: current.credentials.userId,
     napWindow: current.prefs.napWindow,
@@ -66,6 +82,7 @@ export async function refreshWidget(cache?: WidgetCache): Promise<WidgetState> {
   const merged = napRemindersAfter(next, base, await loadWidgetCache());
   await saveWidgetCache(merged);
   await syncNotifications(merged, current.settings);
+  await todo;
   return { cache: merged, signedIn: true };
 }
 

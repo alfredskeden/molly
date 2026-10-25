@@ -16,9 +16,10 @@ let writes: Promise<unknown> = Promise.resolve();
  * Merges `change` into the stored settings, one write after another: two changes made together (Settings'
  * Save and the theme it applies) would otherwise each read the old settings and the second undo the first.
  */
-export function updateSettings(change: Partial<Settings>): Promise<Settings> {
+export function updateSettings(change: Partial<Settings> | ((settings: Settings) => Partial<Settings>)): Promise<Settings> {
   const next = writes.then(async () => {
-    const settings = { ...(await loadSettings()), ...change };
+    const stored = await loadSettings();
+    const settings = { ...stored, ...(typeof change === 'function' ? change(stored) : change) };
     await saveSettings(settings);
     return settings;
   });

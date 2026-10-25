@@ -8,6 +8,7 @@ import {
   eatQuestion,
   editorSubtitle,
   isSolidFeed,
+  newCount,
   SOLIDS_METHOD,
   dayPlan,
   dayRhythm,
@@ -107,6 +108,7 @@ import {
 import { LoadingAnnouncement, useSkeleton } from '@/features/dashboard/Skeleton';
 import { Tiles, type TileState } from '@/features/dashboard/Tiles';
 import { TodaySheet } from '@/features/dashboard/TodaySheet';
+import { useSyncTodoReminders, useTodoBadge } from '@/features/todo/queries';
 import { holdPolls } from '@/features/dashboard/writes';
 import { METHOD_LABELS } from '@/features/dashboard/timeline-text';
 import { UnreachableBanner } from '@/features/dashboard/Unreachable';
@@ -247,6 +249,8 @@ export default function Dashboard() {
   // The meal words name the child when no pronoun is set ("What did Ella eat?").
   const childName = child?.first_name ?? 'the baby';
   const skipNotes = useSkipNotes();
+  const todo = useTodoBadge();
+  useSyncTodoReminders();
   const refresh = useRefreshAfterWrite();
   const keyRejected = useKeyRejected();
   const haptic = useHaptic();
@@ -457,7 +461,7 @@ export default function Dashboard() {
     const undo = await optimistic.unskipped(note.id);
     haptic(HAPTICS.cancel);
     try {
-      await client.updateNoteTags(note.id, [UNDONE_SKIP_TAG]);
+      await client.updateNote(note.id, { tags: [UNDONE_SKIP_TAG] });
       toast({ text: 'Skip undone', tone: 'sleep' });
     } catch (error) {
       undo();
@@ -1124,6 +1128,11 @@ export default function Dashboard() {
             }}
             onSettings={() => router.push('/settings')}
             historyLabel={liveWindow?.kind === 'night' ? 'Tonight' : 'Today'}
+            onTodo={() => {
+              closePanels();
+              router.push('/todo');
+            }}
+            todoNew={todo.items ? newCount(todo.items, todo.seen) : 0}
           />
           ) : pager && shownWindow ? (
             <Pager

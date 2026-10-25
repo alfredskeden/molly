@@ -9,6 +9,7 @@ const CHECKLIST = [
   'Each parent signs in with their own Baby Buddy user and API key.',
   "To stop or cancel each other's timers, both users need the delete timer permission (core.delete_timer), or must be superusers.",
   'To delete entries and tag them, non-superusers also need: delete sleep, delete feeding, delete diaper change, delete medication, change tag and add tag.',
+  "To see the family's own to-do labels, non-superusers also need view tag (core.view_tag).",
 ];
 
 export default function Checklist() {

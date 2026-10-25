@@ -2,7 +2,7 @@
   "expo": {
     "name": "Molly",
     "slug": "molly",
-    "version": "1.2.1",
+    "version": "1.3.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "molly",
@@ -16,7 +16,7 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "se.skedeback.molly",
-      "versionCode": 4
+      "versionCode": 5
     },
     "web": {
       "output": "single",
@@ -345,6 +345,14 @@
           "cameraPermission": "Molly uses the camera to scan the login QR code from Baby Buddy.",
           "recordAudioAndroid": false,
           "barcodeScannerEnabled": true
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Molly attaches the photo you pick to a to-do item.",
+          "cameraPermission": "Molly uses the camera to scan the login QR code from Baby Buddy and to take photos for to-do items.",
+          "microphonePermission": false
         }
       ],
       "expo-asset",

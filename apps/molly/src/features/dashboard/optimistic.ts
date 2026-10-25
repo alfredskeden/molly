@@ -58,8 +58,8 @@ export function useOptimistic() {
         [listOf(kind)]: (current[listOf(kind)] as Entry<EntryKind>[]).filter((entry) => entry.id !== id),
       })),
     /** A skip note, shown before Baby Buddy has it. */
-    skipped: (note: Omit<Note, 'id' | 'child'>) =>
-      guess<Note[]>(skipsKey, (current) => [{ ...note, id: -Date.now(), child: childId }, ...(current ?? [])]),
+    skipped: (note: Omit<Note, 'id' | 'child' | 'image'>) =>
+      guess<Note[]>(skipsKey, (current) => [{ ...note, id: -Date.now(), child: childId, image: null }, ...(current ?? [])]),
     /** Undo of a skip: the note leaves the `molly-skip` list, as it will once retagged. */
     unskipped: (id: number) => guess<Note[]>(skipsKey, (current) => current?.filter((note) => note.id !== id)),
     started: (tracker: Tracker) =>

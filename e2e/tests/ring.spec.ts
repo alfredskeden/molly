@@ -111,7 +111,7 @@ test('1f: the sun shows last night, and tapping again comes back to today', asyn
   // Then
   await expectPager(page, 'Last night', yesterday(0, 0, -1));
   await expect(page.getByText('Bedtime 19:05', { exact: true })).toBeVisible();
-  await expect(page.getByLabel('Slept 11h 55m, 1 feed · 1 diaper', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Slept 12h 8m, 1 feed · 1 diaper', { exact: true })).toBeVisible();
   await expect(button(page, 'Back to now')).toBeVisible();
 
   // When
@@ -336,7 +336,7 @@ test('a past night shows slept, feeds, diapers and medicine in place of the tile
   await button(page, 'Switch to last night').click();
 
   // Then
-  await expect(page.getByLabel('Last night: 11h 55m slept, 1 feed, 1 diaper, 0 medicine', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Last night: 12h 8m slept, 1 feed, 1 diaper, 0 medicine', { exact: true })).toBeVisible();
   for (const tile of ['Start sleep', 'Feed', 'Diaper', 'Medicine']) await expect(button(page, tile)).toBeHidden();
 });
 
