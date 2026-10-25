@@ -957,3 +957,153 @@ describe('when stopping a running sleep starts to save the night', () => {
     expect(from).toBeNull();
   });
 });
+
+describe('an early morning wake near "Day starts"', () => {
+  // "Day starts" 08:00, a learned usual wake of 08:30, the 3–6 month band (60 min threshold).
+  const eight = { start: '08:00', end: '19:00' };
+  const learned = (wake: number) => ({ ...dayRhythm([], null, eight, on(20, 12)), wake, wakeLearned: true });
+  const lateWake = learned(8 * 60 + 30);
+  const lastNight = (end: [number, number]) => sleep({ start: at(19, 22, 42), end: at(20, ...end) });
+
+  it('starts the day at a 06:03 wake once the baby has been up past the threshold', () => {
+    // Given
+    const sleeps = [lastNight([6, 3])];
+
+    // When
+    const window = dayWindow({ ...none, sleep: sleeps }, noTimer, lateWake, on(20, 7, 5));
+
+    // Then
+    expect(window).toMatchObject({ kind: 'day', start: on(20, 6, 3), wake: on(20, 6, 3), clock: false });
+  });
+
+  it('is still the night 37 min after a 06:03 wake', () => {
+    // Given
+    const sleeps = [lastNight([6, 3])];
+
+    // When
+    const window = dayWindow({ ...none, sleep: sleeps }, noTimer, lateWake, on(20, 6, 40));
+
+    // Then
+    expect(window).toMatchObject({ kind: 'night' });
+  });
+
+  it('makes the 08:38 sleep after a 06:03 wake the day’s first nap', () => {
+    // Given
+    const nap = sleep({ start: at(20, 8, 38), end: at(20, 9, 0) });
+    const sleeps = [lastNight([6, 3]), nap];
+
+    // When
+    const night = isNight({ start: on(20, 8, 38), end: on(20, 9, 0) }, sleeps, lateWake, on(20, 9, 0));
+    const window = dayWindow({ ...none, sleep: sleeps }, noTimer, lateWake, on(20, 9, 0));
+
+    // Then
+    expect(night).toBe(false);
+    expect(window).toMatchObject({ kind: 'day', start: on(20, 6, 3) });
+  });
+
+  it('never saves a sleep from 08:38 after a 06:03 wake as the night', () => {
+    // Given
+    const sleeps = [lastNight([6, 3])];
+
+    // When
+    const from = nightFrom(on(20, 8, 38), sleeps, lateWake, on(20, 8, 40));
+
+    // Then
+    expect(from).toBeNull();
+  });
+
+  it('keeps a 07:45 wake inside both ranges as the morning', () => {
+    // Given
+    const sleeps = [lastNight([7, 45])];
+
+    // When
+    const window = dayWindow({ ...none, sleep: sleeps }, noTimer, lateWake, on(20, 12));
+
+    // Then
+    expect(window).toMatchObject({ kind: 'day', start: on(20, 7, 45) });
+  });
+
+  it('takes a 10:30 wake after a bad night when the learned wake is earlier than "Day starts"', () => {
+    // Given
+    const sleeps = [lastNight([10, 30])];
+
+    // When
+    const window = dayWindow({ ...none, sleep: sleeps }, noTimer, learned(7 * 60), on(20, 12));
+
+    // Then
+    expect(window).toMatchObject({ kind: 'day', start: on(20, 10, 30) });
+  });
+
+  it('does not take an 11:01 wake when the later of the two is 08:00', () => {
+    // Given
+    const sleeps = [lastNight([11, 1])];
+
+    // When
+    const window = dayWindow({ ...none, sleep: sleeps }, noTimer, learned(7 * 60), on(20, 12, 30));
+
+    // Then
+    expect(window).toMatchObject({ clock: true });
+  });
+
+  it('takes a wake exactly two hours before "Day starts"', () => {
+    // Given
+    const sleeps = [lastNight([6, 0])];
+
+    // When
+    const window = dayWindow({ ...none, sleep: sleeps }, noTimer, lateWake, on(20, 12));
+
+    // Then
+    expect(window).toMatchObject({ kind: 'day', start: on(20, 6, 0) });
+  });
+
+  it('does not take a wake one minute earlier than that', () => {
+    // Given
+    const sleeps = [lastNight([5, 59])];
+
+    // When
+    const window = dayWindow({ ...none, sleep: sleeps }, noTimer, lateWake, on(20, 12));
+
+    // Then
+    expect(window).toMatchObject({ clock: true });
+  });
+
+  it('keeps a 06:03 waking the baby was back asleep from at 06:30 in the night', () => {
+    // Given
+    const backToSleep = sleep({ start: at(20, 6, 30), end: at(20, 8, 10) });
+    const sleeps = [lastNight([6, 3]), backToSleep];
+
+    // When
+    const night = isNight({ start: on(20, 6, 30), end: on(20, 8, 10) }, sleeps, lateWake, on(20, 12));
+
+    // Then
+    expect(night).toBe(true);
+  });
+
+  it('keeps an hour awake at 03:00 in the night', () => {
+    // Given
+    const backToSleep = sleep({ start: at(20, 4, 0), end: at(20, 8, 20) });
+    const sleeps = [lastNight([3, 0]), backToSleep];
+
+    // When
+    const window = dayWindow({ ...none, sleep: sleeps }, noTimer, lateWake, on(20, 12));
+
+    // Then
+    expect(window).toMatchObject({ kind: 'day', start: on(20, 8, 20) });
+  });
+
+  it('gives the issue’s morning a day from 06:03 with the 08:38 sleep as a nap', () => {
+    // Given
+    const nap = sleep({ start: at(20, 8, 38), end: at(20, 9, 50) });
+    const sleeps = [lastNight([6, 3]), nap];
+    const moments = [on(20, 6, 40), on(20, 7, 5), on(20, 10)];
+
+    // When
+    const windows = moments.map((now) => dayWindow({ ...none, sleep: sleeps.filter((s) => Date.parse(s.start) < now.getTime()) }, noTimer, lateWake, now));
+    const savedNight = isNight({ start: on(20, 8, 38), end: on(20, 9, 50) }, sleeps, lateWake, on(20, 9, 50));
+
+    // Then
+    expect(windows.map((window) => window.kind)).toEqual(['night', 'day', 'day']);
+    expect(windows.slice(1).map((window) => window.start)).toEqual([on(20, 6, 3), on(20, 6, 3)]);
+    expect(savedNight).toBe(false);
+  });
+});

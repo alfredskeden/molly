@@ -2,7 +2,7 @@ import type { Sleep, Timer } from '@molly/api';
 
 import { firstWake, minutesPast, type DayRhythm } from './day-rhythm';
 import type { EntriesByKind } from './latest';
-import { atClock, isNightSleep, type NapWindow } from './nap';
+import { atClock, isNightSleep, minutesOf, type NapWindow } from './nap';
 
 const MINUTE_MS = 60 * 1000;
 /** The strip always runs at least this far past now. */
@@ -121,7 +121,7 @@ export function pastDays(sleeps: Sleep[], rhythm: DayRhythm, now: Date, count: n
 type Found = { midnight: Date; range: Interval; wake: Date | null; naps: Sleep[]; bedtime: Sleep | null };
 
 /**
- * The day some days from `day`, as known at `now`. The morning wake is the earliest end of a sleep
+ * within the age band's range around the usual wake and "Day starts" (`wakeRange`) after which the baby stayed
  * within the age band's range around the usual wake (`before` / `after`) after which the baby stayed
  * awake the band's threshold (`firstWake`); an end that fails is a night waking. Then every sleep from
  * the wake to the next day's range, in order, split at the bedtime (`isBedtime`).
@@ -140,10 +140,15 @@ function dayOn(sleeps: Sleep[], rhythm: DayRhythm, day: Date, days: number, now:
   return { midnight, range, wake, naps: bed < 0 ? after : after.slice(0, bed), bedtime: after[bed] ?? null };
 }
 
-/** The clock range a day's morning wake may fall in: around the usual wake, `before` earlier and `after` later. */
+/**
+ * The clock range a day's morning wake may fall in: from `before` ahead of the earlier of the usual
+ * wake and the setting's "Day starts", to `after` past the later one, so a wake near either counts.
+ */
 function wakeRange(rhythm: DayRhythm, day: Date, days: number): Interval {
   const { before, after } = rhythm.band;
-  return { start: minutesPast(day, days, rhythm.wake - before), end: minutesPast(day, days, rhythm.wake + after) };
+  const setting = minutesOf(rhythm.napWindow.start);
+  const [earlier, later] = [Math.min(rhythm.wake, setting), Math.max(rhythm.wake, setting)];
+  return { start: minutesPast(day, days, earlier - before), end: minutesPast(day, days, later + after) };
 }
 
 /**

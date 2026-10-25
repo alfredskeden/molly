@@ -17,7 +17,8 @@ export function isNightSleep(start: Date, end: Date, window: NapWindow = DEFAULT
   return !isNap(start, window) || end > atClock(start, 0, window.end);
 }
 
-function minutesOf(clock: string): number {
+/** `HH:MM` as minutes past midnight. */
+export function minutesOf(clock: string): number {
   const [hours = 0, minutes = 0] = clock.split(':').map(Number);
   return hours * 60 + minutes;
 }
