@@ -33,7 +33,7 @@ After the fix, last night is 22:40 → 06:00 and Today starts at 06:00.
 
 TDD in `packages/core` (Vitest, Given / When / Then, zero → one → many, then boundaries and errors). Fixtures are made up, never real logs.
 
-- [ ] **1. The night ends at the next morning's wake** (`day-window.test.ts`, "the past pages of the Today card" and "the Today card's previous page"). A learned rhythm (wake 07:30) is needed to show the bug; the `setting` fixture alone has usual wake = "Day starts" = 07:00, and the existing `week` fixture (woke 06:40) already shows it: its expectations `end: on(20, 7, 0)` encode the bug and change to `on(20, 6, 40)`. Order:
+- [x] **1. The night ends at the next morning's wake** (`day-window.test.ts`, "the past pages of the Today card" and "the Today card's previous page"). A learned rhythm (wake 07:30) is needed to show the bug; the `setting` fixture alone has usual wake = "Day starts" = 07:00, and the existing `week` fixture (woke 06:40) already shows it: its expectations `end: on(20, 7, 0)` encode the bug and change to `on(20, 6, 40)`. Order:
   - **One (the bug)**: bedtime 22:40, wake 06:00, learned wake 07:30, at midday → `previousWindow` is the night 22:40 → 06:00, and `dayWindow` starts at 06:00.
   - **Later wake**: same, wake 08:15 → night ends 08:15, Today starts 08:15.
   - **Many**: `windowsBefore` over a week: every night's `end` equals the newer day's `start`, every day's `end` the newer night's `start`.
@@ -41,16 +41,16 @@ TDD in `packages/core` (Vitest, Given / When / Then, zero → one → many, then
   - **Live night unchanged**: tonight's bedtime running or logged, no wake yet → `dayWindow` ends at the usual wake (existing tests stay green).
   - **Night after midnight bedtime** (00:20, existing "a bedtime after midnight" group) and **the clock change** (existing group) still line up.
   - In REFACTOR: rewrite the doc comments that now lie: `windowsBefore` ("A past day runs from its morning wake to its bedtime…": add the night), `windowsOn`, and `nightOf` ("to the next usual wake": now the live night only).
-- [ ] **2. A night with no bedtime starts where its day ended.** Learned bedtime 21:00, "Day ends" 19:00, a day with a wake and no bedtime logged:
+- [x] **2. A night with no bedtime starts where its day ended.** Learned bedtime 21:00, "Day ends" 19:00, a day with a wake and no bedtime logged:
   - past: that day ends 21:00 and its night starts 21:00 (today 19:00);
   - live, after midnight once `bedtimeCut` has passed: Tonight starts 21:00, and `windowsBefore` doesn't list a second night for it;
   - learned bedtime earlier than "Day ends" (18:30 vs 19:00): no gap either way;
   - no wake that day: unchanged, clock day to "Day ends", clock night from it.
-- [ ] **3. Counts follow.** One `ring.test.ts` (or `day-window.test.ts`) test with the issue's second scenario: a feed at 06:20 and a diaper at 06:30 after a 06:00 wake are in `windowStats` of Today's window, not of last night's; last night's `sleptMs` is no more than bedtime → wake for a night with one sleep.
-- [ ] **4. Whole core suite.** Fix every expectation that encoded the old ends (search for `end: on(` in past-page tests and `needs-seeded.test.ts`). An expectation that changes for another reason than "the night now ends at the wake" is a regression: stop and bring it to the developer. `day-fixtures.test.ts` green.
-- [ ] **5. Playwright** (`e2e/tests/day-night.spec.ts`, next to the early-wake test that seeds a learned 08:30 wake and a 06:03 wake): add a feed at 06:20 and a diaper at 06:30, open last night (`Switch to last night`) → its boxes don't count them and its pager ends at 06:03; Today's sheet counts them. Existing `ring.spec.ts`, `recent-days.spec.ts` and `day-night.spec.ts` pass (their seeded wakes may already sit before the usual wake; update an assertion only for the reason above).
-- [ ] **6. Docs.** `CLAUDE.md` "Day and night" bullet: add that past windows tile (a past night ends at the next day's start, a night without bedtime starts at its day's end; the live night still runs to the usual wake). `plans/implan-day-night/NOTES.md` line "Day end / night end": point here. `plans/README.md` row.
-- [ ] **7. Wrap-up.** `implan-cleanup` wrap-up sweep, `pnpm check` and `pnpm e2e` green, PR into `develop`, issue #23 updated with anything that changed during the work.
+- [x] **3. Counts follow.** One `ring.test.ts` (or `day-window.test.ts`) test with the issue's second scenario: a feed at 06:20 and a diaper at 06:30 after a 06:00 wake are in `windowStats` of Today's window, not of last night's; last night's `sleptMs` is no more than bedtime → wake for a night with one sleep.
+- [x] **4. Whole core suite.** Fix every expectation that encoded the old ends (search for `end: on(` in past-page tests and `needs-seeded.test.ts`). An expectation that changes for another reason than "the night now ends at the wake" is a regression: stop and bring it to the developer. `day-fixtures.test.ts` green.
+- [x] **5. Playwright** (`e2e/tests/day-night.spec.ts`, next to the early-wake test that seeds a learned 08:30 wake and a 06:03 wake): add a feed at 06:20 and a diaper at 06:30, open last night (`Switch to last night`) → its boxes don't count them and its pager ends at 06:03; Today's sheet counts them. Existing `ring.spec.ts`, `recent-days.spec.ts` and `day-night.spec.ts` pass (their seeded wakes may already sit before the usual wake; update an assertion only for the reason above).
+- [x] **6. Docs.** `CLAUDE.md` "Day and night" bullet: add that past windows tile (a past night ends at the next day's start, a night without bedtime starts at its day's end; the live night still runs to the usual wake). `plans/implan-day-night/NOTES.md` line "Day end / night end": point here. `plans/README.md` row.
+- [x] **7. Wrap-up.** `implan-cleanup` wrap-up sweep, `pnpm check` and `pnpm e2e` green, PR into `develop`, issue #23 updated with anything that changed during the work.
 
 ## Decisions and why
 
