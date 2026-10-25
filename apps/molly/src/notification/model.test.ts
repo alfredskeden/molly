@@ -1,3 +1,4 @@
+import { todoItems } from '@molly/core';
 import { describe, expect, it } from 'vitest';
 
 import { EMPTY_CACHE, type ChildTimers, type WidgetCache, type WidgetSnapshot } from '@/widget/model';
@@ -7,6 +8,7 @@ import {
   napReminderNotifications,
   notificationCardLine,
   timerNotifications,
+  todoReminderNotifications,
   vitaminDNotifications,
   type ChildReminderNotification,
   type ChildTimerNotification,
@@ -715,5 +717,58 @@ describe('the nap reminder notification', () => {
 
     // Then
     expect(notifications).toEqual([]);
+  });
+});
+
+describe('to-do reminders', () => {
+  const at = (day: number, hours: number, minutes = 0) => new Date(2026, 9, day, hours, minutes);
+  const now = at(25, 10);
+  const note = (id: number, text: string, tags: string[], time: Date) => ({
+    id,
+    child: 1,
+    note: text,
+    time: time.toISOString(),
+    tags: ['molly-todo', ...tags],
+    image: null,
+  });
+
+  it('rings an hour before an item with a time, titled with its text and time, its label below', () => {
+    // Given
+    const items = todoItems([note(7, '6-month checkup', ['To-do: Appointments', 'molly-todo-due'], at(26, 14, 30))]);
+
+    // When
+    const reminders = todoReminderNotifications(items, now);
+
+    // Then
+    expect(reminders).toEqual({
+      schedule: [{ id: 7, title: '6-month checkup · 14:30', text: 'Appointments', at: at(26, 13, 30).getTime() }],
+      keep: [7],
+    });
+  });
+
+  it('rings the evening before a date-only item, as Tomorrow, under Other without a label', () => {
+    // Given
+    const items = todoItems([note(8, 'Call the nurse', ['molly-todo-day'], at(27, 12))]);
+
+    // When
+    const reminders = todoReminderNotifications(items, now);
+
+    // Then
+    expect(reminders.schedule).toEqual([{ id: 8, title: 'Call the nurse · Tomorrow', text: 'Other', at: at(26, 19).getTime() }]);
+  });
+
+  it('keeps an open dated item whose reminder rang, and drops undated and done ones', () => {
+    // Given
+    const items = todoItems([
+      note(1, 'Rang already', ['molly-todo-due'], at(25, 10, 30)),
+      note(2, 'Undated', [], now),
+      { ...note(3, 'Done', ['molly-todo-due'], at(26, 9)), tags: ['molly-todo-done', 'molly-done-2026-10-25', 'molly-todo-due'] },
+    ]);
+
+    // When
+    const reminders = todoReminderNotifications(items, now);
+
+    // Then
+    expect(reminders).toEqual({ schedule: [], keep: [1] });
   });
 });

@@ -4,8 +4,8 @@ import { Pressable } from '@/components/pressable';
 import { IconButton, Spinner, Text } from '@/components/ui';
 
 /**
- * The dashboard's header: the child's name over `<window> · <date>`, and the history, add and settings
- * buttons. With more than one child shown, the name opens the Children sheet (`onChildren`). `updating`:
+ * The dashboard's header: the child's name over `<window> · <date>`, and the to-do, history, add and settings
+ * buttons (`todoNew`: the to-do badge's count). With more than one child shown, the name opens the Children sheet (`onChildren`). `updating`:
  * the app came back and is still reloading; says so in place of the date line.
  */
 export function Header({
@@ -17,6 +17,8 @@ export function Header({
   onAdd,
   onSettings,
   historyLabel,
+  onTodo,
+  todoNew,
 }: {
   name: string;
   dateLine: string;
@@ -27,6 +29,8 @@ export function Header({
   onSettings: () => void;
   /** Spoken: `Today` or `Tonight`, what the history button opens. */
   historyLabel: string;
+  onTodo: () => void;
+  todoNew: number;
 }) {
   const title = (
     <View className="shrink">
@@ -60,6 +64,7 @@ export function Header({
         title
       )}
       <View className="flex-row gap-2">
+        <IconButton icon="checklist" label={todoNew > 0 ? `To-do, ${todoNew} new` : 'To-do'} onPress={onTodo} badge={todoNew} />
         <IconButton icon="history" label={historyLabel} onPress={onHistory} />
         <IconButton icon="add" label="Add entry" onPress={onAdd} ink />
         <IconButton icon="settings" label="Settings" onPress={onSettings} />

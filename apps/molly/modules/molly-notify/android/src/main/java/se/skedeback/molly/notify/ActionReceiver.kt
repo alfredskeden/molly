@@ -9,7 +9,7 @@ import androidx.work.OutOfQuotaPolicy
 import androidx.work.WorkManager
 
 /**
- * Notification taps, and the nap reminder's alarm. Actions run as expedited work rather than a headless service: Android 12+ forbids
+ * Notification taps, and the nap and to-do reminders' alarms. Actions run as expedited work rather than a headless service: Android 12+ forbids
  * starting a foreground service from the background, and this works with the app process killed.
  */
 class ActionReceiver : BroadcastReceiver() {
@@ -22,6 +22,8 @@ class ActionReceiver : BroadcastReceiver() {
         Notifier.rememberDismissed(context, tracker, child, intent.getLongExtra(Notifier.EXTRA_START, -1))
       Notifier.ACTION_DISMISS -> Notifier.dismissReminder(context, tracker, child, intent.getLongExtra(Notifier.EXTRA_START, -1))
       Notifier.ACTION_NAP_ALARM -> Notifier.ringNapReminder(context, child)
+      // A to-do alarm's "child" is the item's note id.
+      Notifier.ACTION_TODO_ALARM -> Notifier.ringTodoReminder(context, child)
       Notifier.ACTION_RUN -> {
         val action = intent.getStringExtra(Notifier.EXTRA_INTENT) ?: return
         Notifier.showPending(context, tracker, child, intent)

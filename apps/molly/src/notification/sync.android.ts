@@ -1,4 +1,4 @@
-import { childPrefs } from '@molly/core';
+import { childPrefs, type TodoItem } from '@molly/core';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { requireNativeModule } from 'expo';
 import { PermissionsAndroid, Platform } from 'react-native';
@@ -10,6 +10,7 @@ import type { WidgetCache } from '@/widget/model';
 import {
   napReminderNotifications,
   timerNotifications,
+  todoReminderNotifications,
   vitaminDNotifications,
   type LiveUpdates,
   type NapReminderNotification,
@@ -18,6 +19,7 @@ import {
   type PermissionAnswer,
   type ReminderNotification,
   type TimerNotification,
+  type TodoReminderNotification,
 } from './model';
 
 type Tracker = 'sleep' | 'feeding';
@@ -40,6 +42,7 @@ const MollyNotify = requireNativeModule<{
   keepOnlyReminders(children: number[]): Promise<void>;
   scheduleNapReminder(child: number, reminder: Omit<NapReminderNotification, 'child' | 'avatar'> & { color: string } & NativeAvatar): Promise<void>;
   keepOnlyNapReminders(children: number[]): Promise<void>;
+  syncTodoReminders(reminders: (TodoReminderNotification & { color: string })[], keep: number[]): Promise<void>;
   allowed(): boolean;
   openSettings(): void;
   liveUpdates(): Promise<LiveUpdates>;
@@ -52,6 +55,7 @@ const COLORS: Record<Tracker, string> = { sleep: PALETTES.day['sleep-mid'], feed
 
 const REMINDER_COLOR = PALETTES.day['med-mid'];
 const NAP_REMINDER_COLOR = PALETTES.day['sleep-mid'];
+const TODO_COLOR = PALETTES.day['ink'];
 
 /** The child's initial for the native icon, drawn white in a circle of the child's icon colour. */
 function nativeAvatar(avatar: NotificationAvatar | null): NativeAvatar {
@@ -106,6 +110,17 @@ export async function syncNotifications(cache: WidgetCache, settings: Settings |
     );
   }
   await safely('nap reminder', () => MollyNotify.keepOnlyNapReminders(napReminders.map((reminder) => reminder.child)));
+}
+
+/**
+ * Sets this phone's to-do reminder alarms from the list it last fetched (the app's to-do query, the widget
+ * refresh) and drops those of items ticked off or undated since; `items` null (signed out) drops them all.
+ */
+export async function syncTodoReminders(items: TodoItem[] | null): Promise<void> {
+  const { schedule, keep } = items ? todoReminderNotifications(items, new Date()) : { schedule: [], keep: [] };
+  await safely('to-do reminder', () =>
+    MollyNotify.syncTodoReminders(schedule.map((reminder) => ({ ...reminder, color: TODO_COLOR })), keep),
+  );
 }
 
 /** False when the permission is denied or Molly's notifications are blocked in Android settings. */

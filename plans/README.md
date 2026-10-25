@@ -44,3 +44,4 @@ How Molly was built, one folder per plan. Each has `MAIN.md` (the steps, with `[
 | [implan-day-night](implan-day-night/MAIN.md) | Day and night from the child's rhythm: learned usual wake and bedtime, age-based thresholds, nap flag on save, issue #14 | Done (sanity run on own logs and device checks open) |
 | [implan-early-wake](implan-early-wake/MAIN.md) | An early morning wake near "Day starts" starts the day even with a later learned wake; learned times on the child screen, issue #18 | Planned |
 | [implan-early-wake](implan-early-wake/MAIN.md) | A morning wake near "Day starts" starts the day even with a later learned wake; learned times on the child screen | Open items left |
+| [implan-todo](implan-todo/MAIN.md) | Shared to-do list on Baby Buddy notes: labels as tags, dates, photos, Android reminders, issue #22 | Open items left |

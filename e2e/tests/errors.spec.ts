@@ -15,8 +15,8 @@ test("while Baby Buddy can't be reached, the dashboard shows what it saw last, d
   // Given
   await signInAs(page, testEnv.parentB);
   await expect(button(page, 'Start sleep')).toBeVisible();
-  // Both timers, entries (sleeps two weeks back included), skips, children and the recent bottles.
-  await expect.poll(async () => JSON.parse((await storedCache(page)) ?? '{}').clientState?.queries?.length).toBe(6);
+  // Both timers, entries (sleeps two weeks back included), skips, children, the recent bottles and the to-do list.
+  await expect.poll(async () => JSON.parse((await storedCache(page)) ?? '{}').clientState?.queries?.length).toBe(7);
   const api = `${testEnv.baseUrl}/api/**`;
   await page.route(api, (route) => route.abort('connectionrefused'));
 

@@ -347,6 +347,14 @@
           "barcodeScannerEnabled": true
         }
       ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Molly attaches the photo you pick to a to-do item.",
+          "cameraPermission": "Molly uses the camera to scan the login QR code from Baby Buddy and to take photos for to-do items.",
+          "microphonePermission": false
+        }
+      ],
       "expo-asset",
       "@react-native-community/datetimepicker"
     ],
