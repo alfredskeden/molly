@@ -120,6 +120,11 @@ export function dayRhythm(
   };
 }
 
+/** The usual wake and bedtime as `HH:MM` clock times, each null while the setting stands in for it. */
+export function learnedTimes(rhythm: DayRhythm): { wake: string | null; bedtime: string | null } {
+  return { wake: rhythm.wakeLearned ? clockOf(rhythm.wake) : null, bedtime: rhythm.bedtimeLearned ? clockOf(rhythm.bedtime) : null };
+}
+
 /**
  * The earliest end of a sleep inside `range` after which the baby stayed awake `awake` minutes: the
  * next sleep started that much later, or none has and that much time has passed by `now`. Only after
@@ -178,4 +183,10 @@ export function clockMinutes(time: Date, day: Date): number {
 
 function clamp(minutes: number, range: { from: number; to: number }): number {
   return Math.min(range.to, Math.max(range.from, minutes));
+}
+
+/** Minutes past midnight as an `HH:MM` clock time; past 24:00 wraps to the next day's. */
+function clockOf(minutes: number): string {
+  const clock = Math.round(minutes) % DAY_MINUTES;
+  return `${String(Math.floor(clock / 60)).padStart(2, '0')}:${String(clock % 60).padStart(2, '0')}`;
 }

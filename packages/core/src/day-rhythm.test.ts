@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { sleep } from '../test/fixtures';
-import { ageBand, dayRhythm } from './day-rhythm';
+import { ageBand, dayRhythm, learnedTimes } from './day-rhythm';
 import { DEFAULT_NAP_WINDOW } from './nap';
 
 const napWindow = DEFAULT_NAP_WINDOW;
@@ -233,5 +233,64 @@ describe('the age band', () => {
 
     // Then
     expect(band).toMatchObject({ awake, long, before: 120, after: 180 });
+  });
+});
+
+describe('what Molly has learned, as clock times', () => {
+  const usual = [14, 15, 16, 17].flatMap((day) => [night(day, [21, 45], [7, 30]), nap(day + 1, [9, 0], [10, 0])]);
+
+  it('is nothing while too few days are logged', () => {
+    // Given
+    const rhythm = dayRhythm([], born, napWindow, on(20, 12));
+
+    // When
+    const times = learnedTimes(rhythm);
+
+    // Then
+    expect(times).toEqual({ wake: null, bedtime: null });
+  });
+
+  it('is only the wake while the bedtime is still the setting', () => {
+    // Given
+    const rhythm = { ...dayRhythm([], born, napWindow, on(20, 12)), wake: clock(8, 30), wakeLearned: true };
+
+    // When
+    const times = learnedTimes(rhythm);
+
+    // Then
+    expect(times).toEqual({ wake: '08:30', bedtime: null });
+  });
+
+  it('is the usual wake and bedtime once both are learned', () => {
+    // Given
+    const rhythm = dayRhythm(usual, born, napWindow, on(20, 12));
+
+    // When
+    const times = learnedTimes(rhythm);
+
+    // Then
+    expect(times).toEqual({ wake: '07:30', bedtime: '21:45' });
+  });
+
+  it('shows a bedtime past midnight as its clock time', () => {
+    // Given
+    const rhythm = { ...dayRhythm(usual, born, napWindow, on(20, 12)), bedtime: clock(24, 15) };
+
+    // When
+    const times = learnedTimes(rhythm);
+
+    // Then
+    expect(times.bedtime).toBe('00:15');
+  });
+
+  it('has no wake under 3 months, however much is logged', () => {
+    // Given
+    const rhythm = dayRhythm(usual, '2026-07-20', napWindow, on(20, 12));
+
+    // When
+    const times = learnedTimes(rhythm);
+
+    // Then
+    expect(times).toEqual({ wake: null, bedtime: '21:45' });
   });
 });
