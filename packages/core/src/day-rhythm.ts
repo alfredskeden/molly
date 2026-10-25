@@ -1,7 +1,7 @@
 import type { Sleep } from '@molly/api';
 
 import { median } from './median';
-import { type NapWindow } from './nap';
+import { minutesOf, type NapWindow } from './nap';
 import { ageInMonths } from './sleep-guide';
 
 const MINUTE_MS = 60 * 1000;
@@ -120,6 +120,11 @@ export function dayRhythm(
   };
 }
 
+/** The usual wake and bedtime as `HH:MM` clock times, each null while the setting stands in for it. */
+export function learnedTimes(rhythm: DayRhythm): { wake: string | null; bedtime: string | null } {
+  return { wake: rhythm.wakeLearned ? clockOf(rhythm.wake) : null, bedtime: rhythm.bedtimeLearned ? clockOf(rhythm.bedtime) : null };
+}
+
 /**
  * The earliest end of a sleep inside `range` after which the baby stayed awake `awake` minutes: the
  * next sleep started that much later, or none has and that much time has passed by `now`. Only after
@@ -180,8 +185,8 @@ function clamp(minutes: number, range: { from: number; to: number }): number {
   return Math.min(range.to, Math.max(range.from, minutes));
 }
 
-/** `HH:MM` as minutes past midnight. */
-function minutesOf(clock: string): number {
-  const [hours = 0, minutes = 0] = clock.split(':').map(Number);
-  return hours * 60 + minutes;
+/** Minutes past midnight as an `HH:MM` clock time; past 24:00 wraps to the next day's. */
+function clockOf(minutes: number): string {
+  const clock = Math.round(minutes) % DAY_MINUTES;
+  return `${String(Math.floor(clock / 60)).padStart(2, '0')}:${String(clock % 60).padStart(2, '0')}`;
 }

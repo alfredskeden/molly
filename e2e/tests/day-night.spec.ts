@@ -82,7 +82,7 @@ test('a sleep after an early wake saves as a nap, and the day starts at the wake
   await expect(page.getByText('Day started 06:31', { exact: true })).toBeVisible();
 });
 
-test('the child screen calls Day starts and Day ends starting values', async ({ page }) => {
+test('the child screen says a morning wake near Day starts or the learned wake starts the day', async ({ page }) => {
   // Given
   await signInAs(page, testEnv.parentB);
 
@@ -90,6 +90,48 @@ test('the child screen calls Day starts and Day ends starting values', async ({ 
   await openChildSettings(page, 'Test');
 
   // Then
-  await expect(page.getByText(/^Molly learns when this child usually wakes up and goes to bed\./).filter({ visible: true })).toBeVisible();
+  await expect(page.getByText(/^Molly learns when this child usually wakes up and goes to bed/).filter({ visible: true })).toBeVisible();
+  await expect(page.getByText(/A morning wake near Day starts or the learned wake starts the day\.$/).filter({ visible: true })).toBeVisible();
   await expect(page.getByLabel('Day starts 07:00', { exact: true }).filter({ visible: true })).toBeVisible();
+});
+
+test('the child screen says Molly is still learning with no sleeps logged', async ({ page }) => {
+  // Given
+  await signInAs(page, testEnv.parentB);
+
+  // When
+  await openChildSettings(page, 'Test');
+
+  // Then
+  await expect(page.getByText('Still learning', { exact: true }).filter({ visible: true })).toBeVisible();
+});
+
+test('the child screen shows the usual wake and bedtime Molly has learned', async ({ page }) => {
+  // Given
+  await seedUsualDays([21, 45], [7, 15], [[[9, 0], [10, 0]], [[13, 0], [14, 30]]]);
+  await clockAt(page, yesterday(12, 0));
+  await signInAs(page, testEnv.parentB);
+
+  // When
+  await openChildSettings(page, 'Test');
+
+  // Then
+  await expect(page.getByText('Molly has learned: wakes about 07:15, bed about 21:45', { exact: true }).filter({ visible: true })).toBeVisible();
+});
+
+test('a wake near Day starts starts the day though Molly has learned a later wake, and the next sleep saves as a nap', async ({ page }) => {
+  // Given
+  // Usually up at 08:30; Day starts at 08:00, so a 06:03 wake is near the setting but over two hours before the learned wake.
+  await seedUsualDays([21, 0], [8, 30], [[[10, 0], [11, 0]], [[14, 0], [15, 0]]]);
+  await post('sleep/', { start: yesterday(22, 42, -1).toISOString(), end: yesterday(6, 3).toISOString(), nap: false });
+  await clockAt(page, yesterday(9, 50));
+  await signInAs(page, testEnv.parentB, { napWindow: { start: '08:00', end: '19:00' } });
+  await expect(page.getByText('Day started 06:03', { exact: true })).toBeVisible();
+
+  // When
+  await addSleep(page, yesterday(8, 38), yesterday(9, 30));
+
+  // Then
+  expect(await latest('sleep')).toMatchObject({ nap: true });
+  await expect(page.getByText('Day started 06:03', { exact: true })).toBeVisible();
 });

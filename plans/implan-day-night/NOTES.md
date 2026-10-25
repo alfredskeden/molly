@@ -62,6 +62,10 @@ The new rule doesn't depend on the setting once it has learned the child. Single
 
 The fixtures are a check that the rule does what it says, not evidence about real children; the developer's own logs are the sanity check (`pnpm replay:naps <file> <birth> --days [--truth <file>]`, never committed).
 
+## Later
+
+- The morning range now also covers "Day starts": `wakeRange` runs from `before` ahead of the earlier of the usual wake and the setting to `after` past the later one (issue #18, `plans/implan-early-wake/`).
+
 ## Open
 
 - Sanity run on the developer's own logs (step 5): theirs to do; record anything worse than the old rule here with a reason.
