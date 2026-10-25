@@ -62,7 +62,7 @@ TDD where the project uses it: `packages/core` unit tests (Given / When / Then, 
   - Replace `updateNoteTags(id, tags)` with `updateNote(id, patch)` (`note`, `time`, `tags`, `image: null`); move its one caller, skip Undo (`apps/molly/src/app/(main)/index.tsx:460`).
   - `createNote` / `updateNote` send multipart when an image is given (`NoteImage`: a web `Blob` or React Native's `{ uri, name, type }`, appended to `FormData` with tags repeated); JSON otherwise.
   - Tests: `listTags` returns a tag a note created; future `time` round-trips; OR filter without `child` returns two children's notes; image upload returns a `/media/notes/images/` URL; `image: null` removes it; a JSON tag patch keeps it; a non-image is `validation`.
-- [ ] **2. To-do rules** (`packages/core/src/todo.ts`, unit-tested). Pure functions over notes and `now`:
+- [x] **2. To-do rules** (`packages/core/src/todo.ts`, unit-tested). Pure functions over notes and `now`:
   - `todoItems(notes)`: note → item (text, label, due kind and moment, done day, image path, id, child).
   - `todoList(items, now, seen)`: label cards in order (Buy, Appointments, family labels A–Z, Other), hidden done items dropped, each card's open count; within a card dated first by due moment, then undated by id descending; done items stay in place struck.
   - `todoLabels(tags)`: the `To-do: ` tags as chips (Buy and Appointments first, then A–Z, case-insensitive duplicates merged); `labelFor(typed, labels)` reuses case-insensitively, refuses "Other" and blank.
