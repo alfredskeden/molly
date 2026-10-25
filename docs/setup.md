@@ -21,10 +21,15 @@ The only thing a shared user gives up: Molly can't tell who started a running ti
 | `Baby Buddy \| settings \| Can view settings` (`babybuddy.view_settings`) | sign in to Molly |
 | `Core \| Timer \| Can delete Timer` (`core.delete_timer`) | stop or cancel the other parent's timers, and cancel any timer at all |
 | `Core \| Sleep \| Can delete Sleep`, `Core \| Feeding \| Can delete Feeding`, `Core \| Diaper Change \| Can delete Diaper Change`, `Core \| Medication \| Can delete Medication` | delete entries |
-| `Core \| Tag \| Can change Tag`, `Core \| Tag \| Can add Tag` | tag entries (for example "mixed"), and skip a nap |
+| `Core \| Tag \| Can change Tag`, `Core \| Tag \| Can add Tag` | tag entries (for example "mixed"), skip a nap, and save to-do items |
+| `Core \| Tag \| Can view Tag` (`core.view_tag`) | see the family's own to-do labels (without it, only Buy and Appointments are offered) |
 | `Core \| Height \| Can view Height` / `Can add Height`, the same for `Head Circumference` and `BMI` | see and log height, head circumference and BMI on the child screen (weight and temperature need nothing extra) |
 
 **Skipping a nap** saves a Baby Buddy note tagged `molly-skip` (text like `Skipped nap 15:05–15:45`), so both phones see it; Undo retags it `molly-skip-undone`. That needs `core.add_note` and `core.change_note`, which the caregiver group already has, plus the two tag permissions above (the first skip creates the tag). Molly never deletes notes, so `core.delete_note` isn't needed.
+
+**The to-do list** is Baby Buddy notes too, shared by everyone on the same Baby Buddy whichever child they were saved on: an open item is tagged `molly-todo`, a ticked one `molly-todo-done` plus `molly-done-<date>`, and its label is a tag `To-do: <label>` (Buy, Appointments, or one the family makes). The same note and tag permissions cover it, plus `core.view_tag` to list the labels. Molly never deletes to-do notes either: ticked items hide after midnight.
+
+**To-do photos are public to anyone with their URL.** Baby Buddy serves its uploaded files (`/media/`) without signing in, so Molly saves each photo under a long random file name, shrunk to 1600 px. A photo removed or replaced in Molly stays on the Baby Buddy server (Molly can't delete files); remove it there if it matters.
 
 Without `core.delete_timer`, stopping the other parent's timer shows "needs permission to stop other people's timers". Molly can't detect this in advance.
 
@@ -50,7 +55,7 @@ The Android app is not a browser, so CORS never applies to it.
 
 A typical setup exposes both through Cloudflare Tunnel:
 
-- **Baby Buddy**, e.g. `baby.example.com`. If Cloudflare Access protects it, add an Access **bypass** policy for the path `/api/*`. Molly authenticates with the API key, and without the bypass Access answers with its login page, which Molly reports as "can't reach". Keep the rest of Baby Buddy behind Access if you like.
+- **Baby Buddy**, e.g. `baby.example.com`. If Cloudflare Access protects it, add an Access **bypass** policy for the path `/api/*`, and one for `/media/notes/images/*` so to-do photos load. Molly authenticates with the API key, and without the bypass Access answers with its login page, which Molly reports as "can't reach" (and photos don't show). Keep the rest of Baby Buddy behind Access if you like.
 - **Molly's web app**, e.g. `molly.example.com`, can stay fully behind Access. It holds no data or secrets itself.
 
 ## 5. Running the web app

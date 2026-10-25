@@ -1,6 +1,6 @@
 // Lock-screen notification content, without the native module, so it can be unit-tested.
 import type { FeedingMethod } from '@molly/api';
-import type { NapWindow } from '@molly/core';
+import { clockText, OTHER, reminderAt, type NapWindow, type TodoItem } from '@molly/core';
 
 import { formatClock } from '@/lib/time';
 import {
@@ -205,6 +205,25 @@ export function napReminderNotifications(cache: WidgetCache): NapReminderNotific
       },
     ];
   });
+}
+
+/** A to-do item's reminder, rung at `at` (epoch ms, also its key); `id` is the note id. */
+export type TodoReminderNotification = { id: number; title: string; text: string; at: number };
+
+/**
+ * The to-do reminders this phone schedules from the list it last fetched: `6-month checkup · 14:30` (or
+ * `· Tomorrow` for a date only, rung the evening before) over the label. `keep`: every open dated item, so a
+ * reminder that rang stays until the item is ticked off, undated or gone.
+ */
+export function todoReminderNotifications(items: TodoItem[], now: Date): { schedule: TodoReminderNotification[]; keep: number[] } {
+  const open = items.filter((item) => item.done === null && item.due !== null && item.id > 0);
+  const schedule = open.flatMap((item) => {
+    const at = reminderAt(item, now);
+    if (!at || !item.due) return [];
+    const when = item.due.kind === 'time' ? clockText(item.due.at) : 'Tomorrow';
+    return [{ id: item.id, title: `${item.text} · ${when}`, text: item.label ?? OTHER, at: at.getTime() }];
+  });
+  return { schedule, keep: open.map((item) => item.id) };
 }
 
 /** `blocked`: Android won't show its prompt any more; only its settings can turn notifications on. */

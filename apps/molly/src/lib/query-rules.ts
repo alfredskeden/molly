@@ -13,9 +13,10 @@ export function shouldRetry(failureCount: number, error: unknown): boolean {
 /**
  * What a cold start needs to draw the dashboard. Settings live in their own storage already. `rhythm`
  * (Life Sim's usual gaps) is fetched once per day or night window, so a restart mustn't fetch it again;
- * `bottles` gives the bottle amount row its start at once, `solids` the Solids panel its food chips.
+ * `bottles` gives the bottle amount row its start at once, `solids` the Solids panel its food chips, `todo` and
+ * `todoLabels` the to-do list and its badge.
  */
-const PERSISTED = new Set(['timer', 'entries', 'skips', 'children', 'lastSleep', 'rhythm', 'bottles', 'solids']);
+const PERSISTED = new Set(['timer', 'entries', 'skips', 'children', 'lastSleep', 'rhythm', 'bottles', 'solids', 'todo', 'todoLabels']);
 
 /**
  * `guessed`: the query's data was last set by a tap's guess, not fetched. A guess must never outlive

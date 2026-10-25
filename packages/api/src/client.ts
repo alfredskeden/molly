@@ -12,6 +12,8 @@ import type {
   Medication,
   NewMeasurement,
   Note,
+  NoteImage,
+  NotePatch,
   NoteQuery,
   NewChange,
   NewFeeding,
@@ -22,6 +24,7 @@ import type {
   Profile,
   Sleep,
   StopFeeding,
+  Tag,
   StopSleep,
   Timer,
   NewTimer,
@@ -63,6 +66,22 @@ const MEASUREMENT_PATHS: Record<MeasurementKind, string> = {
   bmi: 'bmi/',
 };
 
+/**
+ * A note with a photo goes as multipart form data, its tags repeated per tag; one without as JSON.
+ * Only fields that are set are sent.
+ */
+function noteBody(fields: NotePatch & { child?: number }): unknown {
+  const { image, ...rest } = fields;
+  if (!image) return fields;
+  const form = new FormData();
+  for (const [key, value] of Object.entries(rest)) {
+    if (value === undefined) continue;
+    for (const item of Array.isArray(value) ? value : [value]) form.append(key, String(item));
+  }
+  form.append('image', image.blob, image.name);
+  return form;
+}
+
 function abortError(signal: AbortSignal): unknown {
   return signal.reason ?? Object.assign(new Error('Aborted'), { name: 'AbortError' });
 }
@@ -88,6 +107,7 @@ export function createClient({ baseUrl, token, timeoutMs = TIMEOUT_MS }: ClientC
   }
 
   async function send<T>(path: string, { method = 'GET', query, body }: RequestOptions, signal: AbortSignal): Promise<T> {
+    const form = body instanceof FormData;
     const search = query
       ? `?${new URLSearchParams(Object.entries(query).map(([key, value]) => [key, String(value)]))}`
       : '';
@@ -97,9 +117,10 @@ export function createClient({ baseUrl, token, timeoutMs = TIMEOUT_MS }: ClientC
         method,
         headers: {
           Authorization: `Token ${token}`,
-          ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+          // FormData sets its own multipart content type, boundary included.
+          ...(body === undefined || form ? {} : { 'Content-Type': 'application/json' }),
         },
-        body: body === undefined ? undefined : JSON.stringify(body),
+        body: body === undefined || form ? (body as FormData | undefined) : JSON.stringify(body),
         signal,
       });
     } catch (cause) {
@@ -125,17 +146,18 @@ export function createClient({ baseUrl, token, timeoutMs = TIMEOUT_MS }: ClientC
   /**
    * Collects every page, newest first. Pages by offset rather than following `next`, whose
    * absolute URL can carry the wrong scheme behind a TLS-terminating proxy. An entry added between
-   * pages shifts the next page by one, so its repeat is dropped by id.
+   * pages shifts the next page by one, so its repeat is dropped by id (`key`).
    */
-  async function collect<T extends { id: number }>(
+  async function collect<T>(
     path: string,
     query: Record<string, string | number>,
     { pageSize = 100, signal }: CollectOptions = {},
+    key: (item: T) => unknown = (item) => (item as { id: number }).id,
   ): Promise<T[]> {
-    const byId = new Map<number, T>();
+    const byId = new Map<unknown, T>();
     for (let offset = 0; ; ) {
       const page = await request<Page<T>>(path, { query: { ...query, limit: pageSize, offset }, signal });
-      for (const item of page.results) if (!byId.has(item.id)) byId.set(item.id, item);
+      for (const item of page.results) if (!byId.has(key(item))) byId.set(key(item), item);
       offset += page.results.length;
       if (page.results.length === 0 || offset >= page.count) return [...byId.values()];
     }
@@ -180,10 +202,15 @@ export function createClient({ baseUrl, token, timeoutMs = TIMEOUT_MS }: ClientC
     listMeasurements: <K extends MeasurementKind>(kind: K, child: number, options?: CollectOptions) =>
       collect<Measurement<K>>(MEASUREMENT_PATHS[kind], { child }, options),
 
-    createNote: (note: NewNote) => post<Note>('notes/', note),
-    /** Tags replace the note's tags: Undo of a skip retags it, as parents can't delete notes. */
-    updateNoteTags: (id: number, tags: string[]) => request<Note>(`notes/${id}/`, { method: 'PATCH', body: { tags } }),
-    listNotes: (query: NoteQuery, options?: CallOptions) => collect<Note>('notes/', query, options),
+    createNote: (note: NewNote) => post<Note>('notes/', noteBody(note)),
+    /**
+     * Changes only the given fields. Parents can't delete notes, so skip Undo and ticking a to-do
+     * item off retag instead.
+     */
+    updateNote: (id: number, patch: NotePatch) => request<Note>(`notes/${id}/`, { method: 'PATCH', body: noteBody(patch) }),
+    listNotes: (query: NoteQuery, options?: CollectOptions) => collect<Note>('notes/', query, options),
+    /** Every tag; needs `core.view_tag` (403 without). */
+    listTags: (options?: CollectOptions) => collect<Tag>('tags/', {}, options, (tag) => tag.slug),
 
     /** The newest entry of one kind, or null if there is none. */
     getLatestEntry: <K extends EntryKind>(kind: K, child: number, options?: CallOptions) => latest(kind, child, options),

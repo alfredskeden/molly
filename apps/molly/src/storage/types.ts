@@ -9,6 +9,7 @@ import {
   type ChildrenPrefs,
   type GuideRegion,
   type NapWindow,
+  type TodoSeen,
 } from '@molly/core';
 
 import { isThemeKey, type ThemeKey } from '@/theme/themes';
@@ -44,6 +45,7 @@ export type ThemePreference = (typeof THEME_PREFERENCES)[number];
  * reminder): read them through `childPrefs` from `@molly/core`, which fills what's missing with defaults.
  * `guideRegion` is whose advice the Development guide follows, `guideNoteSeen` whether its first-open note
  * was read. `feedTimer` is Time feeds: on, Feed starts a timer; off (the default), a tap saves a finished feed.
+ * `todoSeen` is what this device has seen of the to-do list, for "New" (null until the list first loads).
  */
 export type Settings = {
   childId: number | null;
@@ -57,6 +59,7 @@ export type Settings = {
   guideRegion: GuideRegion;
   guideNoteSeen: boolean;
   feedTimer: boolean;
+  todoSeen: TodoSeen | null;
 };
 
 export const SETTINGS_KEY = 'molly.settings';
@@ -73,6 +76,7 @@ export const DEFAULT_SETTINGS: Settings = {
   guideRegion: 'sweden',
   guideNoteSeen: false,
   feedTimer: false,
+  todoSeen: null,
 };
 
 export function parseSettings(stored: string | null): Settings {
@@ -92,12 +96,13 @@ export function parseSettings(stored: string | null): Settings {
     guideRegion: isGuideRegion(value.guideRegion) ? value.guideRegion : DEFAULT_SETTINGS.guideRegion,
     guideNoteSeen: typeof value.guideNoteSeen === 'boolean' ? value.guideNoteSeen : DEFAULT_SETTINGS.guideNoteSeen,
     feedTimer: typeof value.feedTimer === 'boolean' ? value.feedTimer : DEFAULT_SETTINGS.feedTimer,
+    todoSeen: isTodoSeen(value.todoSeen) ? value.todoSeen : DEFAULT_SETTINGS.todoSeen,
   };
 }
 
 /**
  * The theme, the notification choices, the guide's region and note and Time feeds belong to the device, not the account: kept.
- * The children's preferences go with the account: their ids belong to one Baby Buddy.
+ * The children's preferences and the to-do "seen" mark go with the account: their ids belong to one Baby Buddy.
  */
 export function settingsAfterSignOut(settings: Settings): Settings {
   const { theme, notifications, notificationPrompted, haptics, guideRegion, guideNoteSeen, feedTimer } = settings;
@@ -183,6 +188,15 @@ function isBottleDefaults(value: unknown): value is BottleDefaults {
     isRecord(value) &&
     FEEDING_TYPES.includes(value.type as FeedingType) &&
     (value.amount === undefined || (typeof value.amount === 'number' && value.amount > 0))
+  );
+}
+
+function isTodoSeen(value: unknown): value is TodoSeen {
+  return (
+    isRecord(value) &&
+    typeof value.mark === 'number' &&
+    Array.isArray(value.saved) &&
+    value.saved.every((id) => typeof id === 'number')
   );
 }
 

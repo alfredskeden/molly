@@ -137,14 +137,33 @@ export type Medication = {
 /** Omit `time` for "now", as for `NewChange`. */
 export type NewMedication = { child: number; name: string; time?: string; notes?: string };
 
-/** A Baby Buddy note. Molly only writes skip notes, tagged `molly-skip`. */
-export type Note = { id: number; child: number; note: string; time: string; tags: string[] };
+/**
+ * A Baby Buddy note: skip notes (`molly-skip`) and to-do items (`molly-todo`, `molly-todo-done`).
+ * `image` is an absolute URL built from Baby Buddy's request host, so it may carry the wrong scheme
+ * behind a proxy.
+ */
+export type Note = { id: number; child: number; note: string; time: string; tags: string[]; image: string | null };
+
+/**
+ * A photo to upload, saved by Baby Buddy under `name`. `blob`: a web `Blob`, or on React Native an
+ * `expo-file-system` `File` (Expo's fetch can't send React Native's `{ uri }` form parts).
+ */
+export type NoteImage = { name: string; blob: Blob };
 
 /** Omit `time` for "now". */
-export type NewNote = { child: number; note: string; time?: string; tags: string[] };
+export type NewNote = { child: number; note: string; time?: string; tags: string[]; image?: NoteImage };
 
-/** Note list filters: `tags` (one tag name), `date_min` (ISO 8601 with offset). */
-export type NoteQuery = { child: number; tags?: string; date_min?: string; date_max?: string };
+/** `tags` replaces the note's tags; `image: null` removes the photo, a `NoteImage` replaces it. */
+export type NotePatch = { note?: string; time?: string; tags?: string[]; image?: NoteImage | null };
+
+/**
+ * Note list filters: `tags` (tag names, comma-separated, matching any), `date_min` / `date_max`
+ * (ISO 8601 with offset). Without `child`, every child's notes.
+ */
+export type NoteQuery = { child?: number; tags?: string; date_min?: string; date_max?: string };
+
+/** A Baby Buddy tag (`GET /api/tags/`). Names are case-sensitive and unique. */
+export type Tag = { slug: string; name: string; color: string; last_used: string };
 
 export type EntryKind = 'sleep' | 'feeding' | 'change' | 'medication';
 
