@@ -47,6 +47,13 @@ Probed with `parent_a` / `parent_b`; probe notes, tags and image files deleted a
 - New packages (all `npx expo install`, SDK 57): `expo-image-picker` ~57.0.20 (config plugin: no microphone), `expo-image-manipulator` ~57.0.21, `expo-file-system` ~57.0.7, `expo-crypto` ~57.0.4 (random photo names).
 - Native alarms: `Notifier.kt` has one `Alarm` kind per reminder (nap: child id, to-do: note id) sharing the two-alarm schedule and "rang" key; the nap keys (`nap:<child>`, `napRung:<child>`) and request codes are unchanged. To-do reminders are notification id 6, tagged with the note id, channel `molly.todo`, tap opens `molly://todo`.
 
+## Checked on emulator-5554 (2026-10-25)
+
+- Reminder for an item at 18:57 rang at 17:57 on `molly.todo` (importance 3, no sound): header "Molly · To-do", title "Pick up prescription · 18:57", text "Pharmacy"; a tap opened the list (`molly://todo`, cold start too). A date-only item for tomorrow had its alarm at 19:00 today; ticking it off as the other parent removed it after the next poll. The bell shows only while a reminder is ahead.
+- Camera (permission prompt) and Library (Android photo picker, no prompt) both upload `<32 hex>.jpg`, 1200×1600 and 712×1600. **Bug found and fixed:** `File.move()` leaves the moved `File` object on the old path, so the sheet's thumbnail was blank (and the upload would have failed); the code now moves into the destination `File` and uses that.
+- The emulator had notifications denied, so the first alarm rang into nothing and was marked rung; a reminder that rings with notifications off isn't shown later. Same as nap reminders.
+- Not checked by hand: pinch zoom (adb can't pinch), nap reminders after the alarm refactor (the shared schedule and ring path ran for the to-do reminder; nap keys and request codes are unchanged), the look in every theme.
+
 ## Open
 
 - None.

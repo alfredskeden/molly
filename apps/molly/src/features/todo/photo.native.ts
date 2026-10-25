@@ -27,8 +27,9 @@ export async function pickPhoto(source: PhotoSource): Promise<PickedPhoto | null
   const resize = fitLongEdge(asset.width, asset.height);
   if (resize) context.resize(resize);
   const saved = await (await context.renderAsync()).saveAsync({ compress: PHOTO_QUALITY, format: SaveFormat.JPEG });
-  // Expo's fetch sends a File under its own name, so the file itself gets the random one.
-  const file = new File(saved.uri);
-  file.move(new File(Paths.cache, photoName(getRandomBytes(16))));
+  // Expo's fetch sends a File under its own name, so the file itself gets the random one. The moved
+  // File object keeps its old path: use the destination's.
+  const file = new File(Paths.cache, photoName(getRandomBytes(16)));
+  new File(saved.uri).move(file);
   return { uri: file.uri, image: { name: file.name, blob: file } };
 }
