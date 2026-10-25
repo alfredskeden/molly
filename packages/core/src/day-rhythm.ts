@@ -1,7 +1,7 @@
 import type { Sleep } from '@molly/api';
 
 import { median } from './median';
-import { type NapWindow } from './nap';
+import { minutesOf, type NapWindow } from './nap';
 import { ageInMonths } from './sleep-guide';
 
 const MINUTE_MS = 60 * 1000;
@@ -178,10 +178,4 @@ export function clockMinutes(time: Date, day: Date): number {
 
 function clamp(minutes: number, range: { from: number; to: number }): number {
   return Math.min(range.to, Math.max(range.from, minutes));
-}
-
-/** `HH:MM` as minutes past midnight. */
-function minutesOf(clock: string): number {
-  const [hours = 0, minutes = 0] = clock.split(':').map(Number);
-  return hours * 60 + minutes;
 }

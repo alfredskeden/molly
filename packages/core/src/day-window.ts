@@ -2,7 +2,7 @@ import type { Sleep, Timer } from '@molly/api';
 
 import { firstWake, minutesPast, type DayRhythm } from './day-rhythm';
 import type { EntriesByKind } from './latest';
-import { atClock, isNightSleep, type NapWindow } from './nap';
+import { atClock, isNightSleep, minutesOf, type NapWindow } from './nap';
 
 const MINUTE_MS = 60 * 1000;
 /** The strip always runs at least this far past now. */
@@ -140,10 +140,15 @@ function dayOn(sleeps: Sleep[], rhythm: DayRhythm, day: Date, days: number, now:
   return { midnight, range, wake, naps: bed < 0 ? after : after.slice(0, bed), bedtime: after[bed] ?? null };
 }
 
-/** The clock range a day's morning wake may fall in: around the usual wake, `before` earlier and `after` later. */
+/**
+ * The clock range a day's morning wake may fall in: from `before` ahead of the earlier of the usual
+ * wake and the setting's "Day starts", to `after` past the later one, so a wake near either counts.
+ */
 function wakeRange(rhythm: DayRhythm, day: Date, days: number): Interval {
   const { before, after } = rhythm.band;
-  return { start: minutesPast(day, days, rhythm.wake - before), end: minutesPast(day, days, rhythm.wake + after) };
+  const setting = minutesOf(rhythm.napWindow.start);
+  const [earlier, later] = [Math.min(rhythm.wake, setting), Math.max(rhythm.wake, setting)];
+  return { start: minutesPast(day, days, earlier - before), end: minutesPast(day, days, later + after) };
 }
 
 /**

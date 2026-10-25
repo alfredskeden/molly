@@ -48,6 +48,20 @@ Nothing to remove: the change widens one function and adds a display. Items fold
 - `CLAUDE.md:63` describes the morning wake as "near the usual wake": step 6.
 - `plans/implan-day-night/MAIN.md` / `NOTES.md` describe the range as around the usual wake only. They're history; step 6 adds a pointer in its `NOTES.md` rather than rewriting.
 
+## Replay check (step 2, 2026-10-25)
+
+`pnpm replay:fixtures` with each setting, before the change and after it: the "new" columns (today's rule) are identical, right · wrong · none for wake / bedtime. No drop, nothing to tune.
+
+| Setting | 2 months | 4–5 months | 10 months | 18 months |
+| --- | --- | --- | --- | --- |
+| 07:00–19:00 | 73 · 1 · 1 / 71 · 3 · 1 | 75 · 0 · 0 / 75 · 0 · 0 | 75 · 0 · 0 / 75 · 0 · 0 | 75 · 0 · 0 / 75 · 0 · 0 |
+| 06:00–18:00 | 73 · 1 · 1 / 71 · 3 · 1 | 75 · 0 · 0 / 75 · 0 · 0 | 75 · 0 · 0 / 75 · 0 · 0 | 75 · 0 · 0 / 75 · 0 · 0 |
+| 08:30–20:00 | 73 · 1 · 1 / 71 · 3 · 1 | 75 · 0 · 0 / 75 · 0 · 0 | 73 · 2 · 0 / 75 · 0 · 0 | 74 · 0 · 1 / 74 · 0 · 1 |
+
+Matches the `implan-day-night` "Tuning" numbers. The feared case (an early setting reaching an early waking that stays up the threshold) doesn't occur on these fixtures: their early wakings end back asleep within the threshold.
+
+`minutesOf` (`HH:MM` → minutes) was private in both `nap.ts` and `day-rhythm.ts`; it's now exported from `nap.ts` and used by both and by `wakeRange`.
+
 ## Open
 
 - None.
