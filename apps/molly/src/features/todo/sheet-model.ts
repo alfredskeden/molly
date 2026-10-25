@@ -1,4 +1,4 @@
-import { clockText, reminderAt, type TodoDue } from '@molly/core';
+import { clockText, reminderAt, shortDate, type TodoDue } from '@molly/core';
 
 /** The sheet's date choice: none, Today, Tomorrow, or another day stepped a day at a time. */
 export type TodoDay = 'none' | 'today' | 'tomorrow' | 'other';
@@ -14,7 +14,6 @@ export type TodoDraftState = {
 };
 
 const DAY_MINUTES = 24 * 60;
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 const startOfDay = (time: Date) => new Date(time.getFullYear(), time.getMonth(), time.getDate());
 const addDays = (time: Date, days: number) => new Date(time.getFullYear(), time.getMonth(), time.getDate() + days);
@@ -56,9 +55,6 @@ export function stepDay(draft: TodoDraftState, days: number, now: Date): TodoDra
 export function stepTime(draft: TodoDraftState, minutes: number): TodoDraftState {
   return { ...draft, minutes: Math.min(DAY_MINUTES - 15, Math.max(0, draft.minutes + minutes)) };
 }
-
-/** `27 Oct`. */
-export const shortDate = (time: Date) => `${time.getDate()} ${MONTHS[time.getMonth()]}`;
 
 /** The Android reminder line under the date: when this phone will remind, or none once that's past. */
 export function reminderLine(due: TodoDue | null, now: Date): string | null {

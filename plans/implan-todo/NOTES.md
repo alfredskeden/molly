@@ -39,6 +39,14 @@ Probed with `parent_a` / `parent_b`; probe notes, tags and image files deleted a
 - `expo-camera` is installed (onboarding QR scan); no image picker or manipulator yet. `expo-image` is installed.
 - Web CSP: `docker/nginx.conf.template:13` (`img-src 'self' data: blob:`). Access bypass text: `docs/setup.md:53`.
 
+## Found while building (2026-10-25)
+
+- **Expo's `fetch` can't send React Native's `{ uri, name, type }` form parts** (`expo/src/winter/fetch/convertFormData.ts`: "`uri` is not supported"). The app's global `fetch` is `expo/fetch`, so `NoteImage` is `{ name, blob }` only: on Android the blob is an `expo-file-system` `File` (it implements `Blob` and has `bytes()`), which Expo's FormData sends under the file's own name, so the downscaled file is moved to `<random>.jpg` first. On the web it's a real `Blob` built from the manipulator's base64 (a `fetch` of the `blob:` URL would break the CSP's `connect-src`).
+- `GET /api/tags/` has no `id`, so the client's page collector takes a key (`slug` for tags).
+- The "seen" mark lives in the device settings (`todoSeen`), dropped on sign-out with the children's preferences. A device without one marks everything seen on the first load, so a fresh install has nothing "New".
+- New packages (all `npx expo install`, SDK 57): `expo-image-picker` ~57.0.20 (config plugin: no microphone), `expo-image-manipulator` ~57.0.21, `expo-file-system` ~57.0.7, `expo-crypto` ~57.0.4 (random photo names).
+- Native alarms: `Notifier.kt` has one `Alarm` kind per reminder (nap: child id, to-do: note id) sharing the two-alarm schedule and "rang" key; the nap keys (`nap:<child>`, `napRung:<child>`) and request codes are unchanged. To-do reminders are notification id 6, tagged with the note id, channel `molly.todo`, tap opens `molly://todo`.
+
 ## Open
 
 - None.

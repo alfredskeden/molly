@@ -60,7 +60,7 @@ TDD where the project uses it: `packages/core` unit tests (Given / When / Then, 
   - `listTags()` (`/api/tags/`, paged; `Tag = { slug, name, color, last_used }`).
   - `e2e/seed.py`: both parents get `core.view_tag`.
   - Replace `updateNoteTags(id, tags)` with `updateNote(id, patch)` (`note`, `time`, `tags`, `image: null`); move its one caller, skip Undo (`apps/molly/src/app/(main)/index.tsx:460`).
-  - `createNote` / `updateNote` send multipart when an image is given (`NoteImage`: a web `Blob` or React Native's `{ uri, name, type }`, appended to `FormData` with tags repeated); JSON otherwise.
+  - `createNote` / `updateNote` send multipart when an image is given (`NoteImage`: `{ name, blob }`, a web `Blob` or on Android an `expo-file-system` `File`, since Expo's fetch can't send `{ uri }` parts; appended to `FormData` with tags repeated); JSON otherwise.
   - Tests: `listTags` returns a tag a note created; future `time` round-trips; OR filter without `child` returns two children's notes; image upload returns a `/media/notes/images/` URL; `image: null` removes it; a JSON tag patch keeps it; a non-image is `validation`.
 - [x] **2. To-do rules** (`packages/core/src/todo.ts`, unit-tested). Pure functions over notes and `now`:
   - `todoItems(notes)`: note → item (text, label, due kind and moment, done day, image path, id, child).

@@ -1,4 +1,4 @@
-import { clockText, labelFor, type TodoItem } from '@molly/core';
+import { clockText, labelFor, shortDate, type TodoItem } from '@molly/core';
 import { Image } from 'expo-image';
 import { useState } from 'react';
 import { TextInput, View } from 'react-native';
@@ -18,7 +18,6 @@ import {
   draftDue,
   newTodoDraft,
   reminderLine,
-  shortDate,
   stepDay,
   stepTime,
   todoDraftOf,

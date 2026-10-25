@@ -59,6 +59,9 @@ const startOfDay = (time: Date) => new Date(time.getFullYear(), time.getMonth(),
 const addDays = (time: Date, days: number) => new Date(time.getFullYear(), time.getMonth(), time.getDate() + days);
 const daysBetween = (from: Date, to: Date) => Math.round((startOfDay(to).getTime() - startOfDay(from).getTime()) / DAY_MS);
 
+/** `27 Oct`. */
+export const shortDate = (time: Date) => `${time.getDate()} ${MONTHS[time.getMonth()]}`;
+
 /** The local date, `2026-10-25`. */
 export function localDay(time: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -211,7 +214,7 @@ export function dueText(item: TodoItem, now: Date): string {
   const time = item.due.kind === 'time' ? clockText(item.due.at) : null;
   const named = days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : days === -1 ? 'Yesterday' : null;
   const date =
-    named ?? (days > 1 && days < 14 ? `in ${days} days` : `${item.due.at.getDate()} ${MONTHS[item.due.at.getMonth()]}`);
+    named ?? (days > 1 && days < 14 ? `in ${days} days` : shortDate(item.due.at));
   const text = time ? `${date}${named ? ' ' : ' · '}${time}` : date;
   return isOverdue(item, now) ? `${text} · overdue` : text;
 }
