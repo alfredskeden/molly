@@ -18,6 +18,8 @@ PARENT_PERMS = [
     ("babybuddy", "view_settings"),
     ("core", "change_tag"),
     ("core", "add_tag"),
+    # Listing to-do labels (/api/tags/).
+    ("core", "view_tag"),
     ("core", "delete_sleep"),
     ("core", "delete_feeding"),
     ("core", "delete_diaperchange"),

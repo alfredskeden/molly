@@ -55,7 +55,7 @@ Rules that follow from it:
 
 TDD where the project uses it: `packages/core` unit tests (Given / When / Then, zero → one → many, then boundaries and errors), `packages/api` integration tests against the test Baby Buddy (`pnpm bb:up && pnpm bb:seed`). Screens: Playwright against the web image. Visuals and Android-only behaviour: manual, on `emulator-5554`. Fixtures are made up.
 
-- [ ] **1. Notes client (refactor-first, then new).** `packages/api`, integration tests in `notes.int.test.ts`.
+- [x] **1. Notes client (refactor-first, then new).** `packages/api`, integration tests in `notes.int.test.ts`.
   - `Note` gains `image: string | null`; `NoteQuery.child` becomes optional and `tags` documents the comma OR list.
   - `listTags()` (`/api/tags/`, paged; `Tag = { slug, name, color, last_used }`).
   - `e2e/seed.py`: both parents get `core.view_tag`.

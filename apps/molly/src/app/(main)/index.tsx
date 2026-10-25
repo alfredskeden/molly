@@ -457,7 +457,7 @@ export default function Dashboard() {
     const undo = await optimistic.unskipped(note.id);
     haptic(HAPTICS.cancel);
     try {
-      await client.updateNoteTags(note.id, [UNDONE_SKIP_TAG]);
+      await client.updateNote(note.id, { tags: [UNDONE_SKIP_TAG] });
       toast({ text: 'Skip undone', tone: 'sleep' });
     } catch (error) {
       undo();
