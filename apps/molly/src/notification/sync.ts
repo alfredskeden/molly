@@ -1,4 +1,6 @@
 // The lock-screen notification exists only on Android; see sync.android.ts.
+import type { TodoItem } from '@molly/core';
+
 import type { Settings } from '@/storage/types';
 import type { WidgetCache } from '@/widget/model';
 
@@ -7,6 +9,8 @@ import type { LiveUpdates, NotificationState, PermissionAnswer } from './model';
 export const hasNotifications = false;
 
 export async function syncNotifications(_cache: WidgetCache, _settings: Settings | null): Promise<void> {}
+
+export async function syncTodoReminders(_items: TodoItem[] | null): Promise<void> {}
 
 export function notificationsAllowed(): boolean {
   return false;

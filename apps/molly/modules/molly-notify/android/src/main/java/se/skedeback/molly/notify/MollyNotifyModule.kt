@@ -56,6 +56,15 @@ class NapReminderNotification : Record {
   @Field val avatarColor: String = ""
 }
 
+/** A to-do item's reminder, rung at `at` (epoch ms, also its key); `id` is the note id. */
+class TodoReminderNotification : Record {
+  @Field val id: Int = 0
+  @Field val title: String = ""
+  @Field val text: String = ""
+  @Field val at: Double = 0.0
+  @Field val color: String = "#000000"
+}
+
 class MollyNotifyModule : Module() {
   private val context: Context
     get() = appContext.reactContext?.applicationContext ?: throw Exceptions.ReactContextLost()
@@ -98,6 +107,11 @@ class MollyNotifyModule : Module() {
     /** Cancels the nap reminder alarm and notification of every child not listed. */
     AsyncFunction("keepOnlyNapReminders") { children: List<Int> ->
       Notifier.keepOnlyNapReminders(context, children)
+    }
+
+    /** Sets the to-do reminders ahead and cancels those of items not in `keep`; they post on `molly.todo`. */
+    AsyncFunction("syncTodoReminders") { reminders: List<TodoReminderNotification>, keep: List<Int> ->
+      Notifier.syncTodoReminders(context, reminders, keep)
     }
 
     /** False when the permission is denied or the parent blocked Molly's notifications in Android settings. */
