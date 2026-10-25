@@ -6,7 +6,9 @@
 - **Done day as a tag.** Ticking off adds `molly-done-YYYY-MM-DD` (the ticking phone's local date) next to `molly-todo-done`, so both phones hide it after the same midnight. Costs one Baby Buddy tag per day something is ticked; Molly never shows these as labels.
 - **Photos: random file name, downscaled, public by URL.** Baby Buddy serves `/media/` with no auth (see below), so the URL is the only secret. Docs add a Cloudflare Access bypass for `/media/notes/images/*`; the web CSP's `img-src` gets the Baby Buddy origin.
 - **Date-only reminders at 19:00 the evening before**; items with a time remind 1 h before.
-- **Labels come from the to-do notes, not `/api/tags/`** (parents can't list tags, below). A label exists while any to-do note (open or done, any age) carries it.
+- **Labels are listed with `/api/tags/`, and `core.view_tag` is required** (admins have it; setup asks parents for it). No fallback to labels read from the notes: without the permission the chips are Buy and Appointments only, with a hint.
+- **A new label's tag is created on Save** (with the note), not when "+ New label" → Add is tapped.
+- **Family label cards show only with items** (open or done today); Buy and Appointments always.
 - Label tag name: `To-do: <label>` (readable in Baby Buddy's own UI). Matched case-insensitively, so typing "pharmacy" reuses "Pharmacy". "Other", "Buy" and "Appointments" are reserved names (the last two are built in).
 - Flat plan, steps in `MAIN.md`.
 
@@ -16,7 +18,9 @@ Probed with `parent_a` / `parent_b`; probe notes, tags and image files deleted a
 
 - **`POST /api/notes/` accepts a future `time`** (the Note model has no `clean()`, unlike medication). Returned in UTC.
 - **`?tags=a,b` is an OR filter** (`CharInFilter` on `tags__name`), and `child` is optional: `?tags=molly-todo,molly-todo-done` returns every child's to-do notes in one list. Default order `-time`; `ordering=time` works.
-- **`GET /api/tags/` is 403 for parents** (no `core.view_tag`). Creating a tag by naming it on a note works (`core.add_tag`), as for `molly-skip`.
+- **`GET /api/tags/` is 403 without `core.view_tag`** (the seeded parents lack it; admins list fine). Paged; filter `?name=` is exact. Each tag has `slug`, `name`, `color` (random hex), `last_used`.
+- Creating a tag works for parents both by naming it on a note and by `POST /api/tags/ {"name"}` (201, `core.add_tag`).
+- **Tag names are case-sensitive**: `To-do: Pharmacy` and `To-do: pharmacy` became two tags (`to-do-pharmacy`, `to-do-pharmacy_1`).
 - Tag names may hold spaces and a colon (`To-do: Appointments` → slug `to-do-appointments`). Tag names are unique, ≤100 chars.
 - **Images**: multipart `POST` with `image` returns `"image": "http://<host>/media/notes/images/<file name>"`, an absolute URL built from the request's host. The file name is the uploaded one; a clash gets a random suffix (`3f2a9c_bFbimCa.png`). Multipart `tags` repeats the field per tag.
 - **`/media/` is served by the image's nginx with no auth** (`location ^~ /media/` in `/config/nginx/site-confs/default.conf`): `GET` without a token is 200.
@@ -24,7 +28,7 @@ Probed with `parent_a` / `parent_b`; probe notes, tags and image files deleted a
 - **Removed or replaced image files stay on disk**, and deleting a note doesn't delete its file. Molly can't clean them up (no file API); say so in the docs.
 - A non-image upload is 400 `{"image": ["Upload a valid image. …"]}`. No size limit (`client_max_body_size 0`); Molly downscales anyway.
 - `note` takes 2000+ characters (TextField, no limit).
-- Parents' existing permissions are enough: `add_note`, `change_note` (caregiver group), `add_tag` / `change_tag` (setup step 10). `DELETE` stays 403 (`core.delete_note`), hence ticking by retag.
+- Parents' existing permissions cover the notes: `add_note`, `change_note` (caregiver group), `add_tag` / `change_tag` (setup step 10). Listing labels adds `core.view_tag`. `DELETE` stays 403 (`core.delete_note`), hence ticking by retag.
 
 ## Code pointers found while planning
 
