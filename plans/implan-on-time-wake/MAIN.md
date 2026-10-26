@@ -46,7 +46,7 @@ TDD in `packages/core` (Vitest, Given / When / Then, zero → one → many, then
   - **Plan**: at 08:10 after an on-time wake `nextSleep` / `dayPlan` give a first nap (no longer null as the night); after the undo, none.
 - [x] **3. Replay plans an on-time day at its wake** (`replay.ts` `replayPlans`): `known` is the wake for an on-time wake, `wake + awake` otherwise. Reuse the on-time check from step 1 (export it from `day-rhythm.ts`) rather than repeating it. Rewrite the comments at the `replayPlans` doc and the "only known once" line. `day-fixtures.test.ts` and `replay*.test.ts` green. A score that moves more than a hair is something to report, not tune.
 - [x] **4. Whole core suite.** An existing expectation may change only because an end within 30 min of the usual wake now starts the day before the threshold. Any other change is a regression: stop and bring it to the developer. In the REFACTOR step, rewrite the doc comments that now lie: `firstWake`, `dayOn` ("after which the baby stayed awake the band's threshold"), `AgeBand` (`awake`).
-- [ ] **5. App unit tests** (`apps/molly/src/widget/model.test.ts`), no production change expected:
+- [x] **5. App unit tests** (`apps/molly/src/widget/model.test.ts`), no production change expected:
   - `nightFrom` in the snapshot for a sleep started 10 min after an on-time wake → its start (a Stop saves night).
   - `remindedCache` after stopping the night at an on-time wake, with Vitamin D given yesterday and not today → reminder due, `cycleStart` = the wake.
 - [ ] **6. Playwright** (`e2e/tests/day-night.spec.ts`, using `seedUsualDays` / `clockAt` / `addSleep`). Seed usual days waking 08:08, last night 21:00 → yesterday 08:05:
