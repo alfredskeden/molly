@@ -1,6 +1,6 @@
 import type { Sleep, Timer } from '@molly/api';
 
-import { firstWake, minutesPast, type DayRhythm } from './day-rhythm';
+import { firstWake, minutesPast, onTimeOn, type DayRhythm } from './day-rhythm';
 import type { EntriesByKind } from './latest';
 import { atClock, isNightSleep, minutesOf, type NapWindow } from './nap';
 
@@ -137,8 +137,7 @@ type Found = { midnight: Date; range: Interval; wake: Date | null; naps: Sleep[]
 function dayOn(sleeps: Sleep[], rhythm: DayRhythm, day: Date, days: number, now: Date): Found {
   const midnight = minutesPast(day, days, 0);
   const range = wakeRange(rhythm, day, days);
-  const onTime = { at: minutesPast(day, days, rhythm.wake), within: rhythm.tuning.onTime };
-  const wake = firstWake(sleeps, range, rhythm.band.awake, now, onTime);
+  const wake = firstWake(sleeps, range, rhythm.band.awake, now, onTimeOn(rhythm, day, days));
   if (!wake) return { midnight, range, wake: null, naps: [], bedtime: null };
   const nextMorning = wakeRange(rhythm, day, days + 1).start;
   const after = sleeps

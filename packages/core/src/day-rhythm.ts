@@ -161,6 +161,11 @@ export function firstWake(
   return wake === undefined ? null : new Date(wake);
 }
 
+/** The usual wake on the day some days from `day`, and how close (`onTime`) a wake must be to it to start the day at once. */
+export function onTimeOn(rhythm: DayRhythm, day: Date, days = 0): { at: Date; within: number } {
+  return { at: minutesPast(day, days, rhythm.wake), within: rhythm.tuning.onTime };
+}
+
 /** Whether a wake is within `within` minutes of the usual wake `at`, either side. */
 export function isOnTime(wake: Date, onTime: { at: Date; within: number }): boolean {
   return Math.abs(wake.getTime() - onTime.at.getTime()) <= onTime.within * MINUTE_MS;
