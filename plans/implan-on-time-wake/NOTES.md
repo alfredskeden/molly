@@ -19,9 +19,16 @@
 - `replayPlans` (`packages/core/src/replay.ts`) plans each day at `wake + awake` ("known"). On-time wakes are now known at the wake.
 - Child screen copy "A morning wake near Day starts or the learned wake starts the day." stays true; no copy change.
 
+## Found during the work (2026-10-26)
+
+- `firstWake` ignores an end at exactly `now` (the sleep still runs then), so `replayPlans` plans an on-time day a minute after its wake, not at it. At the wake itself the plan is empty.
+- `replayPlans`' on-time check uses the rhythm as known at the wake (`dayRhythm(knownAt(sleeps, wake), …, wake)`), as the live app would. The helper `onTimeOn(rhythm, day, days)` (`day-rhythm.ts`) is shared with `dayOn`.
+- `pnpm replay:fixtures`: identical before and after (past days don't move). The `replayPlans` test is unchanged.
+- E2E: the undo needs a logged wake on the day before last night. Without one, `isNight` falls back to the clock and the 08:15 sleep saves as a nap (unchanged behaviour); the spec seeds that day.
+
 ## Spotted, not in scope
 
-- None.
+- E2E specs that seed "last night" on yesterday break on the day after a DST change (yesterday 2026-10-25 here: the night really is an hour longer). Seven fail on 2026-10-26 with or without this change: `day-night` "last night ends at an early wake", `recent-days` 1e / nap in progress / drank / no ml line, `ring` 1f / a past night. They pass again on other days.
 
 ## Open
 
