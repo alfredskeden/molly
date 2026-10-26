@@ -130,13 +130,15 @@ type Found = { midnight: Date; range: Interval; wake: Date | null; naps: Sleep[]
 /**
  * A calendar day as logged. Its morning wake is the first sleep end within the age band's range around
  * the usual wake and "Day starts" (`wakeRange`) after which the baby stayed awake the band's
- * threshold (`firstWake`); an end that fails is a night waking. Then every sleep from
+ * threshold (`firstWake`), or, within `onTime` of the usual wake, at once unless the baby was back
+ * asleep within that threshold; an end that fails is a night waking. Then every sleep from
  * the wake to the next day's range, in order, split at the bedtime (`isBedtime`).
  */
 function dayOn(sleeps: Sleep[], rhythm: DayRhythm, day: Date, days: number, now: Date): Found {
   const midnight = minutesPast(day, days, 0);
   const range = wakeRange(rhythm, day, days);
-  const wake = firstWake(sleeps, range, rhythm.band.awake, now);
+  const onTime = { at: minutesPast(day, days, rhythm.wake), within: rhythm.tuning.onTime };
+  const wake = firstWake(sleeps, range, rhythm.band.awake, now, onTime);
   if (!wake) return { midnight, range, wake: null, naps: [], bedtime: null };
   const nextMorning = wakeRange(rhythm, day, days + 1).start;
   const after = sleeps

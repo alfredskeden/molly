@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import { change, feeding, sleep } from '../test/fixtures';
+import { dayPlan } from './day-plan';
 import { dayRhythm } from './day-rhythm';
 import { dayWindow, isNight, nightFrom, previousWindow, windowsBefore } from './day-window';
 import { DEFAULT_NAP_WINDOW, isNightSleep } from './nap';
+import { nextSleep } from './next-sleep';
 import { windowStats } from './ring';
 
 const none = { sleep: [], feeding: [], change: [], medication: [] };
@@ -1270,5 +1272,207 @@ describe('a night with no bedtime logged', () => {
       { kind: 'night', start: on(19, 18, 30), end: on(20, 7, 0) },
       { kind: 'day', start: on(19, 7, 0), end: on(19, 18, 30) },
     ]);
+  });
+});
+
+describe('a wake at the usual time', () => {
+  // Usually up at 08:08 after a night from 21:00, first nap 90 min later: the 3–6 month band, 60 min awake.
+  const usual = usualDays([21, 0], [8, 8], [[[9, 38], [10, 38]], [[13, 30], [14, 30]]]);
+  const rhythmAt = (sleeps: ReturnType<typeof sleep>[], now: Date) => dayRhythm(sleeps, fiveMonths, napWindow, now);
+  const windowAt = (sleeps: ReturnType<typeof sleep>[], now: Date, running: string | null = null) =>
+    dayWindow({ ...none, sleep: sleeps }, running === null ? noTimer : sleepTimer(running), rhythmAt(sleeps, now), now);
+
+  it('starts the day at once at an 08:05 wake', () => {
+    // Given
+    const sleeps = [...usual, sleep({ start: at(19, 21, 0), end: at(20, 8, 5) })];
+
+    // When
+    const window = windowAt(sleeps, on(20, 8, 8));
+
+    // Then
+    expect(window).toMatchObject({ kind: 'day', start: on(20, 8, 5), wake: on(20, 8, 5), clock: false });
+  });
+
+  it('is still the night 10 min after an early waking at 05:10', () => {
+    // Given
+    const sleeps = [...usual, sleep({ start: at(19, 21, 0), end: at(20, 5, 10) })];
+
+    // When
+    const window = windowAt(sleeps, on(20, 5, 20));
+
+    // Then
+    expect(window).toMatchObject({ kind: 'night', start: on(19, 21, 0) });
+  });
+
+  it('starts the day at once at a wake 30 min before or after the usual wake', () => {
+    // Given
+    const before = [...usual, sleep({ start: at(19, 21, 0), end: at(20, 7, 38) })];
+    const after = [...usual, sleep({ start: at(19, 21, 0), end: at(20, 8, 38) })];
+
+    // When
+    const windows = [windowAt(before, on(20, 7, 40)), windowAt(after, on(20, 8, 40))];
+
+    // Then
+    expect(windows).toMatchObject([
+      { kind: 'day', start: on(20, 7, 38) },
+      { kind: 'day', start: on(20, 8, 38) },
+    ]);
+  });
+
+  it('waits the threshold after a wake 31 min before or after the usual wake', () => {
+    // Given
+    const before = [...usual, sleep({ start: at(19, 21, 0), end: at(20, 7, 37) })];
+    const after = [...usual, sleep({ start: at(19, 21, 0), end: at(20, 8, 39) })];
+
+    // When
+    const windows = [windowAt(before, on(20, 7, 40)), windowAt(after, on(20, 8, 41))];
+
+    // Then
+    expect(windows).toMatchObject([
+      { kind: 'night', start: on(19, 21, 0) },
+      { kind: 'night', start: on(19, 21, 0) },
+    ]);
+  });
+
+  it('finds no wake at the usual time without a night before it', () => {
+    // Given
+    const noNight = usual.filter((entry) => Date.parse(entry.start) < on(19, 11).getTime());
+    const sleeps = [...noNight, sleep({ start: at(20, 6, 0), end: at(20, 8, 5) })];
+
+    // When
+    const window = windowAt(sleeps, on(20, 8, 8));
+
+    // Then
+    expect(window).toMatchObject({ kind: 'day', start: on(20, 7, 0), clock: true });
+  });
+
+  it('measures on time from "Day starts" under 3 months', () => {
+    // Given
+    const young = usualDays([20, 0], [6, 0], [[[7, 0], [8, 0]]]);
+    const onTime = [...young, sleep({ start: at(19, 20, 0), end: at(20, 7, 20) })];
+    const late = [...young, sleep({ start: at(19, 20, 0), end: at(20, 7, 31) })];
+    const rhythm = (sleeps: ReturnType<typeof sleep>[], now: Date) => dayRhythm(sleeps, '2026-07-20', napWindow, now);
+
+    // When
+    const windows = [
+      dayWindow({ ...none, sleep: onTime }, noTimer, rhythm(onTime, on(20, 7, 22)), on(20, 7, 22)),
+      dayWindow({ ...none, sleep: late }, noTimer, rhythm(late, on(20, 7, 35)), on(20, 7, 35)),
+    ];
+
+    // Then
+    expect(windows).toMatchObject([
+      { kind: 'day', start: on(20, 7, 20) },
+      { kind: 'night', start: on(19, 20, 0) },
+    ]);
+  });
+
+  it('measures on time from "Day starts" with fewer than 3 learned days', () => {
+    // Given
+    const sleeps = [...usualDays([21, 0], [8, 8], [[[9, 38], [10, 38]]], 18), sleep({ start: at(19, 21, 0), end: at(20, 6, 50) })];
+
+    // When
+    const window = windowAt(sleeps, on(20, 6, 55));
+
+    // Then
+    expect(window).toMatchObject({ kind: 'day', start: on(20, 6, 50) });
+  });
+
+  it('measures on time from the learned wake, not "Day starts", once a wake is learned', () => {
+    // Given
+    const eight = { start: '08:00', end: '19:00' };
+    const rhythm = { ...dayRhythm([], fiveMonths, eight, on(20, 12)), wake: 8 * 60 + 30, wakeLearned: true };
+    const early = [sleep({ start: at(19, 21, 0), end: at(20, 7, 40) })];
+    const near = [sleep({ start: at(19, 21, 0), end: at(20, 8, 5) })];
+
+    // When
+    const windows = [
+      dayWindow({ ...none, sleep: early }, noTimer, rhythm, on(20, 7, 45)),
+      dayWindow({ ...none, sleep: near }, noTimer, rhythm, on(20, 8, 10)),
+    ];
+
+    // Then
+    expect(windows).toMatchObject([{ kind: 'night' }, { kind: 'day', start: on(20, 8, 5) }]);
+  });
+
+  it('is the night again once the baby is back asleep 10 min after an 08:05 wake', () => {
+    // Given
+    const sleeps = [...usual, sleep({ start: at(19, 21, 0), end: at(20, 8, 5) })];
+
+    // When
+    const window = windowAt(sleeps, on(20, 8, 20), at(20, 8, 15));
+
+    // Then
+    expect(window).toMatchObject({ kind: 'night', start: on(19, 21, 0) });
+  });
+
+  it('saves a sleep from 08:15, 10 min after an 08:05 wake, as the night', () => {
+    // Given
+    const morning = [...usual, sleep({ start: at(19, 21, 0), end: at(20, 8, 5) })];
+    const backToSleep = sleep({ start: at(20, 8, 15), end: at(20, 9, 30) });
+    const sleeps = [...morning, backToSleep];
+
+    // When
+    const night = isNight({ start: on(20, 8, 15), end: on(20, 9, 30) }, sleeps, rhythmAt(sleeps, on(20, 9, 30)), on(20, 9, 30));
+    const from = nightFrom(on(20, 8, 15), morning, rhythmAt(morning, on(20, 8, 20)), on(20, 8, 20));
+
+    // Then
+    expect(night).toBe(true);
+    expect(from).toEqual(on(20, 8, 15));
+  });
+
+  it('starts the day at once when that sleep ends on time, at 08:35', () => {
+    // Given
+    const sleeps = [...usual, sleep({ start: at(19, 21, 0), end: at(20, 8, 5) }), sleep({ start: at(20, 8, 15), end: at(20, 8, 35) })];
+
+    // When
+    const window = windowAt(sleeps, on(20, 8, 36));
+
+    // Then
+    expect(window).toMatchObject({ kind: 'day', start: on(20, 8, 35) });
+  });
+
+  it('waits the threshold when that sleep ends late, at 09:30', () => {
+    // Given
+    const sleeps = [...usual, sleep({ start: at(19, 21, 0), end: at(20, 8, 5) }), sleep({ start: at(20, 8, 15), end: at(20, 9, 30) })];
+
+    // When
+    const windows = [windowAt(sleeps, on(20, 10, 29)), windowAt(sleeps, on(20, 10, 30))];
+
+    // Then
+    expect(windows).toMatchObject([
+      { kind: 'night', start: on(19, 21, 0) },
+      { kind: 'day', start: on(20, 9, 30) },
+    ]);
+  });
+
+  it('makes a sleep from 09:20, past the threshold after an 08:05 wake, a nap', () => {
+    // Given
+    const morning = [...usual, sleep({ start: at(19, 21, 0), end: at(20, 8, 5) })];
+    const sleeps = [...morning, sleep({ start: at(20, 9, 20), end: at(20, 10, 0) })];
+
+    // When
+    const night = isNight({ start: on(20, 9, 20), end: on(20, 10, 0) }, sleeps, rhythmAt(sleeps, on(20, 10, 0)), on(20, 10, 0));
+    const window = windowAt(morning, on(20, 9, 30), at(20, 9, 20));
+
+    // Then
+    expect(night).toBe(false);
+    expect(window).toMatchObject({ kind: 'day', start: on(20, 8, 5) });
+  });
+
+  it('plans a first nap 5 min after an 08:05 wake, and none once the baby is back asleep', () => {
+    // Given
+    const sleeps = [...usual, sleep({ start: at(19, 21, 0), end: at(20, 8, 5) })];
+    const [awake, asleep] = [on(20, 8, 10), on(20, 8, 20)];
+    const running = sleepTimer(at(20, 8, 15));
+
+    // When
+    const next = nextSleep(sleeps, noTimer, fiveMonths, rhythmAt(sleeps, awake), awake);
+    const plan = dayPlan(sleeps, noTimer, fiveMonths, rhythmAt(sleeps, awake), [], awake);
+    const undone = [nextSleep(sleeps, running, fiveMonths, rhythmAt(sleeps, asleep), asleep), dayPlan(sleeps, running, fiveMonths, rhythmAt(sleeps, asleep), [], asleep)];
+
+    // Then
+    expect(next).toMatchObject({ kind: 'nap' });
+    expect(plan[0]).toMatchObject({ kind: 'nap' });
+    expect(undone).toEqual([null, []]);
   });
 });

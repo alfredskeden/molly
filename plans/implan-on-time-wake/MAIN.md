@@ -33,13 +33,13 @@ Everything that goes through `dayOn` follows: `dayWindow` (the ring, header, wid
 
 TDD in `packages/core` (Vitest, Given / When / Then, zero → one → many, then boundaries and errors). Fixtures are made up, never real logs. The existing `day-window.test.ts` group "the morning wake by the child's rhythm" (a 5-month child, 3–6 month band, 60 min awake) is a good place to start. You need a learned wake for most tests (seed 3+ earlier days).
 
-- [ ] **1. An on-time wake starts the day at once** (`day-window.test.ts`, new group "a wake at the usual time"). Learned wake 08:08, night 05:10–08:05:
+- [x] **1. An on-time wake starts the day at once** (`day-window.test.ts`, new group "a wake at the usual time"). Learned wake 08:08, night 05:10–08:05:
   - **One (the bug)**: at 08:08 → `dayWindow` is `day`, `start` 08:05.
   - **Early waking keeps the threshold**: a sleep ending 05:10, at 05:20 with no new sleep → still the night.
   - **Boundaries**: end 30 min before and after the usual wake → on time; 31 min → waits the threshold. An end on time but the range check fails (no night before it) → no wake, as today.
   - **Setting stands in**: under 3 months, or fewer than 3 learned days: on time is measured from "Day starts". With a learned wake 08:30 and "Day starts" 08:00, an end at 07:40 is not on time (50 min from the learned wake): it waits the threshold.
   - **Learning unchanged**: `dayRhythm` learns the same usual wake and first wake window as before from fixtures that include on-time wakes (`day-rhythm.test.ts`).
-- [ ] **2. Back to sleep soon after is still the night** (same group):
+- [x] **2. Back to sleep soon after is still the night** (same group):
   - **Undo**: wake 08:05, sleep running from 08:15, at 08:20 → `dayWindow` is the night; `isNight` for the 08:15 sleep stopped at 09:30 → true; `nightFrom(08:15…)` → 08:15.
   - **The day starts again** at the end of that sleep: it ends 08:35 (on time) → day from 08:35 at once. It ends 09:30 (not on time) → night until 09:30 + `awake`, then day from 09:30.
   - **A nap after the threshold**: wake 08:05, sleep from 09:20 (past `awake`) → `isNight` false, the day stays from 08:05.
