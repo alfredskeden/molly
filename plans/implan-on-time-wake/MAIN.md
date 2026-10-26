@@ -54,7 +54,7 @@ TDD in `packages/core` (Vitest, Given / When / Then, zero → one → many, then
   - add a sleep 08:15–09:30 → saved `nap: false`, and at 09:35 the screen is back to the night.
   - Existing `day-night.spec.ts`, `ring.spec.ts`, `recent-days.spec.ts`, `next-sleep.spec.ts`, `day-plan.spec.ts` pass. Change an assertion only for the reason in step 4.
 - [x] **7. Docs.** `CLAUDE.md` "Day and night" bullet: "after which the baby stayed up the age's threshold (so the ring stays night for that first hour)" → add that an end within 30 min of the usual wake starts the day at once, unless the baby sleeps again within the threshold. `plans/implan-day-night/NOTES.md` "Morning" line: point here. `plans/README.md` row.
-- [ ] **8. Wrap-up.** `implan-cleanup` wrap-up sweep, `pnpm check` and `pnpm e2e` green, PR into `develop`, issue #29 updated with anything that changed during the work.
+- [x] **8. Wrap-up.** `implan-cleanup` wrap-up sweep, `pnpm check` and `pnpm e2e` green, PR into `develop`, issue #29 updated with anything that changed during the work.
 
 ## Decisions and why
 
