@@ -49,7 +49,7 @@ TDD in `packages/core` (Vitest, Given / When / Then, zero → one → many, then
 - [x] **5. App unit tests** (`apps/molly/src/widget/model.test.ts`), no production change expected:
   - `nightFrom` in the snapshot for a sleep started 10 min after an on-time wake → its start (a Stop saves night).
   - `remindedCache` after stopping the night at an on-time wake, with Vitamin D given yesterday and not today → reminder due, `cycleStart` = the wake.
-- [ ] **6. Playwright** (`e2e/tests/day-night.spec.ts`, using `seedUsualDays` / `clockAt` / `addSleep`). Seed usual days waking 08:08, last night 21:00 → yesterday 08:05:
+- [x] **6. Playwright** (`e2e/tests/day-night.spec.ts`, using `seedUsualDays` / `clockAt` / `addSleep`). Seed usual days waking 08:08, last night 21:00 → yesterday 08:05:
   - clock 08:08 → `Day started 08:05` visible, no "Tonight".
   - add a sleep 08:15–09:30 → saved `nap: false`, and at 09:35 the screen is back to the night.
   - Existing `day-night.spec.ts`, `ring.spec.ts`, `recent-days.spec.ts`, `next-sleep.spec.ts`, `day-plan.spec.ts` pass. Change an assertion only for the reason in step 4.
