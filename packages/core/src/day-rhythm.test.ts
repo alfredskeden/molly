@@ -70,6 +70,22 @@ describe("the child's usual wake", () => {
     expect(rhythm.wake).toBe(clock(7, 30));
   });
 
+  it('is learned the same way when the wakes come at the usual time', () => {
+    // Given
+    const usual = [12, 13, 14].flatMap((day) => dayFrom(day, [8, 5]));
+    const backToSleep = [15, 16, 17, 18].flatMap((day) => [
+      night(day - 1, [21, 0], [8, 5]),
+      nap(day, [8, 15], [9, 30]),
+      nap(day, [11, 0], [12, 0]),
+    ]);
+
+    // When
+    const rhythm = dayRhythm([...usual, ...backToSleep], born, napWindow, on(19, 12));
+
+    // Then
+    expect(rhythm).toMatchObject({ wake: clock(9, 30), firstWindow: 90, wakeLearned: true });
+  });
+
   it('never comes from a wake after 11:00', () => {
     // Given
     const late = [17, 18, 19].flatMap((day) => [night(day - 1, [21, 0], [11, 30]), nap(day, [13, 0], [14, 0])]);

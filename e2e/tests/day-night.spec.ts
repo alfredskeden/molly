@@ -160,3 +160,36 @@ test("last night ends at an early wake: the morning's feed and diaper count on T
   // Then
   await expect(page.getByLabel('Today', { exact: true }).getByLabel(/^Today: 7h 21m slept, 1 sleep, 1 feed, 1 diaper/)).toBeVisible();
 });
+
+test('a wake at the usual time starts the day at once', async ({ page }) => {
+  // Given
+  await seedUsualDays([21, 0], [8, 8], [[[9, 38], [10, 38]], [[13, 30], [14, 30]]]);
+  await post('sleep/', { start: yesterday(21, 0, -2).toISOString(), end: yesterday(8, 8, -1).toISOString(), nap: false });
+  await post('sleep/', { start: yesterday(21, 0, -1).toISOString(), end: yesterday(8, 5).toISOString(), nap: false });
+  await clockAt(page, yesterday(8, 8));
+
+  // When
+  await signInAs(page, testEnv.parentB);
+
+  // Then
+  await expect(page.getByText('Day started 08:05', { exact: true })).toBeVisible();
+  await expect(page.getByText(/^Tonight · /)).toHaveCount(0);
+});
+
+test('back to sleep 10 min after a wake at the usual time is still the night', async ({ page }) => {
+  // Given
+  await seedUsualDays([21, 0], [8, 8], [[[9, 38], [10, 38]], [[13, 30], [14, 30]]]);
+  await post('sleep/', { start: yesterday(21, 0, -2).toISOString(), end: yesterday(8, 8, -1).toISOString(), nap: false });
+  await post('sleep/', { start: yesterday(21, 0, -1).toISOString(), end: yesterday(8, 5).toISOString(), nap: false });
+  await clockAt(page, yesterday(9, 35));
+  await signInAs(page, testEnv.parentB);
+  await expect(page.getByText('Day started 08:05', { exact: true })).toBeVisible();
+
+  // When
+  await addSleep(page, yesterday(8, 15), yesterday(9, 30));
+
+  // Then
+  expect(await latest('sleep')).toMatchObject({ nap: false });
+  await expect(page.getByText(/^Tonight · /)).toBeVisible();
+  await expect(page.getByText('Day started 08:05', { exact: true })).toHaveCount(0);
+});
