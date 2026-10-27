@@ -22,3 +22,10 @@ Nothing to remove. No keyboard workarounds in the scroll sheets; the 82 % cap st
 ## Open
 
 - Verify on the emulator that the sheet's container spans the full window (edge to edge, behind the status bar), so `insets.top` is the right top limit. If it starts below the status bar, the cap drops the inset.
+
+## Implementation (2026-10-27)
+
+- `capped` animated style on the dragged view: `maxHeight = min(0.82 × height, height − insets.top − lift)`, `lift` as in `lifted`. Continuous, so no branch on "keyboard open"; on the web it's the old 82 %.
+- Body `View` gets `flexShrink: 1` so it shrinks to the cap; `KeyboardAwareScrollView` (`bottomOffset={16}`, `keyboardShouldPersistTaps="handled"`) takes `style` for its padding, since it's a Reanimated scroll view.
+- `pnpm check` green. `pnpm e2e`: 251 passed, 1 failed (`recent-days.spec.ts` 1k, "Yesterday, Night: slept 11 hours 20 minutes"), which fails the same on develop without this change.
+- Emulator checks not run yet: the emulator's install has a rejected key after a reseed, needs signing in again.
