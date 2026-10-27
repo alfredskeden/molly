@@ -21,11 +21,12 @@ Nothing to remove. No keyboard workarounds in the scroll sheets; the 82 % cap st
 
 ## Open
 
-- Verify on the emulator that the sheet's container spans the full window (edge to edge, behind the status bar), so `insets.top` is the right top limit. If it starts below the status bar, the cap drops the inset.
+- None. The container spans the full window: with the keyboard up the sheet's top lands just below the status bar.
 
 ## Implementation (2026-10-27)
 
 - `capped` animated style on the dragged view: `maxHeight = min(0.82 × height, height − insets.top − lift)`, `lift` as in `lifted`. Continuous, so no branch on "keyboard open"; on the web it's the old 82 %.
-- Body `View` gets `flexShrink: 1` so it shrinks to the cap; `KeyboardAwareScrollView` (`bottomOffset={16}`, `keyboardShouldPersistTaps="handled"`) takes `style` for its padding, since it's a Reanimated scroll view.
+- Body `View` gets `flexShrink: 1` so it shrinks to the cap; the `ScrollView` gets `keyboardShouldPersistTaps="handled"`.
+- `KeyboardAwareScrollView` tried first and dropped: it pads and scrolls for the keyboard as if the scroll view reached the screen's bottom, so inside the lifted sheet the keyboard counted twice (blank gap under Save; autofocused text half under the header).
 - `pnpm check` green. `pnpm e2e`: 251 passed, 1 failed (`recent-days.spec.ts` 1k, "Yesterday, Night: slept 11 hours 20 minutes"), which fails the same on develop without this change.
-- Emulator checks not run yet: the emulator's install has a rejected key after a reseed, needs signing in again.
+- Emulator (`molly` AVD, 1080×2424; also 1080×2000 at font scale 1.3): every to-do check in `TEST_STRATEGY.md` passed. Gboard showed only its floating stylus toolbar until `show_ime_with_hard_keyboard=1` and `stylus_handwriting_enabled=0` were set (emulator setting, not an app issue).

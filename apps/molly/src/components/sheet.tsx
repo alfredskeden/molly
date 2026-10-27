@@ -1,7 +1,7 @@
 import { useEffect, type ReactNode } from 'react';
-import { BackHandler, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { BackHandler, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { KeyboardAwareScrollView, useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
+import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
 import Animated, {
   Easing,
   Extrapolation,
@@ -168,14 +168,15 @@ export function Sheet({
                   <GestureDetector gesture={pan}>
                     <View className="gap-3.5 px-4 pt-2.5">{header}</View>
                   </GestureDetector>
-                  <KeyboardAwareScrollView
-                    bottomOffset={16}
+                  {/* Not KeyboardAwareScrollView: the sheet already sits above the keyboard, and that one adds the
+                      keyboard's height again. Android's own scroll view brings a focused field into view. */}
+                  <ScrollView
                     keyboardShouldPersistTaps="handled"
-                    style={styles.scroll}
                     contentContainerStyle={{ paddingBottom: bottom }}
+                    className="px-4 pt-1.5"
                   >
                     {children}
-                  </KeyboardAwareScrollView>
+                  </ScrollView>
                 </>
               ) : (
                 <View className="gap-4 px-4 pt-2.5" style={{ paddingBottom: bottom }}>
@@ -197,8 +198,6 @@ const styles = StyleSheet.create({
   bottom: { position: 'absolute', bottom: 0, left: 0, right: 0 },
   // The body shrinks to the cap so the scroll view inside gets a bounded height.
   shrink: { flexShrink: 1 },
-  // px-4 pt-1.5; the scroll view is a Reanimated one, which takes `style` only.
-  scroll: { paddingHorizontal: 16, paddingTop: 6 },
 });
 
 /**
