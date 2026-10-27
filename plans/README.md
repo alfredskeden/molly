@@ -45,3 +45,4 @@ How Molly was built, one folder per plan. Each has `MAIN.md` (the steps, with `[
 | [implan-early-wake](implan-early-wake/MAIN.md) | A morning wake near "Day starts" starts the day even with a later learned wake; learned times on the child screen | Open items left |
 | [implan-night-ends-at-wake](implan-night-ends-at-wake/MAIN.md) | Past nights end where the next day starts (the next morning wake), no overlap or gap with the day, issue #23 | Open items left |
 | [implan-todo](implan-todo/MAIN.md) | Shared to-do list on Baby Buddy notes: labels as tags, dates, photos, Android reminders, issue #22 | Open items left |
+| [implan-on-time-wake](implan-on-time-wake/MAIN.md) | A wake within 30 min of the usual wake starts the day at once; back asleep within the threshold undoes it, issue #29 | Done |
