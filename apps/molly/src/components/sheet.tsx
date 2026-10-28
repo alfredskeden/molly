@@ -45,6 +45,11 @@ function rubberband(overshoot: number, dimension: number) {
   return (overshoot * dimension * 0.55) / (dimension + 0.55 * Math.abs(overshoot));
 }
 
+/**
+ * A bottom sheet over a scrim that lifts above the keyboard. A `scroll` sheet is at most 82 % of the window and,
+ * while the keyboard is up, shrinks so its top stays below the status bar: the header stays put and the content
+ * scrolls, with a focused field kept above the keyboard. Taps in it count while the keyboard is open.
+ */
 export function Sheet({
   label,
   title,
@@ -111,6 +116,10 @@ export function Sheet({
   const lifted = useAnimatedStyle(() => ({
     transform: [{ translateY: -Math.max(0, -keyboard.get() - insets.bottom) }],
   }));
+  // A scroll sheet's cap: lifted by the same amount, its top never goes above the status bar.
+  const capped = useAnimatedStyle(() => ({
+    maxHeight: Math.min(height * 0.82, height - insets.top - Math.max(0, -keyboard.get() - insets.bottom)),
+  }));
   const dragged = useAnimatedStyle(() => ({ transform: [{ translateY: drag.get() }] }));
   const scrimFade = useAnimatedStyle(() => ({
     opacity: interpolate(drag.get(), [0, sheetHeight.get()], [1, 0], Extrapolation.CLAMP),
@@ -148,18 +157,24 @@ export function Sheet({
       </Animated.View>
       <Animated.View entering={reduced ? undefined : ENTER} exiting={reduced ? undefined : EXIT} style={styles.bottom}>
         <Animated.View style={lifted}>
-          <Animated.View style={dragged} onLayout={(event) => sheetHeight.set(event.nativeEvent.layout.height)}>
+          <Animated.View style={scroll ? [dragged, capped] : dragged} onLayout={(event) => sheetHeight.set(event.nativeEvent.layout.height)}>
             <View
               accessibilityLabel={label}
               className="rounded-t-sheet bg-surface"
-              style={{ maxHeight: scroll ? height * 0.82 : undefined }}
+              style={scroll ? styles.shrink : undefined}
             >
               {scroll ? (
                 <>
                   <GestureDetector gesture={pan}>
                     <View className="gap-3.5 px-4 pt-2.5">{header}</View>
                   </GestureDetector>
-                  <ScrollView contentContainerStyle={{ paddingBottom: bottom }} className="px-4 pt-1.5">
+                  {/* Not KeyboardAwareScrollView: the sheet already sits above the keyboard, and that one adds the
+                      keyboard's height again. Android's own scroll view brings a focused field into view. */}
+                  <ScrollView
+                    keyboardShouldPersistTaps="handled"
+                    contentContainerStyle={{ paddingBottom: bottom }}
+                    className="px-4 pt-1.5"
+                  >
                     {children}
                   </ScrollView>
                 </>
@@ -179,7 +194,11 @@ export function Sheet({
   );
 }
 
-const styles = StyleSheet.create({ bottom: { position: 'absolute', bottom: 0, left: 0, right: 0 } });
+const styles = StyleSheet.create({
+  bottom: { position: 'absolute', bottom: 0, left: 0, right: 0 },
+  // The body shrinks to the cap so the scroll view inside gets a bounded height.
+  shrink: { flexShrink: 1 },
+});
 
 /**
  * The screen under a sheet: hidden from TalkBack while `sheetOpen`, so swiping never reaches a button under
