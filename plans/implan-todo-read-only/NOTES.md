@@ -35,3 +35,11 @@ No dependencies, assets or flags become unused. `plans/implan-todo/TEST_STRATEGY
 ## Open
 
 - None.
+
+## Implementation (2026-10-29)
+
+- Core: `firstSeen` replaced `seenAfter`; `openedBy` / `unreadBy` return the same value for a guess or a null `seen` (a device that never loaded the list records nothing until the baseline lands), so `useTodoSeen().save` takes `TodoSeen | null`.
+- Settings: `parseTodoSeen` replaces `isTodoSeen`; a malformed `opened` / `unread` drops the whole value (null, then the next load re-baselines).
+- Read-only sheet (`TodoView`) is looked up by id from the listed items, so a tick from it shows at once. Edit (from it or the photo viewer) closes it and the viewer before opening `TodoSheet`.
+- `pnpm e2e` 2026-10-29 ~00:10: every to-do test green. `pending.spec.ts` (2) and `solid-food.spec.ts` (2) fail the same on develop at d91b0c8 (run just after midnight); `children.spec.ts` and `dashboard.spec.ts` failed once and passed on rerun.
+- Emulator (emulator-5554, release APK): Classic day, Night and Ribbon checked; thumbnail keeps New; photo → viewer → back returns to the sheet; Android back closes the sheet; tick / untick in place; Mark unread brings New and the badge back.
