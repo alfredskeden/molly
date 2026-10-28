@@ -48,3 +48,4 @@ How Molly was built, one folder per plan. Each has `MAIN.md` (the steps, with `[
 | [implan-on-time-wake](implan-on-time-wake/MAIN.md) | A wake within 30 min of the usual wake starts the day at once; back asleep within the threshold undoes it, issue #29 | Done |
 | [implan-todo-keyboard](implan-todo-keyboard/MAIN.md) | Scroll sheets shrink with the keyboard and keep the first tap, issue #28 | Done |
 | [implan-todo-read-only](implan-todo-read-only/MAIN.md) | Items open read-only first; New until opened on this phone; Mark unread, issue #30 | Done |
+| [implan-todo-pickers](implan-todo-pickers/MAIN.md) | Due date and time from the system picker (browser fields on web), steppers kept for nudges, issue #34 | Planned (decisions to confirm) |
