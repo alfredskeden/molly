@@ -50,10 +50,12 @@ export type ListedItem = TodoItem & { overdue: boolean; isNew: boolean };
 export type TodoCard = { label: string; open: number; items: ListedItem[] };
 
 /**
- * What this device has seen: the highest note id when it last left the list, and the ids it saved
- * since (its own items are never "new"). Null on a device that never opened the list.
+ * What this device has seen, for "New": `mark` the highest note id when the list first loaded here
+ * (it never moves after), `saved` the ids this device created, `opened` the ids opened here, and
+ * `unread` the ids marked unread here (New again, whatever the rest says). Null on a device that never
+ * loaded the list.
  */
-export type TodoSeen = { mark: number; saved: number[] };
+export type TodoSeen = { mark: number; saved: number[]; opened: number[]; unread: number[] };
 
 const startOfDay = (time: Date) => new Date(time.getFullYear(), time.getMonth(), time.getDate());
 const addDays = (time: Date, days: number) => new Date(time.getFullYear(), time.getMonth(), time.getDate() + days);
@@ -94,7 +96,9 @@ const dueEnd = (due: TodoDue) => (due.kind === 'time' ? due.at : addDays(due.at,
 const isOverdue = (item: TodoItem, now: Date) => item.done === null && item.due !== null && dueEnd(item.due) <= now;
 
 const isNew = (item: TodoItem, seen: TodoSeen | null) =>
-  item.done === null && seen !== null && item.id > seen.mark && !seen.saved.includes(item.id);
+  item.done === null &&
+  seen !== null &&
+  (seen.unread.includes(item.id) || (item.id > seen.mark && !seen.saved.includes(item.id) && !seen.opened.includes(item.id)));
 
 /** Done items show struck through until the midnight after they were ticked. */
 const isShown = (item: TodoItem, now: Date) => item.done === null || item.done === localDay(now);
@@ -132,20 +136,55 @@ export function todoList(items: TodoItem[], now: Date, seen: TodoSeen | null): T
   return [cards.get(BUY.toLowerCase())!, cards.get(APPOINTMENTS.toLowerCase())!, ...family, ...(other ? [other] : [])];
 }
 
-/** The header badge: open items from someone else since this device last left the list. */
+/** The header badge: open items New on this device (not opened here, or marked unread). */
 export function newCount(items: TodoItem[], seen: TodoSeen | null): number {
   return items.filter((item) => isNew(item, seen)).length;
 }
 
-/** On leaving the list: everything listed is seen. Guesses (negative ids) don't move the mark. */
-export function seenAfter(items: TodoItem[], seen: TodoSeen | null): TodoSeen {
-  const mark = Math.max(seen?.mark ?? 0, ...items.map((item) => item.id));
-  return { mark, saved: (seen?.saved ?? []).filter((id) => id > mark) };
+/** Highest real id: guesses (negative ids) never count. */
+const topId = (items: TodoItem[]) => Math.max(0, ...items.map((item) => item.id));
+
+/** The first load on a device: everything listed is seen, so a fresh install has nothing New. */
+export function firstSeen(items: TodoItem[]): TodoSeen {
+  return { mark: topId(items), saved: [], opened: [], unread: [] };
 }
 
-/** After this device saved a new item: never "new" here. */
+/** After this device saved a new item: never New here (unless marked unread). */
 export function savedBy(seen: TodoSeen | null, id: number): TodoSeen {
-  return { mark: seen?.mark ?? 0, saved: [...(seen?.saved ?? []), id] };
+  return { mark: 0, opened: [], unread: [], ...seen, saved: [...(seen?.saved ?? []), id] };
+}
+
+/** Opened here (read-only or edit sheet): no longer New, and off unread. Guesses record nothing. */
+export function openedBy(seen: TodoSeen | null, id: number): TodoSeen | null {
+  if (!seen || id < 0) return seen;
+  return {
+    ...seen,
+    opened: seen.opened.includes(id) ? seen.opened : [...seen.opened, id],
+    unread: seen.unread.filter((unread) => unread !== id),
+  };
+}
+
+/** Marked unread here: New again, own items too. Guesses record nothing. */
+export function unreadBy(seen: TodoSeen | null, id: number): TodoSeen | null {
+  if (!seen || id < 0 || seen.unread.includes(id)) return seen;
+  return { ...seen, unread: [...seen.unread, id] };
+}
+
+/**
+ * Keeps the lists small: drops ids missing from the fetched list at or below its highest id (one above
+ * it may be a save not fetched yet), done ids from `unread`, and `saved` / `opened` ids at or below the
+ * mark. Done ids stay in `opened`, so unticking doesn't make them New. The same object when nothing goes.
+ */
+export function pruneSeen(items: TodoItem[], seen: TodoSeen): TodoSeen {
+  const top = topId(items);
+  const listed = new Set(items.map((item) => item.id));
+  const finished = new Set(items.filter((item) => item.done !== null).map((item) => item.id));
+  const kept = (id: number) => id > top || listed.has(id);
+  const saved = seen.saved.filter((id) => id > seen.mark && kept(id));
+  const opened = seen.opened.filter((id) => id > seen.mark && kept(id));
+  const unread = seen.unread.filter((id) => kept(id) && !finished.has(id));
+  const same = saved.length === seen.saved.length && opened.length === seen.opened.length && unread.length === seen.unread.length;
+  return same ? seen : { ...seen, saved, opened, unread };
 }
 
 /**
