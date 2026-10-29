@@ -212,13 +212,18 @@ export type TodoReminderNotification = { id: number; title: string; text: string
 
 /**
  * The to-do reminders this phone schedules from the list it last fetched: `6-month checkup · 14:30` (or
- * `· Tomorrow` for a date only, rung the evening before) over the label. `keep`: every open dated item, so a
- * reminder that rang stays until the item is ticked off, undated or gone.
+ * `· Tomorrow` for a date only, rung the evening before) over the label. Items in `quiet` (this phone's
+ * `todoQuiet`) get none. `keep`: every other open dated item, so a reminder that rang stays until the item
+ * is ticked off, undated, gone or turned quiet.
  */
-export function todoReminderNotifications(items: TodoItem[], now: Date): { schedule: TodoReminderNotification[]; keep: number[] } {
-  const open = items.filter((item) => item.done === null && item.due !== null && item.id > 0);
+export function todoReminderNotifications(
+  items: TodoItem[],
+  quiet: readonly number[],
+  now: Date,
+): { schedule: TodoReminderNotification[]; keep: number[] } {
+  const open = items.filter((item) => item.done === null && item.due !== null && item.id > 0 && !quiet.includes(item.id));
   const schedule = open.flatMap((item) => {
-    const at = reminderAt(item, now, []);
+    const at = reminderAt(item, now, quiet);
     if (!at || !item.due) return [];
     const when = item.due.kind === 'time' ? clockText(item.due.at) : 'Tomorrow';
     return [{ id: item.id, title: `${item.text} · ${when}`, text: item.label ?? OTHER, at: at.getTime() }];

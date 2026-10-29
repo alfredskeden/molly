@@ -6,7 +6,7 @@ const on = (day: number, hours = 0, minutes = 0) => new Date(2026, 9, day, hours
 const now = on(25, 10, 7);
 
 describe('the to-do sheet', () => {
-  it('starts a new item with no text, no label, no date and Any time', () => {
+  it('starts a new item with no text, no label, no date, Any time and the reminder on', () => {
     // Given
     const label = null;
 
@@ -14,19 +14,19 @@ describe('the to-do sheet', () => {
     const draft = newTodoDraft(label, now);
 
     // Then
-    expect(draft).toMatchObject({ text: '', label: null, day: 'none', timed: false });
+    expect(draft).toMatchObject({ text: '', label: null, day: 'none', timed: false, quiet: false });
     expect(draftDue(draft, now)).toBeNull();
   });
 
   it('reads an item back: tomorrow at 14:30, or another day without a time', () => {
     // Given
     const items = [
-      { text: 'Checkup', label: 'Appointments', due: { kind: 'time' as const, at: on(26, 14, 30) } },
-      { text: 'Pharmacy run', label: null, due: { kind: 'day' as const, at: on(30) } },
+      { id: 1, text: 'Checkup', label: 'Appointments', due: { kind: 'time' as const, at: on(26, 14, 30) } },
+      { id: 2, text: 'Pharmacy run', label: null, due: { kind: 'day' as const, at: on(30) } },
     ];
 
     // When
-    const drafts = items.map((item) => todoDraftOf(item, now));
+    const drafts = items.map((item) => todoDraftOf(item, now, []));
 
     // Then
     expect(drafts.map((draft) => [draft.day, draft.timed, draftDue(draft, now)])).toEqual([
@@ -78,7 +78,7 @@ describe('the to-do sheet', () => {
     ];
 
     // When
-    const lines = [...dues.map((due) => reminderLine(due, now)), reminderLine(null, now)];
+    const lines = [...dues.map((due) => reminderLine({ due, quiet: false }, now)), reminderLine({ due: null, quiet: false }, now)];
 
     // Then
     expect(lines).toEqual([
@@ -87,5 +87,27 @@ describe('the to-do sheet', () => {
       'Too late for a reminder',
       null,
     ]);
+  });
+
+  it('reads whether this phone reminds about an item from its quiet ids', () => {
+    // Given
+    const item = { id: 7, text: 'Vaccination', label: null, due: { kind: 'time' as const, at: on(26, 15) } };
+
+    // When
+    const drafts = [todoDraftOf(item, now, [7]), todoDraftOf(item, now, [3])];
+
+    // Then
+    expect(drafts.map((draft) => draft.quiet)).toEqual([true, false]);
+  });
+
+  it('says this phone won\'t remind when quiet, and nothing without a date', () => {
+    // Given
+    const due = { kind: 'time' as const, at: on(25, 14, 30) };
+
+    // When
+    const lines = [reminderLine({ due, quiet: true }, now), reminderLine({ due: null, quiet: true }, now)];
+
+    // Then
+    expect(lines).toEqual(['No reminder on this phone', null]);
   });
 });
