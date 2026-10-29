@@ -33,6 +33,7 @@ describe('device settings', () => {
       guideNoteSeen: false,
       feedTimer: false,
       todoSeen: null,
+      todoQuiet: [],
     });
     expect(settings).toEqual(DEFAULT_SETTINGS);
   });
@@ -434,12 +435,30 @@ describe('the to-do seen mark', () => {
   });
 });
 
+describe('the to-do quiet reminders', () => {
+  it('reads back what was stored, and nothing from a malformed value', () => {
+    // Given
+    const stored = [
+      JSON.stringify({ todoQuiet: [41, 42] }),
+      JSON.stringify({ todoQuiet: ['41'] }),
+      JSON.stringify({ todoQuiet: { id: 41 } }),
+    ];
+
+    // When
+    const quiet = stored.map((value) => parseSettings(value).todoQuiet);
+
+    // Then
+    expect(quiet).toEqual([[41, 42], [], []]);
+  });
+});
+
 describe('signing out', () => {
-  it("drops the child on screen, every child's preferences and the to-do seen mark, and keeps the device's choices", () => {
+  it("drops the child on screen, every child's preferences, the to-do seen mark and quiet reminders, and keeps the device's choices", () => {
     // Given
     const settings = {
       ...DEFAULT_SETTINGS,
       todoSeen: { mark: 40, saved: [41], opened: [], unread: [] },
+      todoQuiet: [41],
       childId: 4,
       children: { 4: { hue: 2, vitaminDReminder: true } },
       theme: 'night' as const,
