@@ -41,6 +41,22 @@
 - Nothing becomes unused: no dependency, flag, asset or setting goes away. The earlier shared-tag draft's `saveTags` fix is not needed (no tag).
 - Spotted, not in scope: none.
 
+## Built (2026-10-29)
+
+- Core: `reminderMoment(due, now)` is the bare rule; `reminderAt(item, now, quiet)` adds done/undated/quiet. `quietFor(quiet, id, on)` and `pruneQuiet(items, quiet)` return the same array when nothing changes.
+- `reminderLine({ due, quiet }, now)` uses `reminderMoment`, no stub `TodoItem`. `TodoView` keeps its `reminderAt` gate (no line once the moment passed, as before) and shows the struck bell + "No reminder" for a quiet open dated item.
+- `useTodoSeen` and `useTodoQuiet` share one `useSaveSetting(key)` in `queries.ts`.
+- `todoReminderNotifications(items, quiet, now)` filters quiet ids out of `open`, so they leave `keep` too.
+- Save records `quietFor(current, saved.id, quiet && due !== null)` after Baby Buddy answers, for edits and new items alike (a guess never reaches it: `write` returns Baby Buddy's note).
+- Small extra: saving with "Remind me" off doesn't trigger the notification permission prompt (`todo.tsx` `onSave`), since nothing will ring.
+- Glyph `notifications_off`: outlined rounded path from `@material-symbols/svg-400@0.47.6/rounded/notifications_off.svg` (the same package's `notifications.svg` matches the existing outlined path).
+- `pnpm test` at the root includes `packages/api`'s integration suite, which needs the shared Baby Buddy on :4778.
+
+## Cleanup sweep (wrap-up)
+
+- Nothing to remove: no flag, setting, asset or dependency became unused. The planned refactors are in (`reminderMoment`, no stub item, shared settings save).
+- Spotted, not in scope: none.
+
 ## Open
 
 - None.
