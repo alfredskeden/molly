@@ -4,7 +4,7 @@
 
 Only the dashboard snaps back to now on return. Left on Settings or To-do, Molly reopens there, and the parent has to find the way back to the ring.
 
-## Before and after
+## Before and after (Android)
 
 A parent checks Recent days, locks the phone, and picks it up 20 minutes later.
 
@@ -18,28 +18,27 @@ after      Recent days  ──▶  dashboard, live ring (back → leaves the app
 
 ```mermaid
 flowchart TD
-  R[App becomes active] --> A{Away 60 s or more?}
+  R[App becomes active] --> W{Web?}
+  W -- yes --> SL[Dashboard showLive only<br/>as today]
+  W -- no --> A{Away 60 s or more?}
   A -- no --> S[Stay as it was]
   A -- yes --> T{Molly sent the parent out?<br/>camera, photo, source link, notification settings}
   T -- yes --> S
-  T -- no --> H{Anything holds?<br/>unsaved input, open edit sheet, Tap log}
+  T -- no --> H{Tap log on screen?}
   H -- yes --> S
   H -- no --> L[Dismiss to the dashboard<br/>then showLive]
 ```
 
 "Stay" means nothing at all changes, on the dashboard too: a past ring, the editor, the open panel all stay.
 
-## What holds
+## Unsaved input is dropped
 
-| Screen | Holds while |
+After a minute away, a half-written to-do or an unsaved setting goes with its screen.
+
+| Where | What the parent sees |
 | --- | --- |
-| Settings, child screen | there are unsaved changes |
-| To-do | the edit sheet is open (new or edit) |
-| Child screen, measurement screen | the measurement sheet is open |
-| Dashboard | the Add entry sheet is open, or the editor has changes |
-| Tap log | always |
-
-A hold anywhere in the stack keeps the whole stack. Settings with changes under a child screen still counts.
+| Settings, child screen with changes | "Changes not saved" toast over the live ring (already there today when leaving with changes) |
+| To-do, measurement or Add entry sheet, dashboard editor | closed, no message (as when closed any other way) |
 
 ## A trip is one return
 
@@ -48,26 +47,24 @@ tap Camera   ──▶ mark "on purpose" ──▶ camera (3 min) ──▶ back
 lock phone 5 min later ──────────────────────────────────▶ back: no mark, go live
 ```
 
-(The to-do sheet would hold anyway while it's open; the trip matters for the source links and Android's settings.)
-
 ## Where it lives
 
 ```mermaid
 flowchart LR
   AS[AppState change] --> M[return model<br/>features/return/model.ts<br/>pure, unit-tested]
-  K[useKeepOnReturn<br/>screens, sheets, Tap log] --> P
   O[leaveOnPurpose<br/>pickPhoto, openLink, turnOnNotifications] --> P
+  RT[current route<br/>/tap-log?] --> P
   M --> P[ReturnProvider<br/>in the main layout]
-  P -- go live --> D[dismiss to /]
-  P -- go live --> SL[dashboard showLive<br/>via useOnLive]
+  P -- go live, Android --> D[dismiss to /]
+  P -- go live / show live --> SL[dashboard showLive<br/>via useOnLive]
 ```
 
 The provider sits in the signed-in layout, so onboarding and "Can't sign in" never see it.
 
 ## What goes away
 
-The dashboard's own "every return → now" listener. The dashboard now waits for the same minute as every other screen. Its in-app glance timer (a past ring goes back to now after a minute on screen) stays.
+The dashboard's own "every return → now" listener. On Android the dashboard now waits for the same minute as every other screen; on the web the shared listener still snaps it back on every return. Its in-app glance timer (a past ring goes back to now after a minute on screen) stays.
 
 ## Web
 
-The same rule runs in the browser: a hidden tab is "away". That's also how Playwright tests it.
+Unchanged: showing the tab again puts the dashboard on the live ring, and screens above it stay where they were.
