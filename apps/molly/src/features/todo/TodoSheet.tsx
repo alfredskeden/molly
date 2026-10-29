@@ -1,10 +1,12 @@
 import { clockText, labelFor, shortDate, type TodoItem } from '@molly/core';
 import { Image } from 'expo-image';
-import { useState } from 'react';
-import { TextInput, View } from 'react-native';
+import { useState, type ReactNode } from 'react';
+import { Keyboard, Platform, TextInput, View } from 'react-native';
 
+import { DateField } from '@/components/DateField';
 import { Pressable } from '@/components/pressable';
 import { Sheet } from '@/components/sheet';
+import { TimeField } from '@/components/TimeField';
 import { FIXED_SCALE, Segment, Spinner, StepButton, Text, ToggleRow } from '@/components/ui';
 import { HAPTICS } from '@/haptics/model';
 import { useHaptic } from '@/haptics/use-haptic';
@@ -17,6 +19,8 @@ import { PHOTO_SOURCES, pickPhoto, type PhotoSource, type PickedPhoto } from './
 import {
   draftDue,
   newTodoDraft,
+  pickDay,
+  pickTime,
   reminderLine,
   stepDay,
   stepTime,
@@ -48,9 +52,11 @@ type PhotoDraft = { kind: 'keep' } | { kind: 'new'; photo: PickedPhoto } | { kin
 
 /**
  * Adds or edits a to-do item: text (keyboard open), label chips, date, time, the Android "Remind me" switch
- * (this phone only; its line says when) and a photo. A new label is only made on Save, with the item. No
- * Delete: parents can't delete notes. `labels` null: no `core.view_tag`, so only the built-in labels, with a
- * hint. `quiet`: this phone's `todoQuiet` ids.
+ * (this phone only; its line says when) and a photo. The Other day and the time open the system date / clock
+ * dialog on Android (closing the keyboard first) and are the browser's date / time fields on the web; the
+ * steppers beside them nudge. A new label is only made on Save, with the item. No Delete: parents can't delete
+ * notes. `labels` null: no `core.view_tag`, so only the built-in labels, with a hint. `quiet`: this phone's
+ * `todoQuiet` ids.
  */
 export function TodoSheet({
   item,
@@ -75,6 +81,7 @@ export function TodoSheet({
   const [added, setAdded] = useState<string[]>([]);
   const [naming, setNaming] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [picking, setPicking] = useState<'date' | 'time' | null>(null);
   const { palette } = useTheme();
   const haptic = useHaptic();
   const set = (changes: Partial<TodoDraftState>) => setDraft((current) => ({ ...current, ...changes }));
@@ -86,6 +93,11 @@ export function TodoSheet({
   const reminder = hasNotifications ? reminderLine({ due, quiet: draft.quiet }, now) : null;
   const blank = draft.text.trim() === '';
   const shownPhoto = photoDraft.kind === 'new' ? photoDraft.photo.uri : photoDraft.kind === 'keep' ? photo : null;
+
+  function openPicker(which: 'date' | 'time') {
+    Keyboard.dismiss();
+    setPicking(which);
+  }
 
   function addLabel() {
     const label = naming === null ? null : labelFor(naming, chips);
@@ -181,9 +193,19 @@ export function TodoSheet({
           <Segment label="Date" options={DAYS} value={draft.day} onChange={(day) => set({ day })} small />
           {draft.day === 'other' && (
             <View className="flex-row items-center gap-2">
-              <Text maxFontSizeMultiplier={FIXED_SCALE} className="flex-1 pl-1 font-display text-[26px]">
-                {shortDate(draft.other)}
-              </Text>
+              <PickedValue text={shortDate(draft.other)} spoken={`Due date ${shortDate(draft.other)}, pick a date`} onPress={() => openPicker('date')}>
+                <DateField
+                  value={draft.other}
+                  min={new Date(now.getFullYear(), now.getMonth(), now.getDate())}
+                  label="Due date"
+                  open={picking === 'date'}
+                  onChange={(day) => {
+                    setDraft((current) => pickDay(current, day, now));
+                    setPicking(null);
+                  }}
+                  onCancel={() => setPicking(null)}
+                />
+              </PickedValue>
               <StepButton label="−1 d" spoken="A day earlier" onPress={() => setDraft((current) => stepDay(current, -1, now))} />
               <StepButton label="+1 d" spoken="A day later" onPress={() => setDraft((current) => stepDay(current, 1, now))} />
             </View>
@@ -199,9 +221,18 @@ export function TodoSheet({
           )}
           {draft.day !== 'none' && draft.timed && (
             <View className="flex-row items-center gap-2">
-              <Text maxFontSizeMultiplier={FIXED_SCALE} accessibilityLabel={`At ${clockText(due!.at)}`} className="flex-1 pl-1 font-display text-[26px] tabular-nums">
-                {clockText(due!.at)}
-              </Text>
+              <PickedValue text={clockText(due!.at)} spoken={`Due time ${clockText(due!.at)}, pick a time`} onPress={() => openPicker('time')}>
+                <TimeField
+                  value={draft.minutes}
+                  label="Due time"
+                  open={picking === 'time'}
+                  onChange={(minutes) => {
+                    setDraft((current) => pickTime(current, minutes));
+                    setPicking(null);
+                  }}
+                  onCancel={() => setPicking(null)}
+                />
+              </PickedValue>
               <StepButton label="−15" spoken="15 minutes earlier" onPress={() => setDraft((current) => stepTime(current, -15))} />
               <StepButton label="+15" spoken="15 minutes later" onPress={() => setDraft((current) => stepTime(current, 15))} />
             </View>
@@ -288,6 +319,22 @@ function Chip({ label, chosen, onPress }: { label: string; chosen: boolean; onPr
       <Text maxFontSizeMultiplier={FIXED_SCALE} className={`text-label font-extrabold ${chosen ? 'text-on-accent' : ''}`}>
         {label}
       </Text>
+    </Pressable>
+  );
+}
+
+/**
+ * The Other day or the time: on Android the big value is a button that opens its dialog (`children`, which
+ * draw nothing there); on the web the browser's field (`children`) stands in its place.
+ */
+function PickedValue({ text, spoken, onPress, children }: { text: string; spoken: string; onPress: () => void; children: ReactNode }) {
+  if (Platform.OS === 'web') return <View className="flex-1 items-start pl-1">{children}</View>;
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={spoken} onPress={onPress} className="flex-1 justify-center self-stretch pl-1 active:opacity-70">
+      <Text maxFontSizeMultiplier={FIXED_SCALE} className="font-display text-[26px] tabular-nums">
+        {text}
+      </Text>
+      {children}
     </Pressable>
   );
 }
