@@ -52,6 +52,19 @@
 - Glyph `notifications_off`: outlined rounded path from `@material-symbols/svg-400@0.47.6/rounded/notifications_off.svg` (the same package's `notifications.svg` matches the existing outlined path).
 - `pnpm test` at the root includes `packages/api`'s integration suite, which needs the shared Baby Buddy on :4778.
 
+## Confirmed (2026-10-29)
+
+- `pnpm check` green (boundaries, typecheck, lint, core 1252 + app 1342 Vitest, `packages/api` 111 against Baby Buddy v2.11, web bundle). `pnpm e2e`: 255 passed.
+- Emulator-5554, release APK, test Baby Buddy, Ribbon theme in Night and Day:
+  - New "Vaccination" today 11:45 with "Remind me" off: subtitle "No reminder on this phone"; no permission prompt; no bell on the row; read-only sheet shows the struck bell + "No reminder"; the date stays. A control "Checkup" at the same time kept its bell and rang at 10:45; "Vaccination" never rang.
+  - Both notes in Baby Buddy have the same tags (`molly-todo`, `To-do: Appointments`, `molly-todo-due`): nothing shared changed.
+  - Turning "Remind me" off on "Checkup" after it rang (subtitle then "Too late for a reminder") cleared the notification on Save.
+  - Date-only "Pharmacy" tomorrow, off: no alarm (`dumpsys alarm`); on again: the 19:00 alarm is back. Each reminder is a pair of `TODO_ALARM` alarms (exact + windowed).
+  - Quiet, then "No date" and Save, then Tomorrow again: the switch is on.
+  - Quiet survives a force-stop and relaunch (the foreground refresh set no alarm; "No reminder" still shown). Android back closes the edit sheet without saving.
+  - Not run on the emulator: sign-out and sign-in bringing reminders back (Vitest covers `settingsAfterSignOut`; signing out the shared emulator session was avoided).
+- PR: opened stacked on `plan/issue-30-todo-read-only` (PR #39 not merged yet) instead of rebasing onto `develop`; GitHub retargets it to `develop` when #39 merges.
+
 ## Cleanup sweep (wrap-up)
 
 - Nothing to remove: no flag, setting, asset or dependency became unused. The planned refactors are in (`reminderMoment`, no stub item, shared settings save).
