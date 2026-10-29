@@ -9,7 +9,9 @@ import {
   noteTime,
   openedBy,
   photoUrl,
+  pruneQuiet,
   pruneSeen,
+  quietFor,
   reminderAt,
   savedBy,
   saveTags,
@@ -302,7 +304,7 @@ describe('due text', () => {
 });
 
 describe('reminders', () => {
-  const reminderOf = (item: Note, at = now) => reminderAt(todoItems([item])[0]!, at);
+  const reminderOf = (item: Note, at = now, quiet: number[] = []) => reminderAt(todoItems([item])[0]!, at, quiet);
 
   it('rings an hour before an item with a time', () => {
     // Given
@@ -340,6 +342,115 @@ describe('reminders', () => {
 
     // Then
     expect(ats).toEqual([null, null, null, null]);
+  });
+
+  it('has none on this phone for a quiet item, with a time or a date only', () => {
+    // Given
+    const timed = dueAt('Vaccination', on(26, 15));
+    const dated = dueOn('Pharmacy', on(27));
+
+    // When
+    const ats = [reminderOf(timed, now, [timed.id]), reminderOf(dated, now, [dated.id])];
+
+    // Then
+    expect(ats).toEqual([null, null]);
+  });
+
+  it('keeps the reminders of items that are not quiet', () => {
+    // Given
+    const quiet = dueAt('Vaccination', on(26, 15));
+    const other = dueAt('Checkup', on(26, 14, 30));
+
+    // When
+    const at = reminderOf(other, now, [quiet.id]);
+
+    // Then
+    expect(at).toEqual(on(26, 13, 30));
+  });
+});
+
+describe('quiet reminders', () => {
+  it('adds an id once', () => {
+    // Given
+    const quiet = [3];
+
+    // When
+    const after = quietFor(quietFor(quiet, 7, true), 7, true);
+
+    // Then
+    expect(after).toEqual([3, 7]);
+  });
+
+  it('removes an id', () => {
+    // Given
+    const quiet = [3, 7];
+
+    // When
+    const after = quietFor(quiet, 3, false);
+
+    // Then
+    expect(after).toEqual([7]);
+  });
+
+  it('records nothing for a guess', () => {
+    // Given
+    const quiet = [3];
+
+    // When
+    const after = quietFor(quiet, -1, true);
+
+    // Then
+    expect(after).toBe(quiet);
+  });
+
+  it('keeps the same array when nothing changes', () => {
+    // Given
+    const quiet = [3];
+
+    // When
+    const after = [quietFor(quiet, 3, true), quietFor(quiet, 5, false)];
+
+    // Then
+    expect(after.every((same) => same === quiet)).toBe(true);
+  });
+
+  it('keeps the same array when every quiet id is a listed dated item', () => {
+    // Given
+    const items = todoItems([dueAt('Vaccination', on(26, 15)), dueOn('Pharmacy', on(27))]);
+    const quiet = items.map((item) => item.id);
+
+    // When
+    const after = pruneQuiet(items, quiet);
+
+    // Then
+    expect(after).toBe(quiet);
+  });
+
+  it('drops ids missing from the list up to its highest id, and keeps those above it (saves not fetched yet)', () => {
+    // Given
+    const items = todoItems([dueAt('Kept', on(26, 15))]);
+    const kept = items[0]!.id;
+
+    // When
+    const after = pruneQuiet(items, [kept - 1, kept, kept + 1]);
+
+    // Then
+    expect(after).toEqual([kept, kept + 1]);
+  });
+
+  it('drops ids listed without a date, and keeps done items', () => {
+    // Given
+    const items = todoItems([
+      open('Undated'),
+      note('Ticked', ['molly-todo-done', 'molly-done-2026-10-25', 'molly-todo-due'], { time: on(27, 9).toISOString() }),
+    ]);
+    const [undated, ticked] = items.map((item) => item.id) as [number, number];
+
+    // When
+    const after = pruneQuiet(items, [undated, ticked]);
+
+    // Then
+    expect(after).toEqual([ticked]);
   });
 });
 

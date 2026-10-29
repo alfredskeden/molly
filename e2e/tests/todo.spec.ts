@@ -431,7 +431,7 @@ test('a photo chosen on the web shows as a thumbnail and full size, loads under 
   expect(cspErrors).toEqual([]);
 });
 
-test('a row without a photo has no photo slot, and the web shows no reminder bells', async ({ page }) => {
+test('a row without a photo has no photo slot, and the web shows no reminder bells, lines or Remind me switch', async ({ page }) => {
   // Given
   await seed('Checkup', ['molly-todo', 'To-do: Appointments', 'molly-todo-due'], day(1, 14, 30));
 
@@ -441,9 +441,12 @@ test('a row without a photo has no photo slot, and the web shows no reminder bel
   // Then
   await expect(card(page, 'Appointments').getByText('Tomorrow 14:30')).toBeVisible();
   await expect(page.getByRole('button', { name: /^Photo: / })).toHaveCount(0);
-  await add(page, 'Anything');
-  await page.getByRole('radio', { name: 'Tomorrow' }).click();
-  await expect(page.getByText(/reminds you/)).toHaveCount(0);
+  await openItem(page, 'Checkup');
+  await expect(itemSheet(page).getByText(/reminder/i)).toHaveCount(0);
+  await button(page, 'Edit').click();
+  await expect(page.getByLabel('What needs doing')).toHaveValue('Checkup');
+  await expect(page.getByRole('switch', { name: 'Remind me' })).toHaveCount(0);
+  await expect(page.getByText(/reminds you|No reminder|Too late for a reminder/)).toHaveCount(0);
 });
 
 test('without view_tag only Buy and Appointments are offered, with a hint and no error toast', async ({ page }) => {

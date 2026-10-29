@@ -46,7 +46,8 @@ export type ThemePreference = (typeof THEME_PREFERENCES)[number];
  * `guideRegion` is whose advice the Development guide follows, `guideNoteSeen` whether its first-open note
  * was read. `feedTimer` is Time feeds: on, Feed starts a timer; off (the default), a tap saves a finished feed.
  * `todoSeen` is what this device has seen of the to-do list, for "New" (null until the list first loads):
- * the first-load mark and the items saved, opened and marked unread here.
+ * the first-load mark and the items saved, opened and marked unread here. `todoQuiet` is the to-do note
+ * ids this device won't remind about ("Remind me" off in the edit sheet, Android); the other phone still does.
  */
 export type Settings = {
   childId: number | null;
@@ -61,6 +62,7 @@ export type Settings = {
   guideNoteSeen: boolean;
   feedTimer: boolean;
   todoSeen: TodoSeen | null;
+  todoQuiet: number[];
 };
 
 export const SETTINGS_KEY = 'molly.settings';
@@ -78,6 +80,7 @@ export const DEFAULT_SETTINGS: Settings = {
   guideNoteSeen: false,
   feedTimer: false,
   todoSeen: null,
+  todoQuiet: [],
 };
 
 export function parseSettings(stored: string | null): Settings {
@@ -98,12 +101,13 @@ export function parseSettings(stored: string | null): Settings {
     guideNoteSeen: typeof value.guideNoteSeen === 'boolean' ? value.guideNoteSeen : DEFAULT_SETTINGS.guideNoteSeen,
     feedTimer: typeof value.feedTimer === 'boolean' ? value.feedTimer : DEFAULT_SETTINGS.feedTimer,
     todoSeen: parseTodoSeen(value.todoSeen),
+    todoQuiet: isIds(value.todoQuiet) ? value.todoQuiet : DEFAULT_SETTINGS.todoQuiet,
   };
 }
 
 /**
  * The theme, the notification choices, the guide's region and note and Time feeds belong to the device, not the account: kept.
- * The children's preferences and the to-do "seen" mark go with the account: their ids belong to one Baby Buddy.
+ * The children's preferences, the to-do "seen" mark and quiet reminders go with the account: their ids belong to one Baby Buddy.
  */
 export function settingsAfterSignOut(settings: Settings): Settings {
   const { theme, notifications, notificationPrompted, haptics, guideRegion, guideNoteSeen, feedTimer } = settings;

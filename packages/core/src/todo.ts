@@ -252,15 +252,41 @@ export function dueText(item: TodoItem, now: Date): string {
   return isOverdue(item, now) ? `${text} · overdue` : text;
 }
 
+/** The reminder for a date: an hour before a time, 19:00 the evening before a date only; none once past. */
+export function reminderMoment(due: TodoDue, now: Date): Date | null {
+  const at = due.kind === 'time' ? new Date(due.at.getTime() - HOUR_MS) : new Date(addDays(due.at, -1).setHours(19));
+  return at > now ? at : null;
+}
+
 /**
  * When this phone reminds: an hour before an item with a time, 19:00 the evening before a date
- * only. None for done or undated items, or once that moment has passed.
+ * only. None for done or undated items, for items turned quiet on this phone (`quiet`, the device's
+ * `todoQuiet` ids), or once that moment has passed.
  */
-export function reminderAt(item: TodoItem, now: Date): Date | null {
-  if (item.done !== null || !item.due) return null;
-  const at =
-    item.due.kind === 'time' ? new Date(item.due.at.getTime() - HOUR_MS) : new Date(addDays(item.due.at, -1).setHours(19));
-  return at > now ? at : null;
+export function reminderAt(item: TodoItem, now: Date, quiet: readonly number[]): Date | null {
+  if (item.done !== null || !item.due || quiet.includes(item.id)) return null;
+  return reminderMoment(item.due, now);
+}
+
+/** Turns one item's reminder off (`on` true: quiet) or back on, on this phone. Guesses record nothing. */
+export function quietFor(quiet: number[], id: number, on: boolean): number[] {
+  if (id < 0 || quiet.includes(id) === on) return quiet;
+  return on ? [...quiet, id] : quiet.filter((other) => other !== id);
+}
+
+/**
+ * Keeps the quiet ids small: drops ids missing from the fetched list at or below its highest id (one
+ * above it may be a save not fetched yet) and ids listed without a date. Done items stay, so unticking
+ * keeps the reminder off. The same array when nothing goes.
+ */
+export function pruneQuiet(items: TodoItem[], quiet: number[]): number[] {
+  const top = topId(items);
+  const byId = new Map(items.map((item) => [item.id, item]));
+  const kept = quiet.filter((id) => {
+    const item = byId.get(id);
+    return item ? item.due !== null : id > top;
+  });
+  return kept.length === quiet.length ? quiet : kept;
 }
 
 /**

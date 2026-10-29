@@ -34,7 +34,7 @@ Rules that follow from it:
 - **Overdue**: an open item whose due moment (date only: the end of that day) has passed. Shown in the danger colour until ticked; Molly never changes it.
 - **New** (replaced by [`implan-todo-read-only`](../implan-todo-read-only/MAIN.md): New now lasts until the item is opened on this phone) (per device, AsyncStorage): the highest note id seen when this device last left the list, plus the ids this device saved since. New = an open item with a higher id that this device didn't save. Edits by the other parent are not "new".
 - **Photo URL**: Baby Buddy returns an absolute URL built from its request host, which may be wrong behind a proxy (`http` vs `https`). Molly keeps only the path from `/media/` and joins it to the session's base URL.
-- **Reminder time**: with a time, 1 h before; date only, 19:00 the day before. A reminder whose time has passed is not set, and the item has no bell. Done items have none.
+- **Reminder time**: with a time, 1 h before; date only, 19:00 the day before. A reminder whose time has passed is not set, and the item has no bell. Done items have none. One item's reminder can be turned off on one phone: [`implan-todo-quiet`](../implan-todo-quiet/MAIN.md).
 
 ## Decisions and why
 

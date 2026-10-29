@@ -7,7 +7,7 @@ import { DateField } from '@/components/DateField';
 import { Pressable } from '@/components/pressable';
 import { Sheet } from '@/components/sheet';
 import { TimeField } from '@/components/TimeField';
-import { FIXED_SCALE, Segment, Spinner, StepButton, Text } from '@/components/ui';
+import { FIXED_SCALE, Segment, Spinner, StepButton, Text, ToggleRow } from '@/components/ui';
 import { HAPTICS } from '@/haptics/model';
 import { useHaptic } from '@/haptics/use-haptic';
 import { hasNotifications } from '@/notification/sync';
@@ -51,15 +51,18 @@ const SOURCES: Record<PhotoSource, { label: string; icon: OutlinedSymbol }> = {
 type PhotoDraft = { kind: 'keep' } | { kind: 'new'; photo: PickedPhoto } | { kind: 'remove' };
 
 /**
- * Adds or edits a to-do item: text (keyboard open), label chips, date, time, the Android reminder line
- * and a photo. The Other day and the time open the system date / clock dialog on Android (closing the
- * keyboard first) and are the browser's date / time fields on the web; the steppers beside them nudge. A new label is only made on Save, with the item. No Delete: parents can't delete notes.
- * `labels` null: no `core.view_tag`, so only the built-in labels, with a hint.
+ * Adds or edits a to-do item: text (keyboard open), label chips, date, time, the Android "Remind me" switch
+ * (this phone only; its line says when) and a photo. The Other day and the time open the system date / clock
+ * dialog on Android (closing the keyboard first) and are the browser's date / time fields on the web; the
+ * steppers beside them nudge. A new label is only made on Save, with the item. No Delete: parents can't delete
+ * notes. `labels` null: no `core.view_tag`, so only the built-in labels, with a hint. `quiet`: this phone's
+ * `todoQuiet` ids.
  */
 export function TodoSheet({
   item,
   photo,
   labels,
+  quiet,
   now,
   onSave,
   onClose,
@@ -68,11 +71,12 @@ export function TodoSheet({
   /** The item's photo URL (`photoUrl`), if it has one. */
   photo: string | null;
   labels: string[] | null;
+  quiet: readonly number[];
   now: Date;
   onSave: (save: TodoSave) => Promise<boolean>;
   onClose: () => void;
 }) {
-  const [draft, setDraft] = useState<TodoDraftState>(() => (item ? todoDraftOf(item, now) : newTodoDraft(null, now)));
+  const [draft, setDraft] = useState<TodoDraftState>(() => (item ? todoDraftOf(item, now, quiet) : newTodoDraft(null, now)));
   const [photoDraft, setPhotoDraft] = useState<PhotoDraft>({ kind: 'keep' });
   const [added, setAdded] = useState<string[]>([]);
   const [naming, setNaming] = useState<string | null>(null);
@@ -86,7 +90,7 @@ export function TodoSheet({
   // An edited item's label stays offered even if the tags list doesn't have it (yet).
   const chips = draft.label && !offered.includes(draft.label) ? [...offered, draft.label] : offered;
   const due = draftDue(draft, now);
-  const reminder = hasNotifications ? reminderLine(due, now) : null;
+  const reminder = hasNotifications ? reminderLine({ due, quiet: draft.quiet }, now) : null;
   const blank = draft.text.trim() === '';
   const shownPhoto = photoDraft.kind === 'new' ? photoDraft.photo.uri : photoDraft.kind === 'keep' ? photo : null;
 
@@ -115,7 +119,7 @@ export function TodoSheet({
     if (blank || saving) return;
     setSaving(true);
     const image = photoDraft.kind === 'new' ? photoDraft.photo.image : photoDraft.kind === 'remove' ? null : undefined;
-    const saved = await onSave({ text: draft.text.trim(), label: draft.label, due, image });
+    const saved = await onSave({ text: draft.text.trim(), label: draft.label, due, image, quiet: draft.quiet });
     setSaving(false);
     if (saved) onClose();
   }
@@ -234,9 +238,14 @@ export function TodoSheet({
             </View>
           )}
           {reminder && (
-            <View className="flex-row items-center gap-1.5 px-1">
-              <Glyph name="notifications" size={16} color="muted" />
-              <Text className="flex-1 text-caption font-bold text-muted">{reminder}</Text>
+            <View className="px-1">
+              <ToggleRow
+                title="Remind me"
+                subtitle={reminder}
+                value={!draft.quiet}
+                onChange={(on) => set({ quiet: !on })}
+                last
+              />
             </View>
           )}
         </View>

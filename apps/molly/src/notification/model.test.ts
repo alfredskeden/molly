@@ -737,7 +737,7 @@ describe('to-do reminders', () => {
     const items = todoItems([note(7, '6-month checkup', ['To-do: Appointments', 'molly-todo-due'], at(26, 14, 30))]);
 
     // When
-    const reminders = todoReminderNotifications(items, now);
+    const reminders = todoReminderNotifications(items, [], now);
 
     // Then
     expect(reminders).toEqual({
@@ -751,7 +751,7 @@ describe('to-do reminders', () => {
     const items = todoItems([note(8, 'Call the nurse', ['molly-todo-day'], at(27, 12))]);
 
     // When
-    const reminders = todoReminderNotifications(items, now);
+    const reminders = todoReminderNotifications(items, [], now);
 
     // Then
     expect(reminders.schedule).toEqual([{ id: 8, title: 'Call the nurse · Tomorrow', text: 'Other', at: at(26, 19).getTime() }]);
@@ -766,9 +766,27 @@ describe('to-do reminders', () => {
     ]);
 
     // When
-    const reminders = todoReminderNotifications(items, now);
+    const reminders = todoReminderNotifications(items, [], now);
 
     // Then
     expect(reminders).toEqual({ schedule: [], keep: [1] });
+  });
+
+  it('neither schedules nor keeps an item quiet on this phone, so one that rang is cleared', () => {
+    // Given
+    const items = todoItems([
+      note(1, 'Rang already', ['molly-todo-due'], at(25, 10, 30)),
+      note(2, 'Vaccination', ['molly-todo-due'], at(26, 15)),
+      note(3, 'Pharmacy', ['molly-todo-day'], at(27, 12)),
+    ]);
+
+    // When
+    const reminders = todoReminderNotifications(items, [1, 2], now);
+
+    // Then
+    expect(reminders).toEqual({
+      schedule: [{ id: 3, title: 'Pharmacy · Tomorrow', text: 'Other', at: at(26, 19).getTime() }],
+      keep: [3],
+    });
   });
 });

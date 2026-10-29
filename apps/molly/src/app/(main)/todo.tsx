@@ -23,7 +23,7 @@ import { PageSkeleton, useSkeleton } from '@/features/dashboard/Skeleton';
 import { UnreachableBanner } from '@/features/dashboard/Unreachable';
 import { useNow } from '@/features/dashboard/use-now';
 import { PhotoViewer } from '@/features/todo/PhotoViewer';
-import { useTodoItems, useTodoLabels, useTodoSeen } from '@/features/todo/queries';
+import { useTodoItems, useTodoLabels, useTodoQuiet, useTodoSeen } from '@/features/todo/queries';
 import { TodoSheet } from '@/features/todo/TodoSheet';
 import { TodoView } from '@/features/todo/TodoView';
 import { useTodoWrites } from '@/features/todo/use-todo-writes';
@@ -44,6 +44,7 @@ export default function Todo() {
   const todo = useTodoItems();
   const labels = useTodoLabels();
   const { seen, save: saveSeen } = useTodoSeen();
+  const { quiet } = useTodoQuiet();
   const writes = useTodoWrites();
   const notifications = useNotificationState();
   const [editing, setEditing] = useState<TodoItem | 'new' | null>(null);
@@ -98,6 +99,7 @@ export default function Todo() {
                 <Card
                   key={card.label}
                   card={card}
+                  quiet={quiet}
                   now={now}
                   photoOf={photoOf}
                   onTick={(item) => writes.setDone(item, item.done === null)}
@@ -117,6 +119,7 @@ export default function Todo() {
         <TodoView
           item={readItem}
           photo={photoOf(readItem)}
+          quiet={quiet}
           now={now}
           onTick={() => writes.setDone(readItem, readItem.done === null)}
           onEdit={() => edit(readItem)}
@@ -143,11 +146,12 @@ export default function Todo() {
           item={editingItem}
           photo={editingItem ? photoOf(editingItem) : null}
           labels={labels.data === undefined ? ['Buy', 'Appointments'] : labels.data}
+          quiet={quiet}
           now={now}
           onSave={async (save) => {
             const saved = await writes.save(save, editingItem ?? undefined);
             // A dated item rings a reminder on Android: ask for notifications once there's one to ring.
-            if (saved && save.due && hasNotifications && notifications.state === 'off') await notifications.turnOn();
+            if (saved && save.due && !save.quiet && hasNotifications && notifications.state === 'off') await notifications.turnOn();
             return saved;
           }}
           onClose={() => setEditing(null)}
@@ -159,6 +163,7 @@ export default function Todo() {
 
 function Card({
   card,
+  quiet,
   now,
   photoOf,
   onTick,
@@ -166,6 +171,7 @@ function Card({
   onPhoto,
 }: {
   card: TodoCard;
+  quiet: readonly number[];
   now: Date;
   photoOf: (item: TodoItem) => string | null;
   onTick: (item: ListedItem) => void;
@@ -187,6 +193,7 @@ function Card({
           <Row
             key={item.id}
             item={item}
+            quiet={quiet}
             now={now}
             photo={photoOf(item)}
             last={index === card.items.length - 1}
@@ -202,6 +209,7 @@ function Card({
 
 function Row({
   item,
+  quiet,
   now,
   photo,
   last,
@@ -210,6 +218,7 @@ function Row({
   onPhoto,
 }: {
   item: ListedItem;
+  quiet: readonly number[];
   now: Date;
   photo: string | null;
   last: boolean;
@@ -219,7 +228,7 @@ function Row({
 }) {
   const done = item.done !== null;
   const when = dueText(item, now);
-  const bell = hasNotifications && reminderAt(item, now) !== null;
+  const bell = hasNotifications && reminderAt(item, now, quiet) !== null;
   return (
     <View testID={`todo-${item.id}`} className={`flex-row items-center gap-1 ${last ? '' : 'border-b border-line'}`}>
       <Pressable
