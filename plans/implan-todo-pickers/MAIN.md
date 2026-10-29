@@ -1,22 +1,22 @@
 # Due date and time from a picker
 
-GitHub issue #34 (merged from #35). Builds on the to-do list (`plans/implan-todo/`) and on issue #30 (`plans/implan-todo-read-only/`, PR #39): this branch starts from #30's branch, and its PR waits for #39 to merge, then rebases onto `develop`. Decisions marked "to confirm" are listed with their alternatives in [`NOTES.md`](NOTES.md); the steps follow the recommended choice. Definition of Done: [`TEST_STRATEGY.md`](TEST_STRATEGY.md).
+GitHub issue #34 (merged from #35). Builds on the to-do list (`plans/implan-todo/`) and on issue #30 (`plans/implan-todo-read-only/`, PR #39): this branch starts from #30's branch, and its PR waits for #39 to merge, then rebases onto `develop`. The decisions (confirmed 2026-10-29) and the alternatives turned down are in [`NOTES.md`](NOTES.md), "Decided". Definition of Done: [`TEST_STRATEGY.md`](TEST_STRATEGY.md).
 
 ## Outcome
 
 - **Tapping the date under Other opens the date picker.** Android: the system date dialog, days before today disabled. Web: the browser's date field (`min` today). The picked day shows in the sheet (`14 Jan`) and is saved.
-- **Picking today or tomorrow switches the segment to Today / Tomorrow** (to confirm). A date before today, which only a typed web value can give, becomes Today.
-- **Tapping the time (with At a time) opens the time picker.** Android: the system 24-hour clock dialog, whose keyboard icon switches to typing hours and minutes (to confirm: not straight into keyboard mode). Web: the browser's time field. Any minute can be picked (`14:40`).
-- **The steppers stay** for small nudges: −1 d / +1 d step from the picked day, never before today, and stay on Other (to confirm); −15 / +15 step from the picked minute, within 00:00–23:59 (to confirm, was 23:45).
+- **Picking today or tomorrow switches the segment to Today / Tomorrow**. A date before today, which only a typed web value can give, becomes Today.
+- **Tapping the time (with At a time) opens the time picker.** Android: the system 24-hour clock dialog, whose keyboard icon switches to typing hours and minutes (it opens on the clock, not straight in keyboard mode). Web: the browser's time field. Any minute can be picked (`14:40`).
+- **The steppers stay** for small nudges: −1 d / +1 d step from the picked day, never before today, and stay on Other; −15 / +15 step from the picked minute, within 00:00–23:59 (was 23:45).
 - **Cancelling a picker keeps the value.** Nothing changes until a date or time is set.
-- **Opening a picker closes the text keyboard** (to confirm); other taps still leave it open (`plans/implan-todo-keyboard/`).
+- **Opening a picker closes the text keyboard**; other taps still leave it open (`plans/implan-todo-keyboard/`).
 - The reminder line follows the picked moment as today (`reminderLine`): 14:40 today → "This phone reminds you today at 13:40".
 
 No new dependency: `@react-native-community/datetimepicker` 9.1.0 is installed and already configured in `app.json`.
 
 ## Pieces of code
 
-- **Shared fields** (`apps/molly/src/components/`, to confirm): `DateField.android.tsx` + `DateField.tsx` (moved from `features/measurements/`, gains `min`, `max` both optional, and `label`, default `Date`), and new `TimeField.android.tsx` + `TimeField.tsx`. Same extension for the platform file and its fallback (`CLAUDE.md`). On Android each opens its dialog when `open` turns on and renders nothing; `onChange` on set, `onCancel` on dismiss. On web each renders the browser input (styled like the measurements date field) and calls `onChange` with a valid value; the time field's value is `HH:MM` (`clockText`), its result minutes past midnight.
+- **Shared fields** (`apps/molly/src/components/`): `DateField.android.tsx` + `DateField.tsx` (moved from `features/measurements/`, gains `min`, `max` both optional, and `label`, default `Date`), and new `TimeField.android.tsx` + `TimeField.tsx`. Same extension for the platform file and its fallback (`CLAUDE.md`). On Android each opens its dialog when `open` turns on and renders nothing; `onChange` on set, `onCancel` on dismiss. On web each renders the browser input (styled like the measurements date field) and calls `onChange` with a valid value; the time field's value is `HH:MM` (`clockText`), its result minutes past midnight.
 - **Draft rules** (`apps/molly/src/features/todo/sheet-model.ts`, Vitest in `sheet-model.test.ts`):
   - `pickDay(draft, day, now)`: today → `day: 'today'`, tomorrow → `'tomorrow'`, later → `'other'` with `other` = that day; before today → Today. `other` is left as it was when snapping, so choosing Other again shows the last Other day.
   - `pickTime(draft, minutes)`: sets `minutes` exactly (within 0…1439); `timed` stays as it is.
@@ -39,5 +39,5 @@ No new dependency: `@react-native-community/datetimepicker` 9.1.0 is installed a
 
 - Turning off an item's reminder: issue #36 (touches the same Date block and `sheet-model.ts`; see `NOTES.md`).
 - A year in `shortDate` for far-ahead dates (spotted, `NOTES.md`).
-- Material 3 pickers or a native theme change (only if decision 3 flips; then spike first).
+- Material 3 pickers or a native theme change (decided against, `NOTES.md` decision 3).
 - Pickers anywhere else (Add entry, Adjust time, measurements' time).

@@ -65,7 +65,7 @@ flowchart LR
 
 The measurements' date field moves to `components/` so both sheets use one. Each field is a pair of files: `.android.tsx` opens the system dialog, `.tsx` is the web input.
 
-## What waits on someone else
+## What waits on other work
 
-- Six choices in this model (shared field, 23:59, clock first, picks-only snapping, keyboard closing, web inputs) are recommendations awaiting the developer's yes; `NOTES.md` lists each with its alternative.
+- Nothing to decide: the six choices in this model (shared field, 23:59, clock first, picks-only snapping, keyboard closing, web inputs) were confirmed on 2026-10-29; `NOTES.md` keeps the alternatives turned down.
 - The PR waits for #30's PR (#39). Issue #36 edits the same Date block and expects a rebase.
