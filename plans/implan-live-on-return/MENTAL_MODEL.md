@@ -33,12 +33,15 @@ flowchart TD
 
 ## Unsaved input is dropped
 
-After a minute away, a half-written to-do or an unsaved setting goes with its screen.
+After a minute away, a half-written to-do or an unsaved setting goes with its screen, and Molly says so.
 
-| Where | What the parent sees |
+| What was open | What the parent sees |
 | --- | --- |
-| Settings, child screen with changes | "Changes not saved" toast over the live ring (already there today when leaving with changes) |
-| To-do, measurement or Add entry sheet, dashboard editor | closed, no message (as when closed any other way) |
+| Settings or child screen with changes | live ring + "Changes not saved" (their existing toast) |
+| To-do, measurement or Add entry sheet, or the dashboard editor, **with changes** | live ring + "Changes not saved" |
+| Any of those **without** changes | live ring, no message |
+
+One toast, however many drafts went. Each sheet tells the provider whether it has changes; a pure has-changes rule per sheet decides that.
 
 ## A trip is one return
 
@@ -54,9 +57,11 @@ flowchart LR
   AS[AppState change] --> M[return model<br/>features/return/model.ts<br/>pure, unit-tested]
   O[leaveOnPurpose<br/>pickPhoto, openLink, turnOnNotifications] --> P
   RT[current route<br/>/tap-log?] --> P
+  U[useUnsavedOnReturn<br/>to-do, measurement, Add entry, editor] --> P
   M --> P[ReturnProvider<br/>in the main layout]
   P -- go live, Android --> D[dismiss to /]
   P -- go live / show live --> SL[dashboard showLive<br/>via useOnLive]
+  P -- go live, a draft changed --> TO[Changes not saved toast]
 ```
 
 The provider sits in the signed-in layout, so onboarding and "Can't sign in" never see it.
