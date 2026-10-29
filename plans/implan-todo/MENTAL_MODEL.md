@@ -74,7 +74,7 @@ Inside a card: dated items first, soonest on top ("Tomorrow 14:30", "in 5 days")
 
 ## "New" and the badge
 
-Each device remembers the highest item id it saw when it last left the list. Higher ids it didn't save itself are "New", and the header's To-do button counts them. Nothing is pushed: the count shows on the next poll.
+*Replaced by [`implan-todo-read-only`](../implan-todo-read-only/MAIN.md): New now lasts until the item is opened on this phone, and Mark unread brings it back.* Each device remembers the highest item id it saw when it last left the list. Higher ids it didn't save itself are "New", and the header's To-do button counts them. Nothing is pushed: the count shows on the next poll.
 
 ## Photos
 
