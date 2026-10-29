@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { agoText } from './format';
+import { agoText, localDay } from './format';
 
 const at = (clock: string, day = 24) => {
   const [hours = 0, minutes = 0] = clock.split(':').map(Number);
@@ -30,5 +30,23 @@ describe('when something happened', () => {
 
     // Then
     expect(text).toBe('22:30');
+  });
+});
+
+describe('the local date', () => {
+  it('is written as YYYY-MM-DD', () => {
+    // When
+    const day = localDay(new Date(2026, 8, 3, 9, 0));
+
+    // Then
+    expect(day).toBe('2026-09-03');
+  });
+
+  it('stays the local day late in the evening', () => {
+    // When
+    const day = localDay(new Date(2026, 11, 31, 23, 59));
+
+    // Then
+    expect(day).toBe('2026-12-31');
   });
 });

@@ -1,6 +1,6 @@
 import { clockText, reminderAt, shortDate, type TodoDue } from '@molly/core';
 
-/** The sheet's date choice: none, Today, Tomorrow, or another day stepped a day at a time. */
+/** The sheet's date choice: none, Today, Tomorrow, or another day (picked, or stepped a day at a time). */
 export type TodoDay = 'none' | 'today' | 'tomorrow' | 'other';
 
 /** What the sheet holds while open. `other` is the Other day's date, `minutes` the time past midnight when `timed`. */
@@ -51,9 +51,28 @@ export function stepDay(draft: TodoDraftState, days: number, now: Date): TodoDra
   return { ...draft, other: other < startOfDay(now) ? startOfDay(now) : other };
 }
 
+/** A minute of the day, kept within 00:00…23:59. */
+const withinDay = (minutes: number) => Math.min(DAY_MINUTES - 1, Math.max(0, minutes));
+
 /** ±15 min, kept within the day. */
 export function stepTime(draft: TodoDraftState, minutes: number): TodoDraftState {
-  return { ...draft, minutes: Math.min(DAY_MINUTES - 15, Math.max(0, draft.minutes + minutes)) };
+  return { ...draft, minutes: withinDay(draft.minutes + minutes) };
+}
+
+/**
+ * A day from the date picker: today or tomorrow choose Today / Tomorrow (a day before today, which only a
+ * typed web value gives, is Today too), any later day becomes the Other day. Snapping leaves `other` as it
+ * was, so choosing Other again shows the last Other day.
+ */
+export function pickDay(draft: TodoDraftState, day: Date, now: Date): TodoDraftState {
+  if (startOfDay(day) <= startOfDay(now)) return { ...draft, day: 'today' };
+  if (sameDay(day, addDays(now, 1))) return { ...draft, day: 'tomorrow' };
+  return { ...draft, day: 'other', other: startOfDay(day) };
+}
+
+/** A time from the time picker, to the minute; Any time / At a time is left as it is. */
+export function pickTime(draft: TodoDraftState, minutes: number): TodoDraftState {
+  return { ...draft, minutes: withinDay(minutes) };
 }
 
 /** The Android reminder line under the date: when this phone will remind, or none once that's past. */

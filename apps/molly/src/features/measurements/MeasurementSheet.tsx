@@ -15,6 +15,7 @@ import {
 import { useState } from 'react';
 import { Platform, TextInput, View } from 'react-native';
 
+import { DateField } from '@/components/DateField';
 import { Pressable } from '@/components/pressable';
 import { Sheet } from '@/components/sheet';
 import { FIXED_SCALE, Segment, Spinner, Text } from '@/components/ui';
@@ -22,7 +23,6 @@ import { HAPTICS } from '@/haptics/model';
 import { useHaptic } from '@/haptics/use-haptic';
 import { useTheme } from '@/theme/theme';
 
-import { DateField } from './DateField';
 import { entryDay, measureOf, newMeasurement, type DayChoice } from './model';
 import { useLogMeasurement } from './queries';
 
