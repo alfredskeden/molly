@@ -1,5 +1,5 @@
 import { BabyBuddyError, type Note, type NoteImage } from '@molly/api';
-import { noteTime, savedBy, saveTags, tickTags, untickTags, type TodoDue, type TodoItem } from '@molly/core';
+import { noteTime, quietFor, savedBy, saveTags, tickTags, untickTags, type TodoDue, type TodoItem } from '@molly/core';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { failureToast, type Toast } from '@/features/dashboard/outcome-messages';
@@ -11,7 +11,7 @@ import { useHaptic } from '@/haptics/use-haptic';
 import { isRefusalError } from '@/session/key-check';
 import { useSignedInSession } from '@/session/session';
 
-import { TODO_KEY, TODO_LABELS_KEY, useTodoSeen } from './queries';
+import { TODO_KEY, TODO_LABELS_KEY, useTodoQuiet, useTodoSeen } from './queries';
 
 export const todoRefusedToast: Toast = {
   text: "Couldn't save. Your Baby Buddy user needs permission to add and change notes and tags (core.add_note, core.change_note, core.add_tag).",
@@ -19,8 +19,11 @@ export const todoRefusedToast: Toast = {
   help: 'permissions',
 };
 
-/** What the sheet saves. `image`: a new photo, null to remove it, undefined to keep what's there. */
-export type TodoSave = { text: string; label: string | null; due: TodoDue | null; image?: NoteImage | null };
+/**
+ * What the sheet saves. `image`: a new photo, null to remove it, undefined to keep what's there. `quiet`:
+ * "Remind me" off, kept on this phone only (`settings.todoQuiet`), and only while the item has a date.
+ */
+export type TodoSave = { text: string; label: string | null; due: TodoDue | null; image?: NoteImage | null; quiet: boolean };
 
 /**
  * Ticks and saves. Optimistic like the trackers' writes: the change shows at once and is undone, with a
@@ -34,6 +37,7 @@ export function useTodoWrites() {
   const haptic = useHaptic();
   const { childId } = useSignedInSession();
   const { save: saveSeen } = useTodoSeen();
+  const { save: saveQuiet } = useTodoQuiet();
 
   async function guess(update: (notes: Note[]) => Note[]) {
     await queryClient.cancelQueries({ queryKey: TODO_KEY });
@@ -79,7 +83,7 @@ export function useTodoWrites() {
   }
 
   /** A new item (on the child on screen) or an edit of `item`. True once Baby Buddy has it. */
-  async function save({ text, label, due, image }: TodoSave, item?: TodoItem): Promise<boolean> {
+  async function save({ text, label, due, image, quiet }: TodoSave, item?: TodoItem): Promise<boolean> {
     const tags = saveTags({ label, due }, item?.tags);
     const time = noteTime(due);
     const uploading = image !== undefined && image !== null;
@@ -105,6 +109,8 @@ export function useTodoWrites() {
     if (!saved) return false;
     haptic(HAPTICS.log);
     if (!item) await saveSeen((seen) => savedBy(seen, saved.id)).catch(() => undefined);
+    // Removing the date forgets it, so a new date starts with the reminder on.
+    await saveQuiet((current) => quietFor(current, saved.id, quiet && due !== null)).catch(() => undefined);
     const labels = queryClient.getQueryData<string[] | null>(TODO_LABELS_KEY);
     if (label && labels && !labels.includes(label)) void queryClient.invalidateQueries({ queryKey: TODO_LABELS_KEY });
     toast({ text: `Saved · ${text}`, tone: 'med' });

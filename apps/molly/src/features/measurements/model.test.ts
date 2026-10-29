@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { dayKey, entryDay, guessMeasurement, measurementChanged, newMeasurement, type SheetState } from './model';
+import { entryDay, guessMeasurement, measurementChanged, newMeasurement, type SheetState } from './model';
 
 const now = new Date(2026, 8, 28, 12, 5);
 
@@ -22,14 +22,6 @@ describe('the day an entry is for', () => {
 
     // Then
     expect(result).toEqual(new Date(2026, 8, 3));
-  });
-
-  it("is written as Baby Buddy's YYYY-MM-DD", () => {
-    // When
-    const key = dayKey(new Date(2026, 8, 3, 23, 30));
-
-    // Then
-    expect(key).toBe('2026-09-03');
   });
 });
 

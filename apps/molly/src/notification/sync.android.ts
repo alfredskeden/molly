@@ -115,10 +115,11 @@ export async function syncNotifications(cache: WidgetCache, settings: Settings |
 
 /**
  * Sets this phone's to-do reminder alarms from the list it last fetched (the app's to-do query, the widget
- * refresh) and drops those of items ticked off or undated since; `items` null (signed out) drops them all.
+ * refresh) and drops those of items ticked off, undated or turned quiet here (`quiet`, `settings.todoQuiet`)
+ * since; `items` null (signed out) drops them all.
  */
-export async function syncTodoReminders(items: TodoItem[] | null): Promise<void> {
-  const { schedule, keep } = items ? todoReminderNotifications(items, new Date()) : { schedule: [], keep: [] };
+export async function syncTodoReminders(items: TodoItem[] | null, quiet: readonly number[]): Promise<void> {
+  const { schedule, keep } = items ? todoReminderNotifications(items, quiet, new Date()) : { schedule: [], keep: [] };
   await safely('to-do reminder', () =>
     MollyNotify.syncTodoReminders(schedule.map((reminder) => ({ ...reminder, color: TODO_COLOR })), keep),
   );

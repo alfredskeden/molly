@@ -1,12 +1,23 @@
 import { describe, expect, it } from 'vitest';
 
-import { draftDue, newTodoDraft, reminderLine, stepDay, stepTime, todoChanged, todoDraftOf, type TodoDraftState } from './sheet-model';
+import {
+  draftDue,
+  newTodoDraft,
+  pickDay,
+  pickTime,
+  reminderLine,
+  stepDay,
+  stepTime,
+  todoChanged,
+  todoDraftOf,
+  type TodoDraftState,
+} from './sheet-model';
 
 const on = (day: number, hours = 0, minutes = 0) => new Date(2026, 9, day, hours, minutes);
 const now = on(25, 10, 7);
 
 describe('the to-do sheet', () => {
-  it('starts a new item with no text, no label, no date and Any time', () => {
+  it('starts a new item with no text, no label, no date, Any time and the reminder on', () => {
     // Given
     const label = null;
 
@@ -14,19 +25,19 @@ describe('the to-do sheet', () => {
     const draft = newTodoDraft(label, now);
 
     // Then
-    expect(draft).toMatchObject({ text: '', label: null, day: 'none', timed: false });
+    expect(draft).toMatchObject({ text: '', label: null, day: 'none', timed: false, quiet: false });
     expect(draftDue(draft, now)).toBeNull();
   });
 
   it('reads an item back: tomorrow at 14:30, or another day without a time', () => {
     // Given
     const items = [
-      { text: 'Checkup', label: 'Appointments', due: { kind: 'time' as const, at: on(26, 14, 30) } },
-      { text: 'Pharmacy run', label: null, due: { kind: 'day' as const, at: on(30) } },
+      { id: 1, text: 'Checkup', label: 'Appointments', due: { kind: 'time' as const, at: on(26, 14, 30) } },
+      { id: 2, text: 'Pharmacy run', label: null, due: { kind: 'day' as const, at: on(30) } },
     ];
 
     // When
-    const drafts = items.map((item) => todoDraftOf(item, now));
+    const drafts = items.map((item) => todoDraftOf(item, now, []));
 
     // Then
     expect(drafts.map((draft) => [draft.day, draft.timed, draftDue(draft, now)])).toEqual([
@@ -54,19 +65,118 @@ describe('the to-do sheet', () => {
     ]);
   });
 
-  it('steps the other day by a day, never before today, and the time by 15 minutes within the day', () => {
+  it('steps the other day by a day, never before today, and stays on Other', () => {
     // Given
-    const draft = { ...newTodoDraft(null, now), day: 'other' as const, other: on(26), minutes: 23 * 60 + 50 };
+    const draft = { ...newTodoDraft(null, now), day: 'other' as const, other: on(26) };
 
     // When
     const earlier = stepDay(stepDay(draft, -1, now), -1, now);
+
+    // Then
+    expect([earlier.day, earlier.other]).toEqual(['other', on(25)]);
+  });
+
+  it('steps the time by 15 minutes, kept within 00:00 and 23:59', () => {
+    // Given
+    const draft = { ...newTodoDraft(null, now), timed: true, minutes: 23 * 60 + 50 };
+
+    // When
     const later = stepTime(draft, 15);
     const earliest = stepTime({ ...draft, minutes: 5 }, -15);
 
     // Then
-    expect(earlier.other).toEqual(on(25));
-    expect(later.minutes).toBe(23 * 60 + 45);
-    expect(earliest.minutes).toBe(0);
+    expect([later.minutes, earliest.minutes]).toEqual([23 * 60 + 59, 0]);
+  });
+
+  it('picks a day after tomorrow as the Other day', () => {
+    // Given
+    const draft = newTodoDraft(null, now);
+
+    // When
+    const picked = pickDay(draft, new Date(2027, 0, 14), now);
+
+    // Then
+    expect([picked.day, draftDue(picked, now)]).toEqual(['other', { kind: 'day', at: new Date(2027, 0, 14) }]);
+  });
+
+  it('picks today as Today and tomorrow as Tomorrow', () => {
+    // Given
+    const draft = { ...newTodoDraft(null, now), day: 'other' as const, other: on(30) };
+
+    // When
+    const days = [pickDay(draft, on(25), now), pickDay(draft, on(26), now)];
+
+    // Then
+    expect(days.map((picked) => [picked.day, picked.other])).toEqual([
+      ['today', on(30)],
+      ['tomorrow', on(30)],
+    ]);
+  });
+
+  it('picks a day before today as Today', () => {
+    // Given
+    const draft = { ...newTodoDraft(null, now), day: 'other' as const, other: on(30) };
+
+    // When
+    const picked = pickDay(draft, on(24), now);
+
+    // Then
+    expect(picked.day).toBe('today');
+  });
+
+  it('keeps the text, label and time when a day is picked', () => {
+    // Given
+    const draft: TodoDraftState = { ...newTodoDraft('Appointments', now), text: 'Checkup', timed: true, minutes: 14 * 60 + 40 };
+
+    // When
+    const picked = pickDay(draft, on(30), now);
+
+    // Then
+    expect(picked).toMatchObject({ text: 'Checkup', label: 'Appointments', timed: true, minutes: 14 * 60 + 40 });
+  });
+
+  it('saves a picked time at its exact minute', () => {
+    // Given
+    const draft = { ...newTodoDraft(null, now), day: 'tomorrow' as const, timed: true };
+
+    // When
+    const picked = pickTime(draft, 14 * 60 + 40);
+
+    // Then
+    expect(draftDue(picked, now)).toEqual({ kind: 'time', at: on(26, 14, 40) });
+  });
+
+  it('steps 15 minutes either way from a picked time', () => {
+    // Given
+    const picked = pickTime({ ...newTodoDraft(null, now), timed: true }, 14 * 60 + 40);
+
+    // When
+    const steps = [stepTime(picked, 15), stepTime(picked, -15)];
+
+    // Then
+    expect(steps.map((draft) => draft.minutes)).toEqual([14 * 60 + 55, 14 * 60 + 25]);
+  });
+
+  it('keeps a picked time within the day', () => {
+    // Given
+    const draft = { ...newTodoDraft(null, now), timed: true };
+
+    // When
+    const times = [pickTime(draft, -1), pickTime(draft, 24 * 60)];
+
+    // Then
+    expect(times.map((picked) => picked.minutes)).toEqual([0, 23 * 60 + 59]);
+  });
+
+  it('reminds an hour before a time picked for today', () => {
+    // Given
+    const picked = pickTime({ ...newTodoDraft(null, now), day: 'today', timed: true }, 14 * 60 + 40);
+
+    // When
+    const line = reminderLine({ due: draftDue(picked, now), quiet: false }, now);
+
+    // Then
+    expect(line).toBe('This phone reminds you today at 13:40');
   });
 
   it('says when the phone will remind, or that the time has passed', () => {
@@ -78,7 +188,7 @@ describe('the to-do sheet', () => {
     ];
 
     // When
-    const lines = [...dues.map((due) => reminderLine(due, now)), reminderLine(null, now)];
+    const lines = [...dues.map((due) => reminderLine({ due, quiet: false }, now)), reminderLine({ due: null, quiet: false }, now)];
 
     // Then
     expect(lines).toEqual([
@@ -88,15 +198,37 @@ describe('the to-do sheet', () => {
       null,
     ]);
   });
+
+  it('reads whether this phone reminds about an item from its quiet ids', () => {
+    // Given
+    const item = { id: 7, text: 'Vaccination', label: null, due: { kind: 'time' as const, at: on(26, 15) } };
+
+    // When
+    const drafts = [todoDraftOf(item, now, [7]), todoDraftOf(item, now, [3])];
+
+    // Then
+    expect(drafts.map((draft) => draft.quiet)).toEqual([true, false]);
+  });
+
+  it('says this phone won\'t remind when quiet, and nothing without a date', () => {
+    // Given
+    const due = { kind: 'time' as const, at: on(25, 14, 30) };
+
+    // When
+    const lines = [reminderLine({ due, quiet: true }, now), reminderLine({ due: null, quiet: true }, now)];
+
+    // Then
+    expect(lines).toEqual(['No reminder on this phone', null]);
+  });
 });
 
 describe('whether the to-do sheet has changes', () => {
-  const item = { text: 'Checkup', label: 'Appointments', due: { kind: 'time' as const, at: on(26, 14, 30) } };
+  const item = { id: 7, text: 'Checkup', label: 'Appointments', due: { kind: 'time' as const, at: on(26, 14, 30) } };
   const unchanged = { photo: 'keep', added: [] } as const;
 
   it.each([
     ['a new item', newTodoDraft(null, now)],
-    ['an existing item', todoDraftOf(item, now)],
+    ['an existing item', todoDraftOf(item, now, [])],
   ])('has none when %s is just opened', (_, opened) => {
     // When
     const changed = todoChanged(opened, opened, unchanged);
@@ -111,9 +243,10 @@ describe('whether the to-do sheet has changes', () => {
     ['day', { day: 'today' }],
     ['time', { minutes: 15 * 60 }],
     ['any time', { timed: false }],
+    ['reminder', { quiet: true }],
   ])('has some when the %s changed', (_, change) => {
     // Given
-    const opened = todoDraftOf(item, now);
+    const opened = todoDraftOf(item, now, []);
 
     // When
     const changed = todoChanged(opened, { ...opened, ...change }, unchanged);
@@ -150,7 +283,7 @@ describe('whether the to-do sheet has changes', () => {
 
   it('has none when changed and changed back', () => {
     // Given
-    const opened = todoDraftOf(item, now);
+    const opened = todoDraftOf(item, now, []);
     const back = { ...stepTime(stepTime(opened, 15), -15), text: 'Checkup', day: 'tomorrow' as const };
 
     // When

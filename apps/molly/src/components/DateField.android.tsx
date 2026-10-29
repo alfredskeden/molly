@@ -1,24 +1,18 @@
 import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { useEffect } from 'react';
 
-/** Android: opens the system date dialog when `open` turns on; nothing of its own on screen. */
-export function DateField({
-  value,
-  max,
-  onChange,
-  onCancel,
-  open,
-}: {
-  value: Date | null;
-  max: Date;
-  onChange: (day: Date) => void;
-  onCancel: () => void;
-  open: boolean;
-}) {
+import type { DateFieldProps } from './DateField';
+
+/**
+ * Android: opens the system date dialog when `open` turns on; nothing of its own on screen. Days outside
+ * `min` / `max` are disabled, and a `value` outside them opens on the nearest bound.
+ */
+export function DateField({ value, min, max, onChange, onCancel, open }: DateFieldProps) {
   useEffect(() => {
     if (!open) return;
     DateTimePickerAndroid.open({
-      value: value ?? max,
+      value: value ?? max ?? min ?? new Date(),
+      minimumDate: min,
       maximumDate: max,
       mode: 'date',
       onChange: (event, day) => {

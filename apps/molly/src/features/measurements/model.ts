@@ -1,5 +1,5 @@
 import type { Measurement, MeasurementKind, NewMeasurement } from '@molly/api';
-import { typedMeasurement } from '@molly/core';
+import { localDay, typedMeasurement } from '@molly/core';
 
 import type { Copy } from '@/theme/copy';
 
@@ -34,12 +34,6 @@ export function entryDay(choice: DayChoice, picked: Date | null, now: Date): Dat
   return new Date(day.getFullYear(), day.getMonth(), day.getDate() - (choice === 'yesterday' ? 1 : 0));
 }
 
-/** Baby Buddy's `YYYY-MM-DD` of a local date. */
-export function dayKey(day: Date): string {
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${day.getFullYear()}-${pad(day.getMonth() + 1)}-${pad(day.getDate())}`;
-}
-
 const FIELDS: Record<Exclude<MeasurementKind, 'temperature'>, string> = {
   weight: 'weight',
   height: 'height',
@@ -63,13 +57,13 @@ export function newMeasurement<K extends MeasurementKind>(kind: K, { child, valu
     if (time > now) return 'future';
     return { child, temperature: value, time: time.toISOString(), ...note } as NewMeasurement<K>;
   }
-  const date = day === 'today' ? {} : { date: dayKey(day) };
+  const date = day === 'today' ? {} : { date: localDay(day) };
   return { child, [FIELDS[kind as keyof typeof FIELDS]]: value, ...date, ...note } as NewMeasurement<K>;
 }
 
 /** The new measurement as a list entry, with a negative id, until Baby Buddy's answer replaces it. Undated is today. */
 export function guessMeasurement<K extends MeasurementKind>(kind: K, entry: NewMeasurement<K>, now: Date): Measurement<K> {
-  const stamp = kind === 'temperature' ? { time: now.toISOString() } : { date: dayKey(now) };
+  const stamp = kind === 'temperature' ? { time: now.toISOString() } : { date: localDay(now) };
   return { notes: null, tags: [], ...stamp, ...entry, id: -Date.now() } as unknown as Measurement<K>;
 }
 
