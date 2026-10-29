@@ -219,7 +219,7 @@ function Row({
 }) {
   const done = item.done !== null;
   const when = dueText(item, now);
-  const bell = hasNotifications && reminderAt(item, now) !== null;
+  const bell = hasNotifications && reminderAt(item, now, []) !== null;
   return (
     <View testID={`todo-${item.id}`} className={`flex-row items-center gap-1 ${last ? '' : 'border-b border-line'}`}>
       <Pressable

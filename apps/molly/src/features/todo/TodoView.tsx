@@ -37,7 +37,7 @@ export function TodoView({
 }) {
   const done = item.done !== null;
   const when = dueText(item, now);
-  const reminder = hasNotifications && reminderAt(item, now) ? reminderLine(item.due, now) : null;
+  const reminder = hasNotifications && reminderAt(item, now, []) ? reminderLine(item.due, now) : null;
   return (
     <Sheet label="To-do item" onScrimPress={onClose} scroll>
       <View className="gap-4">

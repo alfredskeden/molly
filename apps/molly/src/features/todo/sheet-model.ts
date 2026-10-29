@@ -59,7 +59,7 @@ export function stepTime(draft: TodoDraftState, minutes: number): TodoDraftState
 /** The Android reminder line under the date: when this phone will remind, or none once that's past. */
 export function reminderLine(due: TodoDue | null, now: Date): string | null {
   if (!due) return null;
-  const at = reminderAt({ id: 0, child: 0, text: '', label: null, due, done: null, image: null, tags: [] }, now);
+  const at = reminderAt({ id: 0, child: 0, text: '', label: null, due, done: null, image: null, tags: [] }, now, []);
   if (!at) return 'Too late for a reminder';
   const day = sameDay(at, now) ? 'today' : sameDay(at, addDays(now, 1)) ? 'tomorrow' : `on ${shortDate(at)}`;
   return `This phone reminds you ${day} at ${clockText(at)}`;

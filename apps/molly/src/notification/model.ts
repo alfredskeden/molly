@@ -218,7 +218,7 @@ export type TodoReminderNotification = { id: number; title: string; text: string
 export function todoReminderNotifications(items: TodoItem[], now: Date): { schedule: TodoReminderNotification[]; keep: number[] } {
   const open = items.filter((item) => item.done === null && item.due !== null && item.id > 0);
   const schedule = open.flatMap((item) => {
-    const at = reminderAt(item, now);
+    const at = reminderAt(item, now, []);
     if (!at || !item.due) return [];
     const when = item.due.kind === 'time' ? clockText(item.due.at) : 'Tomorrow';
     return [{ id: item.id, title: `${item.text} · ${when}`, text: item.label ?? OTHER, at: at.getTime() }];
