@@ -4,6 +4,8 @@ import { File, Paths } from 'expo-file-system';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 
+import { leaveOnPurpose } from '@/features/return/trip';
+
 import { fitLongEdge, PHOTO_QUALITY, photoName } from './photo-model';
 
 export type PhotoSource = 'camera' | 'library';
@@ -19,7 +21,13 @@ export const PHOTO_SOURCES: readonly PhotoSource[] = ['camera', 'library'];
  */
 export async function pickPhoto(source: PhotoSource): Promise<PickedPhoto | null> {
   const options: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], quality: 1 };
-  if (source === 'camera' && !(await ImagePicker.requestCameraPermissionsAsync()).granted) return null;
+  // Android's camera prompt, the camera and the picker take the app away, maybe for minutes: the return
+  // keeps the sheet (features/return). Marked before each, as an allowed camera has no prompt.
+  if (source === 'camera') {
+    leaveOnPurpose();
+    if (!(await ImagePicker.requestCameraPermissionsAsync()).granted) return null;
+  }
+  leaveOnPurpose();
   const result = source === 'camera' ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
   const asset = result.canceled ? null : result.assets[0];
   if (!asset) return null;

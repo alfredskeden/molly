@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { requireNativeModule } from 'expo';
 import { PermissionsAndroid, Platform } from 'react-native';
 
+import { leaveOnPurpose } from '@/features/return/trip';
 import type { Settings } from '@/storage/types';
 import { CHILD_ICON_COLOURS, PALETTES } from '@/theme/tokens';
 import type { WidgetCache } from '@/widget/model';
@@ -150,6 +151,8 @@ async function ask(): Promise<{ answer: PermissionAnswer; prompted: boolean }> {
     return { answer: 'blocked', prompted: false };
   }
   if (await AsyncStorage.getItem(BLOCKED_KEY)) return { answer: 'blocked', prompted: false };
+  // The prompt and Android's settings take the app away: the return keeps the screen (features/return).
+  leaveOnPurpose();
   const asked = Date.now();
   const result = await PermissionsAndroid.request(permission);
   const prompted = Date.now() - asked > NO_PROMPT_MS;
@@ -169,7 +172,10 @@ export async function askNotificationPermission(): Promise<PermissionAnswer> {
  */
 export async function turnOnNotifications(): Promise<PermissionAnswer> {
   const { answer, prompted } = await ask();
-  if (answer === 'blocked' && !prompted) MollyNotify.openSettings();
+  if (answer === 'blocked' && !prompted) {
+    leaveOnPurpose();
+    MollyNotify.openSettings();
+  }
   return answer;
 }
 
@@ -191,5 +197,6 @@ export async function liveUpdatesState(): Promise<LiveUpdates> {
 
 /** Android's Live Updates switch for Molly, or its notification settings where that screen is missing. */
 export function openLiveUpdateSettings(): void {
+  leaveOnPurpose();
   MollyNotify.openLiveUpdateSettings();
 }

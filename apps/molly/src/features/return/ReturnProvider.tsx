@@ -1,5 +1,5 @@
 import { router, usePathname } from 'expo-router';
-import { createContext, use, useEffect, useId, useRef, type ReactNode } from 'react';
+import { createContext, use, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { AppState, Platform } from 'react-native';
 
 import { useToast } from '@/features/toast/toast';
@@ -10,10 +10,25 @@ import { takeTrip } from './trip';
 /** What the dashboard does on a return: `showLive` (the web) or `goLive` (Android, after a minute away). */
 export type OnLive = (answer: Exclude<ReturnAnswer, 'stay'>) => void;
 
-type Registry = {
-  live: { current: OnLive | null };
-  drafts: Map<string, boolean>;
-};
+/** Who listens for a return: the dashboard's way back to now, and each open draft's "has changes". */
+function newRegistry() {
+  let live: OnLive | null = null;
+  const drafts = new Map<string, boolean>();
+  return {
+    live: (answer: Exclude<ReturnAnswer, 'stay'>) => live?.(answer),
+    setLive: (onLive: OnLive) => {
+      live = onLive;
+      return () => {
+        if (live === onLive) live = null;
+      };
+    },
+    drafts: () => drafts.values(),
+    setDraft: (id: string, changed: boolean) => void drafts.set(id, changed),
+    dropDraft: (id: string) => void drafts.delete(id),
+  };
+}
+
+type Registry = ReturnType<typeof newRegistry>;
 
 const ReturnContext = createContext<Registry | null>(null);
 
@@ -24,7 +39,7 @@ const ReturnContext = createContext<Registry | null>(null);
  * Only in the signed-in layout: onboarding and "Can't sign in" never see it.
  */
 export function ReturnProvider({ children }: { children: ReactNode }) {
-  const registry = useRef<Registry>({ live: { current: null }, drafts: new Map() }).current;
+  const [registry] = useState(newRegistry);
   const toast = useToast();
   const pathname = usePathname();
   const tapLog = useRef(false);
@@ -43,9 +58,9 @@ export function ReturnProvider({ children }: { children: ReactNode }) {
       });
       state = next.state;
       if (next.answer === 'stay') return;
-      if (toastOnReturn(next.answer, registry.drafts.values())) toast({ text: 'Changes not saved', tone: 'danger' });
+      if (toastOnReturn(next.answer, registry.drafts())) toast({ text: 'Changes not saved', tone: 'danger' });
       if (next.answer === 'goLive' && router.canDismiss()) router.dismissTo('/');
-      registry.live.current?.(next.answer);
+      registry.live(next.answer);
     });
     return () => subscription.remove();
   }, [registry, toast]);
@@ -61,21 +76,14 @@ function useRegistry() {
 
 /** The dashboard's way back to now, called on a return. */
 export function useOnLive(onLive: OnLive) {
-  const { live } = useRegistry();
-  useEffect(() => {
-    live.current = onLive;
-    return () => {
-      if (live.current === onLive) live.current = null;
-    };
-  }, [live, onLive]);
+  const { setLive } = useRegistry();
+  useEffect(() => setLive(onLive), [setLive, onLive]);
 }
 
 /** A sheet or editor with a draft says whether it has changes, so going live can say "Changes not saved". */
 export function useUnsavedOnReturn(changed: boolean) {
-  const { drafts } = useRegistry();
+  const { setDraft, dropDraft } = useRegistry();
   const id = useId();
-  useEffect(() => {
-    drafts.set(id, changed);
-  }, [drafts, id, changed]);
-  useEffect(() => () => void drafts.delete(id), [drafts, id]);
+  useEffect(() => setDraft(id, changed), [setDraft, id, changed]);
+  useEffect(() => () => dropDraft(id), [dropDraft, id]);
 }
