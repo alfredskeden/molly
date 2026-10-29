@@ -1,11 +1,11 @@
 import { router, usePathname } from 'expo-router';
 import { createContext, use, useEffect, useId, useRef, useState, type ReactNode } from 'react';
-import { AppState, Platform } from 'react-native';
+import { AppState, Keyboard, Platform } from 'react-native';
 
 import { useToast } from '@/features/toast/toast';
 
 import { onAppState, START, toastOnReturn, type ReturnAnswer } from './model';
-import { takeTrip } from './trip';
+import { tripOnAppState } from './trip';
 
 /** What the dashboard does on a return: `showLive` (the web) or `goLive` (Android, after a minute away). */
 export type OnLive = (answer: Exclude<ReturnAnswer, 'stay'>) => void;
@@ -54,12 +54,16 @@ export function ReturnProvider({ children }: { children: ReactNode }) {
       const next = onAppState(state, status, Date.now(), {
         platform,
         tapLog: tapLog.current,
-        trip: status === 'active' && takeTrip(),
+        trip: tripOnAppState(status),
       });
       state = next.state;
       if (next.answer === 'stay') return;
       if (toastOnReturn(next.answer, registry.drafts())) toast({ text: 'Changes not saved', tone: 'danger' });
-      if (next.answer === 'goLive' && router.canDismiss()) router.dismissTo('/');
+      if (next.answer === 'goLive') {
+        // A sheet's text field unmounted while focused can leave Android's keyboard up over the dashboard.
+        Keyboard.dismiss();
+        if (router.canDismiss()) router.dismissTo('/');
+      }
       registry.live(next.answer);
     });
     return () => subscription.remove();

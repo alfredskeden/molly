@@ -34,6 +34,26 @@ Answered by the developer after a first draft with recommendations.
 - **Docs**: `plans/implan-ring-day-nav/MAIN.md` line 40 says "the app returning from the background still goes to now": mark it as replaced by this plan (after a minute away). `CLAUDE.md` has no word on returns yet; step 5 adds one.
 - **Spotted, not in scope**: a to-do reminder notification opens the app with `OPEN_APP` like the rest, so it lands on the live ring, not the to-do list; a deep link there would be a separate issue.
 
+## During the work (2026-10-29)
+
+- **Stacked on #30**: the plan branch was cut from `develop`; `plan/issue-30-todo-read-only` (PR #39, not merged yet) is merged into it so the PR can target that branch. GitHub retargets it to `develop` once #39 merges.
+- **The model** (`features/return/model.ts`) keeps only the leave time; `onAppState(state, status, now, { platform, tapLog, trip })` answers `stay | showLive | goLive`, and `toastOnReturn(answer, drafts)` says whether to show "Changes not saved". Anything not `web` counts as Android (no iOS build).
+- **Trips** live in their own module (`features/return/trip.ts`), not in the provider, so `notification/sync.android.ts` (also loaded by headless tasks) and `photo.native.ts` import no React. Every `AppState` change goes through `tripOnAppState(status)`.
+- **Found on the emulator: Android flickers before the camera opens.** Tapping Camera in the to-do sheet logged `app background`, `active`, `background`, `active`, `background` within 400 ms (Tap log), then the real `active` 79 s later. The first plan (a one-shot mark used up by the next return) lost the mark on the flicker, and the camera's return went live with "Changes not saved". So there are two kinds of trip:
+  - `awayOnPurpose(action)` for an action that leaves and settles once back (`pickPhoto`, camera prompt included; `PermissionsAndroid.request` in `ask()`): every return while it runs is the trip's; when it settles the trip ends, or, if the app is still away then (the result can arrive before Android's resume), with the next return.
+  - `leaveOnPurpose()` for a fire-and-forget leave (`openLink`, `MollyNotify.openSettings()`, and `openLiveUpdateSettings()`, which the plan missed): the next return is the trip's.
+  This replaces step 4's "before `ask()`": an `ask()` that answers without a prompt never leaves, so it marks nothing.
+- **Keyboard**: going live from the to-do sheet once left Android's keyboard up over the dashboard (the focused field unmounted); `Keyboard.dismiss()` on going live.
+- **The provider's registry** is a closure from `useState(newRegistry)` (React Compiler's lint refuses writing to a ref from context). `useOnLive` registers the dashboard's callback; `useUnsavedOnReturn(changed)` keeps one flag per mounted draft (by `useId`) and drops it on unmount.
+- **Has-changes rules**: `todoChanged(opened, draft, { photo, added })` compares the trimmed text, label, day, the Other day only when picked, and the time only with a date and "At a time"; any picked or removed photo or new label counts. `measurementChanged(kind, opened, sheet)` counts typed text only when it reads as a different value (`typedMeasurement`), a typed clock only when it differs, notes trimmed. `addChanged(opened, draft)` compares every field but the kind (switching the tab alone isn't a change; `note` is reset by the switch, as at opening). A half-typed clock in Add's time field (local `typed` state) isn't counted: the field's draft time only moves once it reads as a time.
+- **Going live**: the toast first, then `router.dismissTo('/')` when `router.canDismiss()`, then the dashboard's callback (`showLive`, and `setAskingAdd(false)`).
+
+## Cleanup sweep (wrap-up)
+
+- Done as planned: the dashboard's own `AppState` listener and its import are gone; `SNAP_BACK_MS` is no longer exported (no other user). No other code, copy, tests or docs described the old every-return snap-back (`grep` for `AppState`, "back to now", "comes back" in `apps/molly/src`, `e2e/tests`, `docs`); the remaining `AppState` listeners are unrelated (widget sync, query focus, "Updating…", notification state, Tap log).
+- Not merged: `SNAP_BACK_MS` and `AWAY_MS` are both 60 s but mean different things (a glance on screen, time away); kept apart.
+- Spotted, not in scope: still the to-do reminder deep link (above).
+
 ## Open
 
 - None besides the decisions above.

@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { requireNativeModule } from 'expo';
 import { PermissionsAndroid, Platform } from 'react-native';
 
-import { leaveOnPurpose } from '@/features/return/trip';
+import { awayOnPurpose, leaveOnPurpose } from '@/features/return/trip';
 import type { Settings } from '@/storage/types';
 import { CHILD_ICON_COLOURS, PALETTES } from '@/theme/tokens';
 import type { WidgetCache } from '@/widget/model';
@@ -151,10 +151,9 @@ async function ask(): Promise<{ answer: PermissionAnswer; prompted: boolean }> {
     return { answer: 'blocked', prompted: false };
   }
   if (await AsyncStorage.getItem(BLOCKED_KEY)) return { answer: 'blocked', prompted: false };
-  // The prompt and Android's settings take the app away: the return keeps the screen (features/return).
-  leaveOnPurpose();
   const asked = Date.now();
-  const result = await PermissionsAndroid.request(permission);
+  // The prompt takes the app away: the return keeps the screen (features/return).
+  const result = await awayOnPurpose(() => PermissionsAndroid.request(permission));
   const prompted = Date.now() - asked > NO_PROMPT_MS;
   if (result === PermissionsAndroid.RESULTS.GRANTED) return { answer: notificationsAllowed() ? 'granted' : 'blocked', prompted };
   if (result !== PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) return { answer: 'denied', prompted };
