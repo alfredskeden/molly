@@ -56,7 +56,24 @@ No dependency, flag or asset becomes unused; no new dependency.
 Spotted, not in scope:
 
 - `shortDate` has no year, so a date picked a year ahead reads like this year's (`14 Jan`). Same in the list (`dueText`). Worth a small issue if far-ahead dates become common.
-- The temperature time in `MeasurementSheet.tsx` (~line 29), `features/add/add-model.ts` and `storage/types.ts` each keep their own `CLOCK` regex.
+- The temperature time in `MeasurementSheet.tsx` (~line 29), `features/add/add-model.ts` and `storage/types.ts` each keep their own `CLOCK` regex; `components/TimeField.tsx` (web, reads the browser's `HH:MM`) now has a fourth. A shared core `clockOf(text)` would unify them.
+
+## Emulator check (2026-10-29, emulator-5554, release APK after a clean prebuild)
+
+- Date dialog: `minimumDate` (local midnight today) greys out the days before today; Cancel keeps the shown day (31 Oct stayed); Next month → 14 Nov → OK shows `14 Nov` and keeps Other; picking today snaps to Today and the date row goes.
+- Time dialog: the framework clock in 24 h (inner ring 13–23 / 00) with the keyboard icon ("Switch to text input mode for the time input"); typed 14:40 → OK shows `14:40`, reminder line "This phone reminds you today at 13:40"; Cancel keeps 09:00; +15 then gives 14:55.
+- The keyboard (`mInputShown`) stays up after a Segment tap and is down once a picker opens; after the dialog the sheet sits at its normal height above the bottom.
+- The dialogs follow the app's Colours setting (`setNightMode`), not the emulator's system mode: dark grey with teal in Night, white with a teal header in Day. Both readable.
+- Measurements' Pick date still opens with the days after today disabled.
+
+## Cleanup sweep (wrap-up, 2026-10-29)
+
+Swept `git diff plan/issue-30-todo-read-only..HEAD`:
+
+- Removed as planned: `features/measurements/DateField*` (moved to `components/`), `dayKey` and its test, the `DAY_MINUTES - 15` cap and its `23:45` assertion, the `At HH:MM` label. `grep -rn 'dayKey\|measurements/DateField\|DAY_MINUTES - 15' apps packages e2e` finds nothing.
+- Docs pointing at the old behaviour updated: `plans/implan-todo/MAIN.md` step 5, `plans/implan-todo-keyboard/MAIN.md` decisions. `CLAUDE.md` and `docs/` don't describe the Date block.
+- No dependency, flag, asset or storage key became unused.
+- Spotted, not in scope: the fourth `CLOCK` regex (above); `e2e/tests/todo.spec.ts` keeps its own `localDay` helper (the e2e suite doesn't import `@molly/core`).
 
 ## Open
 
