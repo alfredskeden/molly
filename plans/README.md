@@ -50,3 +50,4 @@ How Molly was built, one folder per plan. Each has `MAIN.md` (the steps, with `[
 | [implan-todo-read-only](implan-todo-read-only/MAIN.md) | Items open read-only first; New until opened on this phone; Mark unread, issue #30 | Done |
 | [implan-todo-pickers](implan-todo-pickers/MAIN.md) | Due date and time from the system picker (browser fields on web), steppers kept for nudges, issue #34 | Done (TalkBack listen open) |
 | [implan-todo-quiet](implan-todo-quiet/MAIN.md) | Turn off one item's reminder on this phone ("Remind me" switch, `settings.todoQuiet`), issue #36 | Done |
+| [implan-live-on-return](implan-live-on-return/MAIN.md) | Back to the live ring after a minute away from any screen on Android (drafts dropped with "Changes not saved", trips Molly started and the Tap log stay), issue #40 | Done (developer checks open) |

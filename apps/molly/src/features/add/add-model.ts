@@ -31,6 +31,13 @@ export function newDraft(kind: AddKind, now: Date, amount: number | null = null)
   return { kind, start: toMinute(now), end: null, feed: 'Left', diaper: 'Wet', med: 'Vitamin D', note: '', amount, food: '' };
 }
 
+/** Whether the form differs from how it opened; the kind tab alone isn't a change (its fields are untouched). */
+export function addChanged(opened: AddDraft, draft: AddDraft): boolean {
+  const { kind: _openedKind, ...was } = opened;
+  const { kind: _kind, ...now } = draft;
+  return JSON.stringify(was) !== JSON.stringify(now);
+}
+
 export const hasRange = (kind: AddKind) => kind === 'sleep' || kind === 'feed';
 
 export function withEnd(draft: AddDraft, now: Date): AddDraft {

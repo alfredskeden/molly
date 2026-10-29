@@ -1,5 +1,5 @@
 import type { Measurement, MeasurementKind, NewMeasurement } from '@molly/api';
-import { localDay } from '@molly/core';
+import { localDay, typedMeasurement } from '@molly/core';
 
 import type { Copy } from '@/theme/copy';
 
@@ -65,4 +65,28 @@ export function newMeasurement<K extends MeasurementKind>(kind: K, { child, valu
 export function guessMeasurement<K extends MeasurementKind>(kind: K, entry: NewMeasurement<K>, now: Date): Measurement<K> {
   const stamp = kind === 'temperature' ? { time: now.toISOString() } : { date: localDay(now) };
   return { notes: null, tags: [], ...stamp, ...entry, id: -Date.now() } as unknown as Measurement<K>;
+}
+
+/** What the measurement sheet holds while open; `typed` and `clockTyped` are the text while a field is typed in. */
+export type SheetState = {
+  value: number;
+  typed: string | null;
+  choice: DayChoice;
+  picked: Date | null;
+  clock: string;
+  clockTyped: string | null;
+  notes: string;
+};
+
+/** Whether the sheet holds anything other than what it opened with (text typed back to the same value isn't). */
+export function measurementChanged(kind: MeasurementKind, opened: SheetState, sheet: SheetState): boolean {
+  return (
+    sheet.value !== opened.value ||
+    (sheet.typed !== null && typedMeasurement(kind, sheet.typed) !== opened.value) ||
+    sheet.choice !== opened.choice ||
+    (sheet.choice === 'picked' && sheet.picked?.getTime() !== opened.picked?.getTime()) ||
+    sheet.clock !== opened.clock ||
+    (sheet.clockTyped !== null && sheet.clockTyped !== opened.clock) ||
+    sheet.notes.trim() !== opened.notes.trim()
+  );
 }

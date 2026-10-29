@@ -95,3 +95,28 @@ export function reminderLine({ due, quiet }: { due: TodoDue | null; quiet: boole
   const day = sameDay(at, now) ? 'today' : sameDay(at, addDays(now, 1)) ? 'tomorrow' : `on ${shortDate(at)}`;
   return `This phone reminds you ${day} at ${clockText(at)}`;
 }
+
+/** What the sheet holds beside the draft: the photo (as saved, a new one, or removed) and labels made here. */
+export type TodoExtras = { photo: 'keep' | 'new' | 'remove'; added: readonly string[] };
+
+/**
+ * Whether the sheet holds anything Save would change: the text (trimmed, as saved), the label, the date and
+ * time as chosen (an Other day only when Other is picked, a time only with a date and "At a time"), a photo
+ * picked or removed, or a new label.
+ */
+export function todoChanged(opened: TodoDraftState, draft: TodoDraftState, { photo, added }: TodoExtras): boolean {
+  const shown = (state: TodoDraftState) => {
+    const dated = state.day !== 'none';
+    const timed = dated && state.timed;
+    return [
+      state.text.trim(),
+      state.label,
+      state.day,
+      state.day === 'other' ? startOfDay(state.other).getTime() : null,
+      timed,
+      timed ? state.minutes : null,
+      dated && state.quiet,
+    ];
+  };
+  return photo !== 'keep' || added.length > 0 || JSON.stringify(shown(opened)) !== JSON.stringify(shown(draft));
+}

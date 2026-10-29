@@ -19,11 +19,12 @@ import { DateField } from '@/components/DateField';
 import { Pressable } from '@/components/pressable';
 import { Sheet } from '@/components/sheet';
 import { FIXED_SCALE, Segment, Spinner, Text } from '@/components/ui';
+import { useUnsavedOnReturn } from '@/features/return/ReturnProvider';
 import { HAPTICS } from '@/haptics/model';
 import { useHaptic } from '@/haptics/use-haptic';
 import { useTheme } from '@/theme/theme';
 
-import { entryDay, measureOf, newMeasurement, type DayChoice } from './model';
+import { entryDay, measureOf, measurementChanged, newMeasurement, type DayChoice, type SheetState } from './model';
 import { useLogMeasurement } from './queries';
 
 const CLOCK = /^([01]\d|2[0-3]):([0-5]\d)$/;
@@ -59,6 +60,8 @@ export function MeasurementSheet({
   const [clockTyped, setClockTyped] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
+  const [opened] = useState<SheetState>(() => ({ value: start, typed: null, choice: 'today', picked: null, clock: clockText(now), clockTyped: null, notes: '' }));
+  useUnsavedOnReturn(measurementChanged(kind, opened, { value, typed, choice, picked, clock, clockTyped, notes }));
 
   const latest = newestMeasurements(kind, (lists[kind] ?? []) as never[])[0];
   const typedValue = typed === null ? null : typedMeasurement(kind, typed);

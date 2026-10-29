@@ -37,7 +37,7 @@ Before, a past ring could only switch to its pair (the cap) or go back to now; t
 - `‹` is enabled while an older window can exist: some loaded entry starts before the shown window, or the oldest week Baby Buddy sent had any entry (Recent days' `olderMayExist` rule). Otherwise it dims to 0.3, is announced as unavailable, and does nothing.
 - If the window before isn't loaded yet, `‹` asks for it and steps once it arrives: the dashboard's `wantAt` grows from "the window before live" to "the window before this one", and fetches the next `useDays` week when the loaded weeks don't reach it. No spinner unless the wait passes the usual tap-feedback threshold (`implan-tap-feedback`).
 - Spoken: `Previous: <title>` / `Next: <title>` (the pill: `Next: Today`). The title is a header.
-- Every step closes the editor, likely panel and pickers, as the cap does. The 60 s snap back to now restarts with each step (it already does, `viewKey` changes) and the app returning from the background still goes to now. Android back on a past ring still goes to now, not one step back.
+- Every step closes the editor, likely panel and pickers, as the cap does. The 60 s snap back to now restarts with each step (it already does, `viewKey` changes) and the app returning from the background still goes to now (replaced on Android by [`implan-live-on-return`](../implan-live-on-return/MAIN.md): only after a minute away, from any screen). Android back on a past ring still goes to now, not one step back.
 
 **Past stat boxes** (in place of the tiles while a past ring is idle; the editor still takes their place when an entry is tapped):
 

@@ -2,6 +2,7 @@ import { Stack } from 'expo-router';
 
 import { ErrorScreen } from '@/components/ErrorScreen';
 import { useKeepChildOnScreen } from '@/features/children/use-children';
+import { ReturnProvider } from '@/features/return/ReturnProvider';
 import { ToastProvider } from '@/features/toast/toast';
 import { useStackOptions } from '@/theme/theme';
 
@@ -13,8 +14,10 @@ export { ErrorScreen as ErrorBoundary };
 export default function MainLayout() {
   return (
     <ToastProvider>
-      <KeepChildOnScreen />
-      <Stack screenOptions={useStackOptions()} />
+      <ReturnProvider>
+        <KeepChildOnScreen />
+        <Stack screenOptions={useStackOptions()} />
+      </ReturnProvider>
     </ToastProvider>
   );
 }
