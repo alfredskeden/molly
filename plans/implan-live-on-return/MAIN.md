@@ -1,6 +1,6 @@
 # Back to the live ring when the app comes back
 
-GitHub issue #40. Decisions (under "Decided", 2026-10-29) and verified facts are in [`NOTES.md`](NOTES.md), the picture in [`MENTAL_MODEL.md`](MENTAL_MODEL.md), the Definition of Done in [`TEST_STRATEGY.md`](TEST_STRATEGY.md). Work on branch `plan/issue-40-live-on-return` (it holds this plan, cut from `develop`), PR with `--base develop`.
+GitHub issue #40. Decisions (under "Decided", 2026-10-29) and verified facts are in [`NOTES.md`](NOTES.md), the picture in [`MENTAL_MODEL.md`](MENTAL_MODEL.md), the Definition of Done in [`TEST_STRATEGY.md`](TEST_STRATEGY.md). Work on branch `plan/issue-40-live-on-return` (it holds this plan, cut from `develop`, then stacked on #30 by merging `plan/issue-30-todo-read-only`), PR with `--base plan/issue-30-todo-read-only` (retargets to `develop` when #39 merges).
 
 ## Outcome
 
@@ -53,15 +53,15 @@ App unit tests in Vitest (`apps/molly`, Given / When / Then, zero → one → ma
   - Web: any return, short or long, trip or not → show live.
   - Several non-active changes in a row (`inactive` then `background`) → away counts from the first.
   - Back to `active` without a leave before it (start-up, a duplicate event) → stay.
-- [ ] **2. Provider, hooks and the dashboard.** `ReturnProvider` with `useOnLive` and `leaveOnPurpose` as in Pieces, in `(main)/_layout.tsx`. Dashboard: remove the `AppState` listener (`index.tsx` ~353–358) and the `AppState` import; register `showLive` with `useOnLive`. Drop `SNAP_BACK_MS`'s `export` (no other user). Existing Playwright suites still pass (the web behaves as before).
-- [ ] **3. "Changes not saved" for sheets and the editor.**
+- [x] **2. Provider, hooks and the dashboard.** `ReturnProvider` with `useOnLive` and `leaveOnPurpose` as in Pieces, in `(main)/_layout.tsx`. Dashboard: remove the `AppState` listener (`index.tsx` ~353–358) and the `AppState` import; register `showLive` with `useOnLive`. Drop `SNAP_BACK_MS`'s `export` (no other user). Existing Playwright suites still pass (the web behaves as before).
+- [x] **3. "Changes not saved" for sheets and the editor.**
   - TDD the three new has-changes rules (`sheet-model.test.ts`, `measurements/model.test.ts`, `add-model.test.ts`): unchanged at opening → false (new and existing to-do item); each field changed → true; changed and changed back → false. `isChanged` already has tests.
   - `useUnsavedOnReturn` in the provider, called from `TodoSheet`, `MeasurementSheet`, `AddSheet` and the dashboard (editor open and `isChanged`). The dashboard's go-live callback also closes the Add entry sheet.
   - Unit-test the provider's decision if it's more than "any reported true" (keep it in the model, e.g. `goLive` returns whether to toast from the reported flags).
-- [ ] **4. Trips.** `leaveOnPurpose()` just before leaving in `pickPhoto` (`features/todo/photo.native.ts`, camera and library, after the camera permission check), `openLink` (`features/development/open-link.ts`, the native one; `.web.ts` unchanged), and `turnOnNotifications` (`notification/sync.android.ts`, before `ask()`).
-- [ ] **5. Emulator checks** (`TEST_STRATEGY.md`, Android section): Home and screen lock with real minutes, back leaves the app, each screen, the "Changes not saved" toast for each draft, widget taps, the camera, source link and settings trips, Tap log, "Can't sign in".
-- [ ] **6. Docs.** `CLAUDE.md`: one bullet on the return rule (Android only, a minute away, drafts dropped with "Changes not saved", trips, Tap log; the web snaps the dashboard back on every return) and where it lives (`features/return/`). `plans/implan-ring-day-nav/MAIN.md` line 40: mark "the app returning from the background still goes to now" as replaced by this plan on Android (after a minute away). `plans/README.md` row status.
-- [ ] **7. Wrap-up.** `implan-cleanup` wrap-up sweep on the diff, `pnpm check` and `pnpm e2e` green, every box in `TEST_STRATEGY.md` ticked, PR into `develop`, issue #40 updated with anything that changed during the work.
+- [x] **4. Trips.** `leaveOnPurpose()` just before leaving in `pickPhoto` (`features/todo/photo.native.ts`, camera and library, after the camera permission check), `openLink` (`features/development/open-link.ts`, the native one; `.web.ts` unchanged), and `turnOnNotifications` (`notification/sync.android.ts`, before `ask()`).
+- [ ] **5. Emulator checks** *(all run but four, left for the developer: notification prompt / "Open Android settings" trip, "Can't sign in", a measurement's own screen; see NOTES "Emulator checks")* (`TEST_STRATEGY.md`, Android section): Home and screen lock with real minutes, back leaves the app, each screen, the "Changes not saved" toast for each draft, widget taps, the camera, source link and settings trips, Tap log, "Can't sign in".
+- [x] **6. Docs.** `CLAUDE.md`: one bullet on the return rule (Android only, a minute away, drafts dropped with "Changes not saved", trips, Tap log; the web snaps the dashboard back on every return) and where it lives (`features/return/`). `plans/implan-ring-day-nav/MAIN.md` line 40: mark "the app returning from the background still goes to now" as replaced by this plan on Android (after a minute away). `plans/README.md` row status.
+- [ ] **7. Wrap-up.** *(done but the developer's open boxes in `TEST_STRATEGY.md` and the web check by hand)* `implan-cleanup` wrap-up sweep on the diff, `pnpm check` and `pnpm e2e` green, every box in `TEST_STRATEGY.md` ticked, PR into `develop`, issue #40 updated with anything that changed during the work.
 
 ## Assumptions
 
