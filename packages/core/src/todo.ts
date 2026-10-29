@@ -1,6 +1,6 @@
 import type { Note } from '@molly/api';
 
-import { clockText } from './format';
+import { clockText, localDay } from './format';
 
 // The shared to-do list: every item is a Baby Buddy note on whichever child was on screen when it
 // was added; the list ignores the child. Plan: plans/implan-todo/.
@@ -63,12 +63,6 @@ const daysBetween = (from: Date, to: Date) => Math.round((startOfDay(to).getTime
 
 /** `27 Oct`. */
 export const shortDate = (time: Date) => `${time.getDate()} ${MONTHS[time.getMonth()]}`;
-
-/** The local date, `2026-10-25`. */
-export function localDay(time: Date): string {
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${time.getFullYear()}-${pad(time.getMonth() + 1)}-${pad(time.getDate())}`;
-}
 
 const isLabelTag = (tag: string) => tag.startsWith(LABEL_PREFIX);
 const isDoneTag = (tag: string) => tag === TODO_DONE_TAG || tag.startsWith(DONE_DAY_PREFIX);
