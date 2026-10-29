@@ -45,7 +45,7 @@ On every `AppState` change to `active`, with `away` = time since the app last le
 
 App unit tests in Vitest (`apps/molly`, Given / When / Then, zero → one → many, then boundaries). Android-only behaviour by hand on the emulator (`emulator-5554`, never the developer's phone). Playwright can't drive Android's background, so it only guards that the web is unchanged.
 
-- [ ] **1. Return model (TDD, `features/return/model.test.ts`).**
+- [x] **1. Return model (TDD, `features/return/model.test.ts`).**
   - Zero: no change since start → stay.
   - Android, one: away 60 s and back → go live. Away 59 s → stay. Exactly 60 s → go live.
   - Android, trip: a trip mark → stay on that return, whatever the length; the mark is used up, the next long return goes live.
