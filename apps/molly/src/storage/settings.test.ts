@@ -409,13 +409,28 @@ describe('settings stored before several children', () => {
 describe('the to-do seen mark', () => {
   it('reads back what was stored, and nothing from a malformed value', () => {
     // Given
-    const stored = [JSON.stringify({ todoSeen: { mark: 40, saved: [41, 42] } }), JSON.stringify({ todoSeen: { mark: '40' } })];
+    const stored = [
+      JSON.stringify({ todoSeen: { mark: 40, saved: [41, 42], opened: [43], unread: [39] } }),
+      JSON.stringify({ todoSeen: { mark: '40' } }),
+      JSON.stringify({ todoSeen: { mark: 40, saved: [], opened: ['43'], unread: [] } }),
+    ];
 
     // When
     const seen = stored.map((value) => parseSettings(value).todoSeen);
 
     // Then
-    expect(seen).toEqual([{ mark: 40, saved: [41, 42] }, null]);
+    expect(seen).toEqual([{ mark: 40, saved: [41, 42], opened: [43], unread: [39] }, null, null]);
+  });
+
+  it('upgrades a mark stored before items could be opened, with nothing opened or unread', () => {
+    // Given
+    const stored = JSON.stringify({ todoSeen: { mark: 40, saved: [41] } });
+
+    // When
+    const seen = parseSettings(stored).todoSeen;
+
+    // Then
+    expect(seen).toEqual({ mark: 40, saved: [41], opened: [], unread: [] });
   });
 });
 
@@ -424,7 +439,7 @@ describe('signing out', () => {
     // Given
     const settings = {
       ...DEFAULT_SETTINGS,
-      todoSeen: { mark: 40, saved: [41] },
+      todoSeen: { mark: 40, saved: [41], opened: [], unread: [] },
       childId: 4,
       children: { 4: { hue: 2, vitaminDReminder: true } },
       theme: 'night' as const,

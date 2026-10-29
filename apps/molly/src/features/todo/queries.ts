@@ -1,5 +1,5 @@
 import { BabyBuddyError } from '@molly/api';
-import { seenAfter, TODO_QUERY_TAGS, todoItems, todoLabels, type TodoSeen } from '@molly/core';
+import { firstSeen, pruneSeen, TODO_QUERY_TAGS, todoItems, todoLabels, type TodoSeen } from '@molly/core';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo } from 'react';
 
@@ -50,16 +50,13 @@ export function useTodoLabels() {
   });
 }
 
-/**
- * This device's "seen" mark and how to move it. A device that never had one starts with everything
- * listed as seen, so a fresh install has nothing "new".
- */
+/** What this device has seen of the list, for "New", and how to record more (null stays null). */
 export function useTodoSeen() {
   const queryClient = useQueryClient();
   const settings = useSettings();
   const seen = settings.data?.todoSeen ?? null;
   const save = useCallback(
-    async (change: (seen: TodoSeen | null) => TodoSeen) => {
+    async (change: (seen: TodoSeen | null) => TodoSeen | null) => {
       const next = await updateSettings((settings) => ({ todoSeen: change(settings.todoSeen) }));
       queryClient.setQueryData(['settings'], next);
     },
@@ -70,13 +67,15 @@ export function useTodoSeen() {
 
 /**
  * The header badge's count, and the dashboard's side of the to-do list: the first load on a device marks
- * everything seen, and every new list sets this phone's reminders (Android).
+ * everything seen (a fresh install has nothing New), and every fetched list prunes what it no longer needs.
+ * The dashboard stays mounted under the list, so this runs while the list is open too.
  */
 export function useTodoBadge() {
   const { items } = useTodoItems();
   const { seen, loaded, save } = useTodoSeen();
   useEffect(() => {
-    if (items && loaded && seen === null) save((current) => current ?? seenAfter(items, null)).catch(() => undefined);
+    if (!items || !loaded || (seen !== null && pruneSeen(items, seen) === seen)) return;
+    save((current) => (current ? pruneSeen(items, current) : firstSeen(items))).catch(() => undefined);
   }, [items, loaded, seen, save]);
   return { items, seen };
 }
