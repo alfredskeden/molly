@@ -1,57 +1,58 @@
-# Turning off an item's reminder
+# Turning off an item's reminder on this phone
 
-GitHub issue #36. Builds on the to-do list (`plans/implan-todo/`) and the read-only sheet from issue #30 (`plans/implan-todo-read-only/`). This branch is stacked on #30: see `NOTES.md` "Where this sits" before opening the PR.
-
-The answers below are recommendations still waiting for the developer: `NOTES.md` "Decisions to confirm". If one changes, update this file, `MENTAL_MODEL.md` and `TEST_STRATEGY.md` together.
+GitHub issue #36. Builds on the to-do list (`plans/implan-todo/`) and the read-only sheet from issue #30 (`plans/implan-todo-read-only/`). This branch is stacked on #30: see `NOTES.md` "Where this sits" before opening the PR. Decisions and their reasons: `NOTES.md` "Decided (2026-10-29)".
 
 ## Outcome
 
-- In the edit sheet on Android, a dated item has a **"Remind me" switch** where the reminder line is today. On by default, so existing items keep their reminders. Off: the subtitle reads "No reminder on either phone", and after Save neither phone sets the alarm, the list row has no bell and the read-only sheet says "No reminder".
-- The date and time stay as they were. Only the reminder goes.
+- In the edit sheet on Android, a dated item has a **"Remind me" switch** where the reminder line is today. On by default, so existing items keep their reminders. Off: the subtitle reads "No reminder on this phone", and after Save this phone sets no alarm, its list row has no bell and the read-only sheet says "No reminder".
+- **Only this phone.** The other parent's phone still reminds. Nothing about the item changes in Baby Buddy; the date and time stay.
 - Works for items with a time and for date-only items.
 - Turning it on again brings the reminder back (1 h before, or 19:00 the evening before), as long as that moment is still ahead.
+- The web is unchanged: no reminders, no switch.
 
 ## How it's stored
 
-A tag on the note, **`molly-todo-quiet`**, next to `molly-todo-due` / `molly-todo-day`. Shared: both phones read it from the list they fetch, so both go quiet, and it survives a reinstall. Baby Buddy creates the tag the first time a parent saves a quiet item (parents have `core.add_tag`).
+A device setting, **`settings.todoQuiet: number[]`**: the note ids this phone won't remind about. Same life as `settings.todoSeen`: default `[]`, a malformed value reads as `[]`, dropped on sign-out, lost on reinstall.
 
-- `todoItems` reads it into `TodoItem.quiet: boolean`.
-- `reminderAt` returns null for a quiet item, so every caller (the list's bell, the sheets, `todoReminderNotifications`) follows without its own check.
-- `saveTags` writes it only when the draft is quiet **and** has a date; otherwise it drops it. Removing the date therefore resets the reminder to on.
-- `tickTags` / `untickTags` keep it (they keep every non-state tag already).
-- `todoReminderNotifications` leaves quiet items out of `keep` as well as `schedule`, so a reminder that already rang is cleared when the item goes quiet.
+- `reminderAt(item, now, quiet)` returns null when `item.id` is in `quiet`, so every caller (the list's bell, both sheets, `todoReminderNotifications`) follows without its own check.
+- Saving records it: the item's id goes in when the switch is off and the item has a date, and comes out otherwise. So removing the date forgets it. A new item is recorded once Baby Buddy returns its id; guesses (negative ids) never are.
+- `pruneQuiet(items, quiet)` keeps the list small, run where `pruneSeen` runs: drops ids missing from the fetched list at or below its highest id, and ids listed without a date. Keeps done items, so unticking keeps the reminder off. Same array when nothing changes.
+- `todoReminderNotifications` leaves quiet items out of `keep` as well as `schedule`, so a reminder that already rang here is cleared.
 
 ## Where it shows
 
-| Place | Reminder on | Reminder off |
+| Place | Reminder on | Reminder off (this phone) |
 | --- | --- | --- |
-| Edit sheet (Android, a date chosen) | Switch on, subtitle "This phone reminds you … at …" or "Too late for a reminder" | Switch off, subtitle "No reminder on either phone" |
-| Read-only sheet (Android) | Bell + the reminder line (as now) | Struck bell + "No reminder" (only on a dated, open item) |
+| Edit sheet (Android, a date chosen) | Switch on, subtitle "This phone reminds you … at …" or "Too late for a reminder" | Switch off, subtitle "No reminder on this phone" |
+| Read-only sheet (Android) | Bell + the reminder line (as now) | Struck bell + "No reminder" (open, dated items) |
 | List row (Android) | Bell while the reminder is ahead | No bell |
-| Web | No switch, no line, no bell (as now) | Same; a web edit keeps the quiet tag |
+| Other parent's phone | Unchanged | Unchanged |
+| Web | No switch, no line, no bell (as now) | Same |
 
 ## Pieces of code
 
-- Core `packages/core/src/todo.ts`: `QUIET_TAG`, `TodoItem.quiet`, `TodoDraft.quiet`, `todoItems`, `saveTags`, `reminderAt`.
-- Sheet model `apps/molly/src/features/todo/sheet-model.ts`: `TodoDraftState.quiet`, `todoDraftOf`, `reminderLine`.
-- Sheets: `TodoSheet.tsx` (switch), `TodoView.tsx` (off line), `use-todo-writes.ts` (`TodoSave.quiet` into `saveTags`).
-- Notifications: `apps/molly/src/notification/model.ts` `todoReminderNotifications`.
+- Core `packages/core/src/todo.ts`: `reminderAt(item, now, quiet)`, `quietFor(quiet, id, on)` (set or clear one id), `pruneQuiet`.
+- Settings `apps/molly/src/storage/types.ts`: `Settings.todoQuiet`, default, parse, sign-out.
+- `features/todo/queries.ts`: `useTodoQuiet()` (read + save, like `useTodoSeen`); `useTodoBadge` also prunes it; `useSyncTodoReminders` re-syncs when it changes.
+- Sheet model `features/todo/sheet-model.ts`: `TodoDraftState.quiet`, `todoDraftOf(item, now, quiet)`, `reminderLine`.
+- Sheets: `TodoSheet.tsx` (switch), `TodoView.tsx` (off line), `use-todo-writes.ts` (`TodoSave.quiet`, recorded after the save), the row bell in `app/(main)/todo.tsx`.
+- Notifications: `notification/model.ts` `todoReminderNotifications(items, quiet, now)`; `syncTodoReminders(items, quiet)` in `sync.android.ts` and the web no-op `sync.ts`; the widget refresh passes `current.settings.todoQuiet`.
 - Glyph: `notifications_off` in `apps/molly/src/theme/symbols.ts`.
 - Theme rules as in `CLAUDE.md`: semantic classes, `Text` from `@/components/ui`, the existing `ToggleRow`.
 
 ## Steps
 
-1. [ ] **Core rule (TDD, `packages/core/src/todo.test.ts`).** `QUIET_TAG = 'molly-todo-quiet'`; `todoItems` sets `quiet` (false without the tag); `reminderAt` is null for a quiet timed item and a quiet date-only item, unchanged otherwise; `saveTags` with `quiet: true` and a date adds the tag once, with `quiet: false` or no date drops a tag the item had; `tickTags` / `untickTags` keep it. Update `reminderAt`'s doc comment.
-2. [ ] **Sheet model (refactor first, then TDD, `features/todo/sheet-model.test.ts`).** Refactor `reminderLine` to take `{ due, quiet }` without building a stub `TodoItem` (tests green), and make `TodoView` use it instead of `reminderAt` + `reminderLine`. Then: `TodoDraftState.quiet` (false for a new item), `todoDraftOf` reads it from the item, and `reminderLine` returns "No reminder on either phone" for a quiet draft with a date (still null without one).
-3. [ ] **Notifications (TDD, `notification/model.test.ts`).** A quiet item is neither scheduled nor kept; the doc comment says "every open dated item with its reminder on".
-4. [ ] **Sheets.** `TodoSave` carries `quiet`; `save` passes it to `saveTags`, and the optimistic copy gets the same tags. `TodoSheet`: on Android with a date, a `ToggleRow` "Remind me" with `reminderLine` as subtitle replaces the line; the web shows nothing new but saves the draft's `quiet`. `TodoView`: for a quiet open dated item on Android, the `notifications_off` glyph and "No reminder". Add the `notifications_off` path (outlined, 0 fill, as `notifications`) to `symbols.ts`.
-5. [ ] **E2E (`e2e/tests/todo.spec.ts`).** An item seeded with `molly-todo-quiet` and a date keeps the tag after its text is edited on the web; removing its date on the web drops the tag; the web edit sheet has no "Remind me" switch.
+1. [ ] **Core rule (refactor first, then TDD, `packages/core/src/todo.test.ts`).** Pull the bare reminder moment out of `reminderAt` (`reminderMoment(due, now)`), tests green. Then `reminderAt(item, now, quiet)`: null for a quiet timed and a quiet date-only item, unchanged for others (fix callers to pass `[]` for now so `pnpm typecheck` stays green). `quietFor`: adds once, removes, ignores guesses. `pruneQuiet`: the rules above, same array when nothing changes. Update `reminderAt`'s doc comment.
+2. [ ] **Settings (TDD, `apps/molly/src/storage/settings.test.ts`).** `todoQuiet` round-trips, a malformed value reads as `[]`, sign-out drops it. Update the `Settings` and `settingsAfterSignOut` doc comments.
+3. [ ] **Sheet model and notifications (TDD).** `sheet-model.test.ts`: `reminderLine` takes `{ due, quiet }` with no stub `TodoItem` (via `reminderMoment`); a new draft is on; `todoDraftOf` reads quiet from the ids; the quiet line is "No reminder on this phone", no line without a date. `notification/model.test.ts`: a quiet item is neither scheduled nor kept, others unaffected; update the doc comment.
+4. [ ] **Wiring.** `useTodoQuiet` in `queries.ts` (share the settings-field save with `useTodoSeen` if they stay alike); `useTodoBadge` prunes `todoQuiet`; `useSyncTodoReminders` and `widget/refresh.ts` pass it to `syncTodoReminders` (and the comments say so). `TodoSave.quiet`; `save` records `quietFor(quiet, id, quiet && due !== null)` after Baby Buddy answers. Row bell and `TodoView` pass the ids; `TodoView` uses `reminderLine` and shows `notifications_off` + "No reminder" for a quiet open dated item on Android. `TodoSheet`: on Android with a date, a `ToggleRow` "Remind me" with `reminderLine` as subtitle replaces the line. Add the `notifications_off` path (outlined, as `notifications`) to `symbols.ts`.
+5. [ ] **E2E (`e2e/tests/todo.spec.ts`).** Extend "…the web shows no reminder bells" (~378): the web edit sheet of a dated item has no "Remind me" switch and no reminder line. That's all the web can show; the rest is Vitest and the emulator.
 6. [ ] **Emulator check** (emulator-5554 only, never the developer's phone): the checklist in `TEST_STRATEGY.md` "Manual".
-7. [ ] **Wrap-up.** `CLAUDE.md` to-do bullet: reminders skip items tagged `molly-todo-quiet`. In `plans/implan-todo/` point `MAIN.md:37` ("Reminder time") and `MENTAL_MODEL.md` "Reminders" at this plan. `plans/README.md` row to Done. Record what was confirmed in `NOTES.md` (and Baby Buddy facts in `plans/implan-molly/NOTES.md` if anything new turns up). `pnpm check` and `pnpm e2e` green. Run the cleanup sweep on the diff. Every box in `TEST_STRATEGY.md` ticked. Rebase onto `develop` once PR #39 is merged, then open the PR with `--base develop`.
+7. [ ] **Wrap-up.** `CLAUDE.md` to-do bullet: Android reminders skip items in `settings.todoQuiet` (per device, "Remind me" in the edit sheet). In `plans/implan-todo/` point `MAIN.md:37` ("Reminder time") and `MENTAL_MODEL.md` "Reminders" at this plan. `plans/README.md` row to Done. Record what was confirmed in `NOTES.md`. `pnpm check` and `pnpm e2e` green. Run the cleanup sweep on the diff. Every box in `TEST_STRATEGY.md` ticked. Rebase onto `develop` once PR #39 is merged, then open the PR with `--base develop`.
 
 ## Out of scope
 
-- A per-phone reminder choice (see decision 1 in `NOTES.md`).
+- Turning a reminder off for both phones (a shared tag): decided against.
 - Choosing the reminder time (1 h before / 19:00 stay fixed).
 - Due date and time pickers: issue #34.
 - Reminders on the web, the widget or the lock-screen timer notification.

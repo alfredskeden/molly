@@ -1,27 +1,27 @@
-# Mental model: turning off an item's reminder
+# Mental model: turning off an item's reminder on this phone
 
 ## In one line
 
-A dated to-do item can carry the tag `molly-todo-quiet`. With it, no phone reminds; the date stays.
+Each phone keeps a list of to-do ids it won't remind about (`settings.todoQuiet`). The item, its date and the other parent's reminders don't change.
 
 ## Where the switch lives
 
 ```mermaid
 flowchart LR
-  L[list row] -->|tap| V[read-only sheet<br/>shows reminder or 'No reminder']
+  L[list row] -->|tap| V[read-only sheet<br/>reminder or 'No reminder']
   V -->|Edit| S[edit sheet<br/>'Remind me' switch, Android]
-  S -->|Save| BB[(Baby Buddy note<br/>+ molly-todo-quiet or not)]
+  S -->|Save| BB[(Baby Buddy note<br/>date, text as before)]
+  S -->|Save, after the id is known| Q[(this phone<br/>settings.todoQuiet)]
 ```
 
-The switch is in the edit sheet only, and only on Android with a date chosen. It saves with Save, like the date.
+The switch is in the edit sheet only, on Android with a date chosen. It saves with Save, like the date.
 
 ## One rule, every place follows
 
 ```mermaid
 flowchart TD
-  T[note tags] --> I[todoItems<br/>quiet: true/false]
-  I --> R{reminderAt}
-  R -- quiet, done, undated<br/>or moment passed --> N[null]
+  I[item + todoQuiet] --> R{reminderAt}
+  R -- id in todoQuiet, done, undated<br/>or moment passed --> N[null]
   R -- otherwise --> A[1 h before / 19:00 evening before]
   N --> X[no bell · no alarm · 'No reminder']
   A --> Y[bell · alarm · 'This phone reminds you …']
@@ -29,18 +29,20 @@ flowchart TD
 
 `reminderAt` is the single place that knows about quiet. The bell, both sheets and the alarm schedule all ask it.
 
-## Shared, not per phone
+## Per phone
 
-The tag lives on the note, so both parents' phones read it on their next fetch and drop the alarm. A reminder that already rang is cleared too. Reinstalling changes nothing.
+```mermaid
+flowchart LR
+  N[(note 42<br/>Vaccination 15:00)] --> P1[Phone A<br/>todoQuiet: 42] --> X[no alarm]
+  N --> P2[Phone B<br/>todoQuiet: empty] --> Y[reminds 14:00]
+```
+
+Each phone decides for itself. Sign-out or a reinstall forgets the list, so reminders come back on.
 
 ## Date first, reminder second
 
-Quiet only means something with a date. Saving an item with no date drops the tag, so giving it a date later starts with the reminder on. Existing items have no tag, so they keep reminding.
+Quiet only means something with a date. Saving with no date takes the id out, so a later date starts with the reminder on. Pruning drops ids of items that are gone or have lost their date; done items stay, so unticking keeps it quiet.
 
 ## Web
 
-No reminders on the web, so no switch either. Editing an item on the web keeps its quiet state.
-
-## Still to confirm
-
-Shared vs per phone, both kinds of date, the switch's place and wording, dropping quiet with the date: `NOTES.md` "Decisions to confirm".
+No reminders on the web, so no switch either. The web never touches a phone's list.
