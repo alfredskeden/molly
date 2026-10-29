@@ -12,12 +12,14 @@ import { reminderLine } from './sheet-model';
 
 /**
  * An item opened from the list, read-only: its whole text, label and date (overdue in red), this phone's
- * reminder, the photo (tap for the viewer) and whether it's done. Tick or untick it here, Edit it, or
- * Mark unread (open items only) to make it New again on this phone.
+ * reminder ("No reminder" when it's quiet here, `quiet` being this phone's `todoQuiet` ids), the photo (tap
+ * for the viewer) and whether it's done. Tick or untick it here, Edit it, or Mark unread (open items only) to
+ * make it New again on this phone.
  */
 export function TodoView({
   item,
   photo,
+  quiet,
   now,
   onTick,
   onEdit,
@@ -28,6 +30,7 @@ export function TodoView({
   item: ListedItem;
   /** The item's photo URL (`photoUrl`), if it has one. */
   photo: string | null;
+  quiet: readonly number[];
   now: Date;
   onTick: () => void;
   onEdit: () => void;
@@ -37,7 +40,8 @@ export function TodoView({
 }) {
   const done = item.done !== null;
   const when = dueText(item, now);
-  const reminder = hasNotifications && reminderAt(item, now, []) ? reminderLine(item.due, now) : null;
+  const silenced = hasNotifications && !done && item.due !== null && quiet.includes(item.id);
+  const reminder = hasNotifications && reminderAt(item, now, quiet) ? reminderLine({ due: item.due, quiet: false }, now) : null;
   return (
     <Sheet label="To-do item" onScrimPress={onClose} scroll>
       <View className="gap-4">
@@ -54,10 +58,10 @@ export function TodoView({
             {when !== '' && ' · '}
             {when !== '' && <Text className={`text-sm font-bold ${item.overdue ? 'text-danger' : 'text-muted'}`}>{when}</Text>}
           </Text>
-          {reminder && (
+          {(reminder || silenced) && (
             <View className="flex-row items-center gap-1.5">
-              <Glyph name="notifications" size={16} color="muted" />
-              <Text className="flex-1 text-caption font-bold text-muted">{reminder}</Text>
+              <Glyph name={silenced ? 'notifications_off' : 'notifications'} size={16} color="muted" />
+              <Text className="flex-1 text-caption font-bold text-muted">{silenced ? 'No reminder' : reminder}</Text>
             </View>
           )}
           {done && (

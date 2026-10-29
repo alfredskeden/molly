@@ -37,11 +37,12 @@ async function session() {
 
 /**
  * This phone's to-do reminders follow the list as the refresh finds it, so a tick on the other parent's phone
- * drops the alarm here too. A failed fetch leaves the alarms as they were.
+ * drops the alarm here too, minus the items quiet on this phone (`todoQuiet`). A failed fetch leaves the
+ * alarms as they were.
  */
-async function refreshTodoReminders(client: Client) {
+async function refreshTodoReminders(client: Client, quiet: readonly number[]) {
   try {
-    await syncTodoReminders(todoItems(await client.listNotes({ tags: TODO_QUERY_TAGS })));
+    await syncTodoReminders(todoItems(await client.listNotes({ tags: TODO_QUERY_TAGS })), quiet);
   } catch (error) {
     tapLog(`to-do reminders not refreshed: ${String(error)}`);
   }
@@ -56,7 +57,7 @@ export async function refreshWidget(cache?: WidgetCache): Promise<WidgetState> {
   if (!current) {
     await saveWidgetCache(EMPTY_CACHE);
     await syncNotifications(EMPTY_CACHE, null);
-    await syncTodoReminders(null);
+    await syncTodoReminders(null, []);
     return { cache: EMPTY_CACHE, signedIn: false };
   }
   const base = cache ?? (await loadWidgetCache());
@@ -68,7 +69,7 @@ export async function refreshWidget(cache?: WidgetCache): Promise<WidgetState> {
   };
   const client = createClient(current.credentials);
   // Alongside the snapshots, not after: the widgets shouldn't wait for it.
-  const todo = refreshTodoReminders(client);
+  const todo = refreshTodoReminders(client, current.settings.todoQuiet);
   const next = await refreshedCache(kept, client, {
     child: current.childId,
     userId: current.credentials.userId,
