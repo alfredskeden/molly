@@ -85,12 +85,14 @@ Picked from the camera or library (web: a file), shrunk to 1600 px, saved under 
 ```mermaid
 flowchart LR
   F[to-do fetch<br/>app or widget refresh] --> W{dated, open,<br/>time still ahead?}
-  W -- yes --> A[alarm: 1 h before<br/>or 19:00 the evening before]
+  W -- yes --> Q{quiet on<br/>this phone?}
+  Q -- no --> A[alarm: 1 h before<br/>or 19:00 the evening before]
+  Q -- yes --> X
   W -- no --> X[no alarm, no bell]
   A --> N[notification on molly.todo<br/>tap opens To-do]
 ```
 
-Each phone sets its own alarms from what it last fetched. When the other parent ticks an item, the next refresh drops the alarm.
+Each phone sets its own alarms from what it last fetched. When the other parent ticks an item, the next refresh drops the alarm. "Remind me" off in the edit sheet makes an item quiet on that phone only (`settings.todoQuiet`): [`implan-todo-quiet`](../implan-todo-quiet/MAIN.md).
 
 ## Build order
 
