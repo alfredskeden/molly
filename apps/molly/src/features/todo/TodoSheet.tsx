@@ -6,6 +6,7 @@ import { TextInput, View } from 'react-native';
 import { Pressable } from '@/components/pressable';
 import { Sheet } from '@/components/sheet';
 import { FIXED_SCALE, Segment, Spinner, StepButton, Text } from '@/components/ui';
+import { useUnsavedOnReturn } from '@/features/return/ReturnProvider';
 import { HAPTICS } from '@/haptics/model';
 import { useHaptic } from '@/haptics/use-haptic';
 import { hasNotifications } from '@/notification/sync';
@@ -20,6 +21,7 @@ import {
   reminderLine,
   stepDay,
   stepTime,
+  todoChanged,
   todoDraftOf,
   type TodoDay,
   type TodoDraftState,
@@ -72,6 +74,8 @@ export function TodoSheet({
   const [added, setAdded] = useState<string[]>([]);
   const [naming, setNaming] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [opened] = useState(draft);
+  useUnsavedOnReturn(todoChanged(opened, draft, { photo: photoDraft.kind, added }));
   const { palette } = useTheme();
   const haptic = useHaptic();
   const set = (changes: Partial<TodoDraftState>) => setDraft((current) => ({ ...current, ...changes }));

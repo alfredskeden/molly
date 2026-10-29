@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { dayKey, entryDay, guessMeasurement, newMeasurement } from './model';
+import { dayKey, entryDay, guessMeasurement, measurementChanged, newMeasurement, type SheetState } from './model';
 
 const now = new Date(2026, 8, 28, 12, 5);
 
@@ -83,5 +83,44 @@ describe('the guess shown before Baby Buddy answers', () => {
 
     // Then
     expect(guess).toMatchObject({ weight: 7050, date: '2026-09-28' });
+  });
+});
+
+describe('whether the measurement sheet has changes', () => {
+  const opened: SheetState = { value: 4500, typed: null, choice: 'today', picked: null, clock: '12:05', clockTyped: null, notes: '' };
+
+  it('has none when just opened', () => {
+    // When
+    const changed = measurementChanged('weight', opened, opened);
+
+    // Then
+    expect(changed).toBe(false);
+  });
+
+  it.each<[string, Partial<SheetState>]>([
+    ['value', { value: 4510 }],
+    ['typed value', { typed: '45' }],
+    ['day', { choice: 'yesterday' }],
+    ['picked day', { choice: 'picked', picked: new Date(2026, 8, 3) }],
+    ['time', { clock: '11:30' }],
+    ['typed time', { clockTyped: '11:' }],
+    ['notes', { notes: 'After the bath' }],
+  ])('has some when the %s changed', (_, change) => {
+    // When
+    const changed = measurementChanged('weight', opened, { ...opened, ...change });
+
+    // Then
+    expect(changed).toBe(true);
+  });
+
+  it('has none when changed and changed back, or typed as it was', () => {
+    // Given
+    const back: SheetState = { ...opened, typed: '4500', clockTyped: '12:05', notes: ' ' };
+
+    // When
+    const changed = measurementChanged('weight', opened, back);
+
+    // Then
+    expect(changed).toBe(false);
   });
 });

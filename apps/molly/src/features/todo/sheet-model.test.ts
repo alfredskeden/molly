@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { draftDue, newTodoDraft, reminderLine, stepDay, stepTime, todoDraftOf, type TodoDraftState } from './sheet-model';
+import { draftDue, newTodoDraft, reminderLine, stepDay, stepTime, todoChanged, todoDraftOf, type TodoDraftState } from './sheet-model';
 
 const on = (day: number, hours = 0, minutes = 0) => new Date(2026, 9, day, hours, minutes);
 const now = on(25, 10, 7);
@@ -87,5 +87,88 @@ describe('the to-do sheet', () => {
       'Too late for a reminder',
       null,
     ]);
+  });
+});
+
+describe('whether the to-do sheet has changes', () => {
+  const item = { text: 'Checkup', label: 'Appointments', due: { kind: 'time' as const, at: on(26, 14, 30) } };
+  const unchanged = { photo: 'keep', added: [] } as const;
+
+  it.each([
+    ['a new item', newTodoDraft(null, now)],
+    ['an existing item', todoDraftOf(item, now)],
+  ])('has none when %s is just opened', (_, opened) => {
+    // When
+    const changed = todoChanged(opened, opened, unchanged);
+
+    // Then
+    expect(changed).toBe(false);
+  });
+
+  it.each<[string, Partial<TodoDraftState>]>([
+    ['text', { text: 'Checkup at 15' }],
+    ['label', { label: null }],
+    ['day', { day: 'today' }],
+    ['time', { minutes: 15 * 60 }],
+    ['any time', { timed: false }],
+  ])('has some when the %s changed', (_, change) => {
+    // Given
+    const opened = todoDraftOf(item, now);
+
+    // When
+    const changed = todoChanged(opened, { ...opened, ...change }, unchanged);
+
+    // Then
+    expect(changed).toBe(true);
+  });
+
+  it('has some when another day is stepped', () => {
+    // Given
+    const opened = { ...newTodoDraft(null, now), day: 'other' as const };
+
+    // When
+    const changed = todoChanged(opened, stepDay(opened, 1, now), unchanged);
+
+    // Then
+    expect(changed).toBe(true);
+  });
+
+  it.each([
+    ['a photo picked', { photo: 'new', added: [] }],
+    ['the photo removed', { photo: 'remove', added: [] }],
+    ['a new label added', { photo: 'keep', added: ['Pharmacy'] }],
+  ] as const)('has some with %s', (_, extras) => {
+    // Given
+    const opened = newTodoDraft(null, now);
+
+    // When
+    const changed = todoChanged(opened, opened, extras);
+
+    // Then
+    expect(changed).toBe(true);
+  });
+
+  it('has none when changed and changed back', () => {
+    // Given
+    const opened = todoDraftOf(item, now);
+    const back = { ...stepTime(stepTime(opened, 15), -15), text: 'Checkup', day: 'tomorrow' as const };
+
+    // When
+    const changed = todoChanged(opened, back, unchanged);
+
+    // Then
+    expect(changed).toBe(false);
+  });
+
+  it('has none for what a cleared choice hid: a stepped other day, a time with no date', () => {
+    // Given
+    const opened = newTodoDraft(null, now);
+    const hidden = { ...stepDay(opened, 3, now), minutes: 12 * 60, timed: true, text: '  ' };
+
+    // When
+    const changed = todoChanged(opened, hidden, unchanged);
+
+    // Then
+    expect(changed).toBe(false);
   });
 });

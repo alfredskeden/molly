@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { addProblem, addSummary, newDraft, parseClock, withEnd, type AddDraft } from './add-model';
+import { addChanged, addProblem, addSummary, newDraft, parseClock, withEnd, type AddDraft } from './add-model';
 
 const at = (clock: string, day = 24) => {
   const [hours = 0, minutes = 0] = clock.split(':').map(Number);
@@ -188,5 +188,50 @@ describe('an entry that can not be saved', () => {
 
     // Then
     expect(problem).toBeNull();
+  });
+});
+
+describe('whether the Add entry sheet has changes', () => {
+  const opened = newDraft('sleep', now, 120);
+
+  it('has none when just opened', () => {
+    // When
+    const changed = addChanged(opened, opened);
+
+    // Then
+    expect(changed).toBe(false);
+  });
+
+  it('has none when only the kind tab changed', () => {
+    // When
+    const changed = addChanged(opened, { ...opened, kind: 'diaper' });
+
+    // Then
+    expect(changed).toBe(false);
+  });
+
+  it.each<[string, Partial<AddDraft>]>([
+    ['start', { start: at('11:10') }],
+    ['end', withEnd(opened, now)],
+    ['feed method', { kind: 'feed', feed: 'Bottle' }],
+    ['diaper kind', { kind: 'diaper', diaper: 'Dirty' }],
+    ['medicine', { kind: 'med', med: 'Other' }],
+    ['amount', { amount: 150 }],
+    ['notes', { note: 'Half a dose' }],
+    ['food', { food: 'Carrot' }],
+  ])('has some when the %s changed', (_, change) => {
+    // When
+    const changed = addChanged(opened, { ...opened, ...change });
+
+    // Then
+    expect(changed).toBe(true);
+  });
+
+  it('has none when changed and changed back', () => {
+    // When
+    const changed = addChanged(opened, { ...opened, start: new Date(opened.start), note: '' });
+
+    // Then
+    expect(changed).toBe(false);
   });
 });
