@@ -234,6 +234,30 @@ describe('the widget snapshot', () => {
     expect(snapshot.sleepTimer).toMatchObject({ start: evening.start, nightFrom: on(20, 21, 0).toISOString() });
   });
 
+  it('says a sleep started 10 min after a wake at the usual time saves the night from its start', async () => {
+    // Given
+    const on = (day: number, hours: number, minutes = 0) => new Date(2026, 8, day, hours, minutes);
+    const entry = (from: Date, to: Date) => ({ ...savedSleep, start: from.toISOString(), end: to.toISOString() });
+    // Ten days up at 07:00 after a night from 21:45, and up at 07:00 today too.
+    const sleeps = Array.from({ length: 11 }, (_, index) => entry(on(9 + index, 21, 45), on(10 + index, 7, 0)));
+    const backToSleep = { ...runningSleep, start: on(20, 7, 10).toISOString() };
+    const client = {
+      findTimer: vi.fn(async ({ name }: { name: string }) => (name === 'molly:sleep' ? backToSleep : null)),
+      getLatestEntries: vi.fn(async () => ({ sleep: null, feeding: null, change: null })),
+      listEntries: vi.fn(async () => sleeps),
+      listChildren: vi.fn(async () => [{ id: CHILD, first_name: 'Molly', birth_date: '2026-05-10' }]),
+      listNotes: vi.fn(async () => []),
+      getRecentBottles: async () => [],
+      getRecentFeedings: async () => [],
+    };
+
+    // When
+    const snapshot = await fetchSnapshot(client as never, { child: CHILD, userId: 2, napWindow, now: on(20, 7, 15) });
+
+    // Then
+    expect(snapshot.sleepTimer).toMatchObject({ start: backToSleep.start, nightFrom: backToSleep.start });
+  });
+
   it('plans the day from a 06:31 wake with the 08:15–10:26 back-to-sleep as its first nap', async () => {
     // Given
     const on = (day: number, hours: number, minutes = 0) => new Date(2026, 8, day, hours, minutes);
@@ -1172,6 +1196,28 @@ describe('the Vitamin D check after a stop', () => {
 
     // Then
     expect(cache).toEqual(EMPTY_CACHE);
+  });
+});
+
+describe('the Vitamin D check after stopping the night at the usual wake', () => {
+  it("posts a reminder for today's cycle from that wake, with yesterday's dose the last one", async () => {
+    // Given
+    const on = (day: number, hours: number, minutes = 0) => new Date(2026, 8, day, hours, minutes);
+    const night = { ...savedSleep, nap: false, start: on(19, 21, 0).toISOString(), end: on(20, 7, 5).toISOString() };
+    const yesterday = { ...savedMedication, name: 'Vitamin D', time: on(19, 8, 0).toISOString() };
+    const client = {
+      listEntries: vi.fn(async (kind: string) => (kind === 'sleep' ? [night] : [yesterday])),
+      listChildren: vi.fn(async () => []),
+    };
+    const outcome = { type: 'stopped', created: { kind: 'sleep', entry: night } } as const;
+
+    // When
+    const cache = await remindedCache(EMPTY_CACHE, client as never, { outcome, enabled: true, child: CHILD, napWindow, now: on(20, 7, 6) });
+
+    // Then
+    expect(cache.reminders).toEqual([
+      { child: CHILD, cycleStart: on(20, 7, 5).toISOString(), lastGiven: yesterday.time, at: on(20, 7, 6).toISOString() },
+    ]);
   });
 });
 

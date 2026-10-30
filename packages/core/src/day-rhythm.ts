@@ -9,7 +9,8 @@ const DAY_MINUTES = 24 * 60;
 
 /**
  * What an age changes about day and night, in minutes: how far `before` and `after` the usual wake a
- * morning wake may be, how long the baby must then stay `awake`, and how `long` an evening sleep must
+ * morning wake may be, how long the baby must then stay `awake` (a wake at the usual time only needs
+ * not to be back asleep within it), and how `long` an evening sleep must
  * run to be the night when it starts early. Under 3 months there's no stable wake to learn
  * (`learnsWake`): the setting's "Day starts" stands in.
  */
@@ -31,6 +32,8 @@ export type DayTuning = {
   eveningFrom: number;
   /** The awake threshold is at most this share of the child's usual first wake window. */
   awakeShare: number;
+  /** A morning wake this close to the usual wake, either side, starts the day without the awake wait. */
+  onTime: number;
   /** Oldest first, so the first match wins. */
   bands: AgeBand[];
   /** The age a child without a birth date is taken to be. */
@@ -45,6 +48,7 @@ export const DAY_TUNING: DayTuning = {
   bedtimeCut: 90,
   eveningFrom: 3 * 60,
   awakeShare: 2 / 3,
+  onTime: 30,
   bands: [
     { fromMonths: 12, before: 120, after: 180, awake: 40, long: 120, learnsWake: true },
     { fromMonths: 6, before: 120, after: 180, awake: 45, long: 120, learnsWake: true },
@@ -127,11 +131,20 @@ export function learnedTimes(rhythm: DayRhythm): { wake: string | null; bedtime:
 
 /**
  * The earliest end of a sleep inside `range` after which the baby stayed awake `awake` minutes: the
- * next sleep started that much later, or none has and that much time has passed by `now`. Only after
- * a night: some sleep started between the same clock time as the range's end a day earlier and the
- * range's start. A sleep still running (its end is now) never ends it. Null without one.
+ * next sleep started that much later, or none has and that much time has passed by `now`. An end
+ * `onTime` (within its minutes of the usual wake) needs no wait while no sleep has followed it; once
+ * one has, it must still start `awake` later. Only after a night: some sleep started between the same
+ * clock time as the range's end a day earlier and the range's start. A sleep still running (its end
+ * is now) never ends it. Null without one. Learning leaves out `onTime`, so it never uses the usual
+ * wake to find the wakes it learns it from.
  */
-export function firstWake(sleeps: Sleep[], range: { start: Date; end: Date }, awake: number, now: Date): Date | null {
+export function firstWake(
+  sleeps: Sleep[],
+  range: { start: Date; end: Date },
+  awake: number,
+  now: Date,
+  onTime?: { at: Date; within: number },
+): Date | null {
   const nightFrom = minutesPast(range.end, -1, range.end.getHours() * 60 + range.end.getMinutes());
   const started = (entry: Sleep) => Date.parse(entry.start);
   const after = sleeps.filter((entry) => started(entry) > nightFrom.getTime());
@@ -142,9 +155,20 @@ export function firstWake(sleeps: Sleep[], range: { start: Date; end: Date }, aw
     .sort((a, b) => a - b);
   const wake = ends.find((end) => {
     const next = Math.min(...sleeps.map(started).filter((start) => start >= end));
+    if (onTime && isOnTime(new Date(end), onTime) && next === Infinity) return true;
     return Math.min(next, now.getTime()) - end >= awake * MINUTE_MS;
   });
   return wake === undefined ? null : new Date(wake);
+}
+
+/** The usual wake on the day some days from `day`, and how close (`onTime`) a wake must be to it to start the day at once. */
+export function onTimeOn(rhythm: DayRhythm, day: Date, days = 0): { at: Date; within: number } {
+  return { at: minutesPast(day, days, rhythm.wake), within: rhythm.tuning.onTime };
+}
+
+/** Whether a wake is within `within` minutes of the usual wake `at`, either side. */
+export function isOnTime(wake: Date, onTime: { at: Date; within: number }): boolean {
+  return Math.abs(wake.getTime() - onTime.at.getTime()) <= onTime.within * MINUTE_MS;
 }
 
 /**

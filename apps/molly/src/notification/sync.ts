@@ -10,7 +10,7 @@ export const hasNotifications = false;
 
 export async function syncNotifications(_cache: WidgetCache, _settings: Settings | null): Promise<void> {}
 
-export async function syncTodoReminders(_items: TodoItem[] | null): Promise<void> {}
+export async function syncTodoReminders(_items: TodoItem[] | null, _quiet: readonly number[]): Promise<void> {}
 
 export function notificationsAllowed(): boolean {
   return false;

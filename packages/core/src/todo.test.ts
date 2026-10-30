@@ -3,18 +3,23 @@ import { describe, expect, it } from 'vitest';
 
 import {
   dueText,
+  firstSeen,
   labelFor,
   newCount,
   noteTime,
+  openedBy,
   photoUrl,
+  pruneQuiet,
+  pruneSeen,
+  quietFor,
   reminderAt,
   savedBy,
   saveTags,
-  seenAfter,
   tickTags,
   todoItems,
   todoLabels,
   todoList,
+  unreadBy,
   untickTags,
   type TodoSeen,
 } from './todo';
@@ -299,7 +304,7 @@ describe('due text', () => {
 });
 
 describe('reminders', () => {
-  const reminderOf = (item: Note, at = now) => reminderAt(todoItems([item])[0]!, at);
+  const reminderOf = (item: Note, at = now, quiet: number[] = []) => reminderAt(todoItems([item])[0]!, at, quiet);
 
   it('rings an hour before an item with a time', () => {
     // Given
@@ -338,9 +343,122 @@ describe('reminders', () => {
     // Then
     expect(ats).toEqual([null, null, null, null]);
   });
+
+  it('has none on this phone for a quiet item, with a time or a date only', () => {
+    // Given
+    const timed = dueAt('Vaccination', on(26, 15));
+    const dated = dueOn('Pharmacy', on(27));
+
+    // When
+    const ats = [reminderOf(timed, now, [timed.id]), reminderOf(dated, now, [dated.id])];
+
+    // Then
+    expect(ats).toEqual([null, null]);
+  });
+
+  it('keeps the reminders of items that are not quiet', () => {
+    // Given
+    const quiet = dueAt('Vaccination', on(26, 15));
+    const other = dueAt('Checkup', on(26, 14, 30));
+
+    // When
+    const at = reminderOf(other, now, [quiet.id]);
+
+    // Then
+    expect(at).toEqual(on(26, 13, 30));
+  });
+});
+
+describe('quiet reminders', () => {
+  it('adds an id once', () => {
+    // Given
+    const quiet = [3];
+
+    // When
+    const after = quietFor(quietFor(quiet, 7, true), 7, true);
+
+    // Then
+    expect(after).toEqual([3, 7]);
+  });
+
+  it('removes an id', () => {
+    // Given
+    const quiet = [3, 7];
+
+    // When
+    const after = quietFor(quiet, 3, false);
+
+    // Then
+    expect(after).toEqual([7]);
+  });
+
+  it('records nothing for a guess', () => {
+    // Given
+    const quiet = [3];
+
+    // When
+    const after = quietFor(quiet, -1, true);
+
+    // Then
+    expect(after).toBe(quiet);
+  });
+
+  it('keeps the same array when nothing changes', () => {
+    // Given
+    const quiet = [3];
+
+    // When
+    const after = [quietFor(quiet, 3, true), quietFor(quiet, 5, false)];
+
+    // Then
+    expect(after.every((same) => same === quiet)).toBe(true);
+  });
+
+  it('keeps the same array when every quiet id is a listed dated item', () => {
+    // Given
+    const items = todoItems([dueAt('Vaccination', on(26, 15)), dueOn('Pharmacy', on(27))]);
+    const quiet = items.map((item) => item.id);
+
+    // When
+    const after = pruneQuiet(items, quiet);
+
+    // Then
+    expect(after).toBe(quiet);
+  });
+
+  it('drops ids missing from the list up to its highest id, and keeps those above it (saves not fetched yet)', () => {
+    // Given
+    const items = todoItems([dueAt('Kept', on(26, 15))]);
+    const kept = items[0]!.id;
+
+    // When
+    const after = pruneQuiet(items, [kept - 1, kept, kept + 1]);
+
+    // Then
+    expect(after).toEqual([kept, kept + 1]);
+  });
+
+  it('drops ids listed without a date, and keeps done items', () => {
+    // Given
+    const items = todoItems([
+      open('Undated'),
+      note('Ticked', ['molly-todo-done', 'molly-done-2026-10-25', 'molly-todo-due'], { time: on(27, 9).toISOString() }),
+    ]);
+    const [undated, ticked] = items.map((item) => item.id) as [number, number];
+
+    // When
+    const after = pruneQuiet(items, [undated, ticked]);
+
+    // Then
+    expect(after).toEqual([ticked]);
+  });
 });
 
 describe('new items', () => {
+  const seenWith = (fields: Partial<TodoSeen>): TodoSeen => ({ mark: 0, saved: [], opened: [], unread: [], ...fields });
+  const newTexts = (notes: Note[], seen: TodoSeen | null) =>
+    listOf(notes, seen).flatMap((card) => card.items.filter((item) => item.isNew).map((item) => item.text));
+
   it('counts nothing on a device that never looked', () => {
     // Given
     const items = todoItems([open('Wipes'), open('Bibs')]);
@@ -352,43 +470,160 @@ describe('new items', () => {
     expect(count).toBe(0);
   });
 
-  it("counts open items above the seen mark that this device didn't save, never done ones", () => {
+  it('marks open items above the mark New, never done ones', () => {
     // Given
-    const [seenOne, theirs, mine, theirDone] = [open('Seen'), open('Theirs'), open('Mine'), done('Done', '2026-10-25')];
-    const seen = { mark: seenOne.id, saved: [mine.id] };
+    const [seenOne, theirs, theirDone] = [open('Seen'), open('Theirs'), done('Done', '2026-10-25')];
+    const seen = seenWith({ mark: seenOne.id });
 
     // When
-    const list = todoList(todoItems([seenOne, theirs, mine, theirDone]), now, seen);
-    const count = newCount(todoItems([seenOne, theirs, mine, theirDone]), seen);
+    const fresh = newTexts([seenOne, theirs, theirDone], seen);
 
     // Then
-    expect(count).toBe(1);
-    expect(list.at(-1)!.items.filter((item) => item.isNew).map((item) => item.text)).toEqual(['Theirs']);
+    expect(fresh).toEqual(['Theirs']);
   });
 
-  it('moves the mark to the highest id on leaving, and remembers ids saved here until then', () => {
+  it('does not mark items saved or opened here New', () => {
+    // Given
+    const [mine, read, theirs] = [open('Mine'), open('Read'), open('Theirs')];
+    const seen = seenWith({ saved: [mine.id], opened: [read.id] });
+
+    // When
+    const fresh = newTexts([mine, read, theirs], seen);
+
+    // Then
+    expect(fresh).toEqual(['Theirs']);
+  });
+
+  it('marks an unread item New even at or below the mark, saved or opened here, until it is done', () => {
+    // Given
+    const [old, mine, read, ticked] = [open('Old'), open('Mine'), open('Read'), done('Ticked', '2026-10-25')];
+    const seen = seenWith({ mark: ticked.id, saved: [mine.id], opened: [read.id], unread: [old.id, mine.id, read.id, ticked.id] });
+
+    // When
+    const fresh = newTexts([old, mine, read, ticked], seen);
+
+    // Then
+    expect(fresh).toEqual(['Read', 'Mine', 'Old']);
+  });
+
+  it('counts the same items the list marks New', () => {
+    // Given
+    const notes = [open('Seen'), open('Theirs'), open('Mine'), open('Unread')];
+    const seen = seenWith({ mark: notes[0]!.id, saved: [notes[2]!.id], unread: [notes[0]!.id] });
+
+    // When
+    const count = newCount(todoItems(notes), seen);
+
+    // Then
+    expect(count).toBe(newTexts(notes, seen).length);
+    expect(count).toBe(3);
+  });
+
+  it('records an opened item and takes it off unread, keeping the rest', () => {
+    // Given
+    const seen = seenWith({ mark: 3, saved: [5], opened: [6], unread: [7, 8] });
+
+    // When
+    const after = openedBy(seen, 7);
+
+    // Then
+    expect(after).toEqual({ mark: 3, saved: [5], opened: [6, 7], unread: [8] });
+  });
+
+  it('records an unread item once, keeping the rest', () => {
+    // Given
+    const seen = seenWith({ mark: 3, saved: [5], opened: [6], unread: [7] });
+
+    // When
+    const after = [unreadBy(seen, 6), unreadBy(seen, 7)];
+
+    // Then
+    expect(after).toEqual([
+      { mark: 3, saved: [5], opened: [6], unread: [7, 6] },
+      { mark: 3, saved: [5], opened: [6], unread: [7] },
+    ]);
+  });
+
+  it('records nothing for a guess or a device that never looked', () => {
+    // Given
+    const seen = seenWith({ mark: 3 });
+
+    // When
+    const after = [openedBy(seen, -4), unreadBy(seen, -4), openedBy(null, 5), unreadBy(null, 5)];
+
+    // Then
+    expect(after).toEqual([seen, seen, null, null]);
+  });
+
+  it('records an item saved here, keeping opened and unread', () => {
+    // Given
+    const seen = seenWith({ mark: 3, opened: [6], unread: [7] });
+
+    // When
+    const after = savedBy(seen, 9);
+
+    // Then
+    expect(after).toEqual({ mark: 3, saved: [9], opened: [6], unread: [7] });
+  });
+
+  it('starts a device at the highest listed id, ignoring guesses', () => {
+    // Given
+    const items = todoItems([open('One'), open('Two'), open('Guess', undefined, { id: -5 })]);
+
+    // When
+    const seen = firstSeen(items);
+
+    // Then
+    expect(seen).toEqual({ mark: items[1]!.id, saved: [], opened: [], unread: [] });
+  });
+
+  it('starts at zero with nothing listed', () => {
+    // Given
+    const items = todoItems([]);
+
+    // When
+    const seen = firstSeen(items);
+
+    // Then
+    expect(seen).toEqual({ mark: 0, saved: [], opened: [], unread: [] });
+  });
+
+  it('keeps the seen lists as they are when nothing has gone', () => {
     // Given
     const items = todoItems([open('One'), open('Two')]);
-    const seen = savedBy({ mark: 0, saved: [] }, 99);
+    const seen = seenWith({ saved: [items[0]!.id], opened: [items[1]!.id], unread: [items[0]!.id] });
 
     // When
-    const after = seenAfter(items, seen);
+    const after = pruneSeen(items, seen);
 
     // Then
-    expect(seen).toEqual({ mark: 0, saved: [99] });
-    expect(after).toEqual({ mark: items[1]!.id, saved: [99] });
+    expect(after).toBe(seen);
   });
 
-  it('forgets saved ids once the mark passes them, and ignores guesses', () => {
+  it('drops ids missing from the list up to its highest id, and keeps those above it (saves not fetched yet)', () => {
     // Given
-    const items = todoItems([open('One'), open('Guess', undefined, { id: -5 })]);
-    const seen = { mark: 0, saved: [items[0]!.id] };
+    const items = todoItems([open('Kept')]);
+    const [kept] = [items[0]!.id];
+    const seen = seenWith({ saved: [kept - 1, kept + 1], opened: [kept - 2, kept, kept + 2], unread: [kept - 3, kept + 3] });
 
     // When
-    const after = seenAfter(items, seen);
+    const after = pruneSeen(items, seen);
 
     // Then
-    expect(after).toEqual({ mark: items[0]!.id, saved: [] });
+    expect(after).toEqual({ mark: 0, saved: [kept + 1], opened: [kept, kept + 2], unread: [kept + 3] });
+  });
+
+  it('drops done items from unread and saved or opened ids at or below the mark, keeping done ones opened', () => {
+    // Given
+    const items = todoItems([open('Old'), done('Ticked', '2026-10-25'), open('Recent')]);
+    const [old, ticked, recent] = items.map((item) => item.id) as [number, number, number];
+    const seen = seenWith({ mark: old, saved: [old, recent], opened: [old, ticked], unread: [old, ticked] });
+
+    // When
+    const after = pruneSeen(items, seen);
+
+    // Then
+    expect(after).toEqual({ mark: old, saved: [recent], opened: [ticked], unread: [old] });
   });
 });
 

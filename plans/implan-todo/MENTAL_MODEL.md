@@ -74,7 +74,7 @@ Inside a card: dated items first, soonest on top ("Tomorrow 14:30", "in 5 days")
 
 ## "New" and the badge
 
-Each device remembers the highest item id it saw when it last left the list. Higher ids it didn't save itself are "New", and the header's To-do button counts them. Nothing is pushed: the count shows on the next poll.
+*Replaced by [`implan-todo-read-only`](../implan-todo-read-only/MAIN.md): New now lasts until the item is opened on this phone, and Mark unread brings it back.* Each device remembers the highest item id it saw when it last left the list. Higher ids it didn't save itself are "New", and the header's To-do button counts them. Nothing is pushed: the count shows on the next poll.
 
 ## Photos
 
@@ -85,12 +85,14 @@ Picked from the camera or library (web: a file), shrunk to 1600 px, saved under 
 ```mermaid
 flowchart LR
   F[to-do fetch<br/>app or widget refresh] --> W{dated, open,<br/>time still ahead?}
-  W -- yes --> A[alarm: 1 h before<br/>or 19:00 the evening before]
+  W -- yes --> Q{quiet on<br/>this phone?}
+  Q -- no --> A[alarm: 1 h before<br/>or 19:00 the evening before]
+  Q -- yes --> X
   W -- no --> X[no alarm, no bell]
   A --> N[notification on molly.todo<br/>tap opens To-do]
 ```
 
-Each phone sets its own alarms from what it last fetched. When the other parent ticks an item, the next refresh drops the alarm.
+Each phone sets its own alarms from what it last fetched. When the other parent ticks an item, the next refresh drops the alarm. "Remind me" off in the edit sheet makes an item quiet on that phone only (`settings.todoQuiet`): [`implan-todo-quiet`](../implan-todo-quiet/MAIN.md).
 
 ## Build order
 

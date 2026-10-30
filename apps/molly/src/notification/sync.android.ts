@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { requireNativeModule } from 'expo';
 import { PermissionsAndroid, Platform } from 'react-native';
 
+import { awayOnPurpose, leaveOnPurpose } from '@/features/return/trip';
 import type { Settings } from '@/storage/types';
 import { CHILD_ICON_COLOURS, PALETTES } from '@/theme/tokens';
 import type { WidgetCache } from '@/widget/model';
@@ -114,10 +115,11 @@ export async function syncNotifications(cache: WidgetCache, settings: Settings |
 
 /**
  * Sets this phone's to-do reminder alarms from the list it last fetched (the app's to-do query, the widget
- * refresh) and drops those of items ticked off or undated since; `items` null (signed out) drops them all.
+ * refresh) and drops those of items ticked off, undated or turned quiet here (`quiet`, `settings.todoQuiet`)
+ * since; `items` null (signed out) drops them all.
  */
-export async function syncTodoReminders(items: TodoItem[] | null): Promise<void> {
-  const { schedule, keep } = items ? todoReminderNotifications(items, new Date()) : { schedule: [], keep: [] };
+export async function syncTodoReminders(items: TodoItem[] | null, quiet: readonly number[]): Promise<void> {
+  const { schedule, keep } = items ? todoReminderNotifications(items, quiet, new Date()) : { schedule: [], keep: [] };
   await safely('to-do reminder', () =>
     MollyNotify.syncTodoReminders(schedule.map((reminder) => ({ ...reminder, color: TODO_COLOR })), keep),
   );
@@ -151,7 +153,8 @@ async function ask(): Promise<{ answer: PermissionAnswer; prompted: boolean }> {
   }
   if (await AsyncStorage.getItem(BLOCKED_KEY)) return { answer: 'blocked', prompted: false };
   const asked = Date.now();
-  const result = await PermissionsAndroid.request(permission);
+  // The prompt takes the app away: the return keeps the screen (features/return).
+  const result = await awayOnPurpose(() => PermissionsAndroid.request(permission));
   const prompted = Date.now() - asked > NO_PROMPT_MS;
   if (result === PermissionsAndroid.RESULTS.GRANTED) return { answer: notificationsAllowed() ? 'granted' : 'blocked', prompted };
   if (result !== PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) return { answer: 'denied', prompted };
@@ -169,7 +172,10 @@ export async function askNotificationPermission(): Promise<PermissionAnswer> {
  */
 export async function turnOnNotifications(): Promise<PermissionAnswer> {
   const { answer, prompted } = await ask();
-  if (answer === 'blocked' && !prompted) MollyNotify.openSettings();
+  if (answer === 'blocked' && !prompted) {
+    leaveOnPurpose();
+    MollyNotify.openSettings();
+  }
   return answer;
 }
 
@@ -191,5 +197,6 @@ export async function liveUpdatesState(): Promise<LiveUpdates> {
 
 /** Android's Live Updates switch for Molly, or its notification settings where that screen is missing. */
 export function openLiveUpdateSettings(): void {
+  leaveOnPurpose();
   MollyNotify.openLiveUpdateSettings();
 }

@@ -1,7 +1,7 @@
 import type { Sleep } from '@molly/api';
 
 import { DAY_PLAN_TUNING, dayPlan, type DayPlanTuning, type Skip } from './day-plan';
-import { DAY_TUNING, dayRhythm, type DayRhythm, type DayTuning } from './day-rhythm';
+import { DAY_TUNING, dayRhythm, isOnTime, onTimeOn, type DayRhythm, type DayTuning } from './day-rhythm';
 import { isNight as isNightIn, pastDays, wakeAndBedtime, type DayWindow } from './day-window';
 import { atClock, isNightSleep, type NapWindow } from './nap';
 import { NEXT_SLEEP_TUNING, nextSleep, type NextSleep, type NextSleepTuning } from './next-sleep';
@@ -112,9 +112,9 @@ export function likelyFor(
 export type PlanCase = { day: Date; position: number; kind: NextSleep['kind']; score: ReturnType<typeof score> | null };
 
 /**
- * Plans each logged day from its morning wake, as soon as it was known (the age's threshold after it),
- * knowing only the sleeps that had ended by then, and
- * scores planned nap N against the day's Nth sleep (null if the day had fewer naps) and planned
+ * Plans each logged day from its morning wake, as soon as it was known (right after a wake at the
+ * usual time as Molly knew it then, else the age's threshold after it), knowing only the sleeps that
+ * had ended by then, and scores planned nap N against the day's Nth sleep (null if the day had fewer naps) and planned
  * bedtime against the logged one. Days without a logged bedtime are left out. Catnaps don't count.
  */
 export function replayPlans(
@@ -135,8 +135,10 @@ export function replayPlans(
     .flatMap(({ wake, naps, bedtime }) => {
       if (!bedtime) return [];
       const long = naps.filter(isLong);
-      // The wake is only known once the baby has been up the age's threshold.
-      const known = new Date(wake.getTime() + rhythm.band.awake * MINUTE_MS);
+      // A wake at the usual time is known a minute after it (at the wake itself, the sleep still runs),
+      // any other once the baby has been up the age's threshold.
+      const onTime = isOnTime(wake, onTimeOn(dayRhythm(knownAt(sleeps, wake), birthDate, napWindow, wake, dayTuning), wake));
+      const known = new Date(wake.getTime() + (onTime ? 1 : rhythm.band.awake) * MINUTE_MS);
       const before = knownAt(sleeps, known);
       const plan = dayPlan(before, null, birthDate, dayRhythm(before, birthDate, napWindow, known, dayTuning), [], known, planTuning, tuning);
       return plan.map((planned, index): PlanCase => {

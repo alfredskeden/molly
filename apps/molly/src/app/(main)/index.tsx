@@ -50,7 +50,7 @@ import {
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { AppState, BackHandler, Platform, useWindowDimensions, View } from 'react-native';
+import { BackHandler, Platform, useWindowDimensions, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -121,6 +121,7 @@ import { WhySheet } from '@/features/dashboard/WhySheet';
 import { WindowRow } from '@/features/dashboard/WindowRow';
 import { likelyKey, likelySlotOf, ringLikely, ringMarks, ringSleeps, type RingKey } from '@/features/ring/model';
 import { Ring, type RingProps } from '@/features/ring/Ring';
+import { useOnLive, useUnsavedOnReturn } from '@/features/return/ReturnProvider';
 import { useToast } from '@/features/toast/toast';
 import { answerStrength, HAPTICS, type HapticAction } from '@/haptics/model';
 import { useHaptic } from '@/haptics/use-haptic';
@@ -145,7 +146,7 @@ const PAST_DAYS = 2;
 const startOfDay = (time: Date, days: number) => new Date(time.getFullYear(), time.getMonth(), time.getDate() + days);
 
 /** A past window stays at most this long before the ring snaps back to now. */
-export const SNAP_BACK_MS = 60_000;
+const SNAP_BACK_MS = 60_000;
 /** The ring never shrinks below this; under it (huge fonts, a small phone) the screen scrolls instead. */
 const MIN_RING = 280;
 /**
@@ -342,7 +343,7 @@ export default function Dashboard() {
     }, [back, showLive]),
   );
 
-  // A past window is a glance: back to now after a minute, or when the app comes back. Not while one of its
+  // A past window is a glance: back to now after a minute on screen (a return: below). Not while one of its
   // entries is being edited: the minute starts again once the editor closes.
   const editingOpen = editing !== null;
   useEffect(() => {
@@ -350,12 +351,18 @@ export default function Dashboard() {
     const timeout = setTimeout(showLive, SNAP_BACK_MS);
     return () => clearTimeout(timeout);
   }, [showingPrevious, editingOpen, viewKey, showLive]);
-  useEffect(() => {
-    const subscription = AppState.addEventListener('change', (status) => {
-      if (status === 'active') showLive();
-    });
-    return () => subscription.remove();
-  }, [showLive]);
+  // Back to now when the app comes back (`features/return`): on the web every time, on Android after a minute
+  // away, which also closes the Add entry sheet ("Changes not saved" if it, or the editor, had changes).
+  useOnLive(
+    useCallback(
+      (answer) => {
+        showLive();
+        if (answer === 'goLive') setAskingAdd(false);
+      },
+      [showLive],
+    ),
+  );
+  useUnsavedOnReturn(editing !== null && isChanged(editing.draft, editing.target));
 
 
   /**

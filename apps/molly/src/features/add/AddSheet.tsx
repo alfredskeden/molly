@@ -8,6 +8,7 @@ import { FIXED_SCALE, Segment, Spinner, Text } from '@/components/ui';
 import { amountInput, startAmount } from '@/features/feed/amount-input';
 import { BottleAmount } from '@/features/feed/BottleAmount';
 import { FoodField } from '@/features/feed/FoodField';
+import { useUnsavedOnReturn } from '@/features/return/ReturnProvider';
 import { HAPTICS } from '@/haptics/model';
 import { useHaptic } from '@/haptics/use-haptic';
 import { Glyph } from '@/theme/Glyph';
@@ -15,7 +16,7 @@ import { TrackerIcon } from '@/theme/TrackerIcon';
 import type { FilledSymbol } from '@/theme/symbols';
 import { useTheme } from '@/theme/theme';
 
-import { addProblem, addSummary, hasRange, newDraft, parseClock, withEnd, type AddDraft, type AddKind } from './add-model';
+import { addChanged, addProblem, addSummary, hasRange, newDraft, parseClock, withEnd, type AddDraft, type AddKind } from './add-model';
 
 const TYPES: { kind: AddKind; label: string; icon: FilledSymbol }[] = [
   { kind: 'sleep', label: 'Sleep', icon: 'bedtime' },
@@ -63,6 +64,8 @@ export function AddSheet({
   const [form, setDraft] = useState(() => newDraft('sleep', now));
   const [amount, dispatchAmount] = useReducer(amountInput, bottle.amount ?? null, startAmount);
   const draft = { ...form, amount: amount.amount };
+  const [opened] = useState(draft);
+  useUnsavedOnReturn(addChanged(opened, draft));
   const haptic = useHaptic();
   const set = (changes: Partial<AddDraft>) => setDraft((current) => ({ ...current, ...changes }));
   const range = hasRange(draft.kind);

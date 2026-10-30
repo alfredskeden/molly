@@ -47,10 +47,13 @@ async function todoNotes(): Promise<Note[]> {
 const todoButton = (page: Page) => page.getByRole('button', { name: /^To-do/ });
 const card = (page: Page, label: string) => page.getByLabel(label, { exact: true });
 const button = (page: Page, name: string) => page.getByRole('button', { name, exact: true });
+const itemSheet = (page: Page) => page.getByLabel('To-do item', { exact: true });
+const openItem = (page: Page, text: string) => page.getByRole('button', { name: new RegExp(`^Open, ${text}`) }).click();
+const back = (page: Page) => page.getByRole('link', { name: 'Back', exact: true }).click();
 
 /** Signed in as parent A, with everything up to `mark` seen on this device. */
 async function openList(page: Page, mark = 0) {
-  await signInAs(page, testEnv.parentA, { todoSeen: { mark, saved: [] } });
+  await signInAs(page, testEnv.parentA, { todoSeen: { mark, saved: [], opened: [], unread: [] } });
   await todoButton(page).click();
   await expect(page.getByRole('heading', { name: 'To-do' })).toBeVisible();
 }
@@ -106,22 +109,89 @@ test('an item added under Buy shows there and is saved as a tagged note', async 
   ]);
 });
 
-test("the other parent's new item is counted on the badge and marked New until the list is left", async ({ page }) => {
+test("the other parent's new item stays New after leaving the list, until it's opened here", async ({ page }) => {
   // Given
   const seen = await seed('Seen before', ['molly-todo']);
   await seed('Wipes', ['molly-todo', 'To-do: Buy']);
-  await signInAs(page, testEnv.parentA, { todoSeen: { mark: seen.id, saved: [] } });
-
-  // When
+  await signInAs(page, testEnv.parentA, { todoSeen: { mark: seen.id, saved: [], opened: [], unread: [] } });
+  await expect(todoButton(page)).toHaveAccessibleName('To-do, 1 new');
+  await todoButton(page).click();
+  await expect(page.getByText('1 new', { exact: true })).toBeVisible();
+  await back(page);
   await expect(todoButton(page)).toHaveAccessibleName('To-do, 1 new');
   await todoButton(page).click();
 
+  // When
+  await openItem(page, 'Wipes, new');
+
   // Then
-  await expect(page.getByText('1 new since you last looked')).toBeVisible();
-  await expect(card(page, 'Buy').getByText('New', { exact: true })).toBeVisible();
-  await page.getByRole('link', { name: 'Back', exact: true }).click();
+  await expect(itemSheet(page).getByText('Wipes', { exact: true })).toBeVisible();
+  await itemSheet(page).getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(card(page, 'Buy').getByText('New', { exact: true })).toHaveCount(0);
+  await back(page);
   await expect(todoButton(page)).toHaveAccessibleName('To-do');
   await expect(page.getByTestId('badge')).toHaveCount(0);
+});
+
+test('Mark unread closes the sheet and makes the item New again, on the badge too', async ({ page }) => {
+  // Given
+  await seed('Wipes', ['molly-todo', 'To-do: Buy']);
+  await openList(page);
+  await openItem(page, 'Wipes');
+
+  // When
+  await button(page, 'Mark unread').click();
+
+  // Then
+  await expect(itemSheet(page)).toHaveCount(0);
+  await expect(card(page, 'Buy').getByText('New', { exact: true })).toBeVisible();
+  await back(page);
+  await expect(todoButton(page)).toHaveAccessibleName('To-do, 1 new');
+});
+
+test('an item added on this phone is never New, until it is marked unread', async ({ page }) => {
+  // Given
+  await openList(page);
+  await add(page, 'Bibs', 'Buy');
+  await button(page, 'Save').click();
+  await expect(card(page, 'Buy').getByText('Bibs')).toBeVisible();
+  await expect.poll(async () => (await todoNotes()).length).toBe(1);
+  await expect(card(page, 'Buy').getByText('New', { exact: true })).toHaveCount(0);
+
+  // When
+  await openItem(page, 'Bibs');
+  await button(page, 'Mark unread').click();
+
+  // Then
+  await expect(card(page, 'Buy').getByText('New', { exact: true })).toBeVisible();
+  await expect(page.getByText('1 new', { exact: true })).toBeVisible();
+});
+
+test('tapping an item opens it read-only, closing sends nothing, and Edit opens the edit sheet', async ({ page }) => {
+  // Given
+  await seed('Checkup', ['molly-todo', 'To-do: Appointments', 'molly-todo-due'], day(1, 14, 30));
+  await openList(page);
+  const writes: string[] = [];
+  page.on('request', (request) => {
+    if (request.url().includes('/api/notes') && request.method() !== 'GET') writes.push(request.method());
+  });
+
+  // When
+  await openItem(page, 'Checkup');
+
+  // Then
+  await expect(itemSheet(page).getByText('Checkup', { exact: true })).toBeVisible();
+  await expect(itemSheet(page).getByText('Tomorrow 14:30')).toBeVisible();
+  await expect(itemSheet(page).getByText(/Appointments/)).toBeVisible();
+  await expect(page.getByLabel('What needs doing')).toHaveCount(0);
+  await itemSheet(page).getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(itemSheet(page)).toHaveCount(0);
+  expect(writes).toEqual([]);
+  await openItem(page, 'Checkup');
+  await button(page, 'Edit').click();
+  await expect(page.getByLabel('What needs doing')).toHaveValue('Checkup');
+  await expect(page.getByRole('radio', { name: 'Appointments', exact: true })).toHaveAttribute('aria-checked', 'true');
+  await expect(page.getByRole('radio', { name: 'Tomorrow' })).toHaveAttribute('aria-checked', 'true');
 });
 
 test("an item saved on another child shows in the same list", async ({ page }) => {
@@ -205,7 +275,8 @@ test('a dated item with a time is saved and shown as Tomorrow, and an edit moves
   await button(page, '15 minutes later').click();
   await button(page, 'Save').click();
   await expect(card(page, 'Appointments').getByText('Tomorrow 09:30')).toBeVisible();
-  await page.getByRole('button', { name: /^Edit, 6-month checkup/ }).click();
+  await openItem(page, '6-month checkup');
+  await button(page, 'Edit').click();
   await button(page, '15 minutes later').click();
   await button(page, 'Save').click();
 
@@ -214,6 +285,62 @@ test('a dated item with a time is saved and shown as Tomorrow, and an edit moves
   const [saved] = await todoNotes();
   expect(saved!.tags).toContain('molly-todo-due');
   expect(new Date(saved!.time).getTime()).toBe(day(1, 9, 45).getTime());
+});
+
+test('a date picked months ahead under Other is shown in the sheet and saved as that day', async ({ page }) => {
+  // Given
+  const target = day(90);
+  await openList(page);
+  await add(page, 'Passport renewal');
+  await page.getByRole('radio', { name: 'Other' }).click();
+
+  // When
+  await page.getByLabel('Due date', { exact: true }).fill(localDay(target));
+
+  // Then
+  await expect(page.getByLabel('Due date', { exact: true })).toHaveValue(localDay(target));
+  await expect(page.getByRole('radio', { name: 'Other' })).toBeChecked();
+  await button(page, 'Save').click();
+  await expect(card(page, 'Other').getByText('Passport renewal')).toBeVisible();
+  const [saved] = await todoNotes();
+  expect(saved!.tags).toContain('molly-todo-day');
+  expect(localDay(new Date(saved!.time))).toBe(localDay(target));
+});
+
+test("picking today's date under Other chooses Today", async ({ page }) => {
+  // Given
+  await openList(page);
+  await add(page, 'Call the clinic');
+  await page.getByRole('radio', { name: 'Other' }).click();
+
+  // When
+  await page.getByLabel('Due date', { exact: true }).fill(localDay(day(0)));
+
+  // Then
+  await expect(page.getByRole('radio', { name: 'Today' })).toBeChecked();
+  await expect(page.getByLabel('Due date', { exact: true })).toHaveCount(0);
+});
+
+test('a typed time is saved to the minute, and +15 steps on from it', async ({ page }) => {
+  // Given
+  await openList(page);
+  await add(page, 'Pick up the pram', 'Buy');
+  await page.getByRole('radio', { name: 'Tomorrow' }).click();
+  await page.getByRole('radio', { name: 'At a time' }).click();
+
+  // When
+  await page.getByLabel('Due time', { exact: true }).fill('14:40');
+  await button(page, 'Save').click();
+  await expect(card(page, 'Buy').getByText('Tomorrow 14:40')).toBeVisible();
+  await openItem(page, 'Pick up the pram');
+  await button(page, 'Edit').click();
+  await button(page, '15 minutes later').click();
+  await button(page, 'Save').click();
+
+  // Then
+  await expect(card(page, 'Buy').getByText('Tomorrow 14:55')).toBeVisible();
+  const [saved] = await todoNotes();
+  expect(new Date(saved!.time).getTime()).toBe(day(1, 14, 55).getTime());
 });
 
 test('dated items come first, soonest on top, then undated ones', async ({ page }) => {
@@ -226,7 +353,7 @@ test('dated items come first, soonest on top, then undated ones', async ({ page 
   await openList(page);
 
   // Then
-  await expect(card(page, 'Buy').getByRole('button', { name: /^Edit, / })).toHaveText([/Tomorrow/, /In five days/, /Undated/]);
+  await expect(card(page, 'Buy').getByRole('button', { name: /^Open, / })).toHaveText([/Tomorrow/, /In five days/, /Undated/]);
   await expect(card(page, 'Buy').getByText('in 5 days')).toBeVisible();
 });
 
@@ -304,7 +431,7 @@ test('a photo chosen on the web shows as a thumbnail and full size, loads under 
   expect(cspErrors).toEqual([]);
 });
 
-test('a row without a photo has no photo slot, and the web shows no reminder bells', async ({ page }) => {
+test('a row without a photo has no photo slot, and the web shows no reminder bells, lines or Remind me switch', async ({ page }) => {
   // Given
   await seed('Checkup', ['molly-todo', 'To-do: Appointments', 'molly-todo-due'], day(1, 14, 30));
 
@@ -314,9 +441,12 @@ test('a row without a photo has no photo slot, and the web shows no reminder bel
   // Then
   await expect(card(page, 'Appointments').getByText('Tomorrow 14:30')).toBeVisible();
   await expect(page.getByRole('button', { name: /^Photo: / })).toHaveCount(0);
-  await add(page, 'Anything');
-  await page.getByRole('radio', { name: 'Tomorrow' }).click();
-  await expect(page.getByText(/reminds you/)).toHaveCount(0);
+  await openItem(page, 'Checkup');
+  await expect(itemSheet(page).getByText(/reminder/i)).toHaveCount(0);
+  await button(page, 'Edit').click();
+  await expect(page.getByLabel('What needs doing')).toHaveValue('Checkup');
+  await expect(page.getByRole('switch', { name: 'Remind me' })).toHaveCount(0);
+  await expect(page.getByText(/reminds you|No reminder|Too late for a reminder/)).toHaveCount(0);
 });
 
 test('without view_tag only Buy and Appointments are offered, with a hint and no error toast', async ({ page }) => {

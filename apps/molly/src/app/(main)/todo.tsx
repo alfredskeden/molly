@@ -1,18 +1,18 @@
 import {
   dueText,
   newCount,
+  openedBy,
   OTHER,
   photoUrl,
   reminderAt,
-  seenAfter,
   todoList,
+  unreadBy,
   type ListedItem,
   type TodoCard,
   type TodoItem,
 } from '@molly/core';
 import { Image } from 'expo-image';
-import { useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -23,8 +23,9 @@ import { PageSkeleton, useSkeleton } from '@/features/dashboard/Skeleton';
 import { UnreachableBanner } from '@/features/dashboard/Unreachable';
 import { useNow } from '@/features/dashboard/use-now';
 import { PhotoViewer } from '@/features/todo/PhotoViewer';
-import { useTodoItems, useTodoLabels, useTodoSeen } from '@/features/todo/queries';
+import { useTodoItems, useTodoLabels, useTodoQuiet, useTodoSeen } from '@/features/todo/queries';
 import { TodoSheet } from '@/features/todo/TodoSheet';
+import { TodoView } from '@/features/todo/TodoView';
 import { useTodoWrites } from '@/features/todo/use-todo-writes';
 import { hasNotifications } from '@/notification/sync';
 import { useNotificationState } from '@/notification/use-state';
@@ -33,8 +34,8 @@ import { Glyph } from '@/theme/Glyph';
 
 /**
  * The family's shared to-do list: one card per label (Buy and Appointments always, the family's own while
- * they have items, Other last). Items from the other parent since this device last left the list are
- * "New"; leaving moves that mark.
+ * they have items, Other last). Tapping an item opens it read-only. Items from the other parent are "New"
+ * until opened on this phone (read-only or edit sheet); Mark unread makes one New again.
  */
 export default function Todo() {
   const insets = useSafeAreaInsets();
@@ -43,9 +44,11 @@ export default function Todo() {
   const todo = useTodoItems();
   const labels = useTodoLabels();
   const { seen, save: saveSeen } = useTodoSeen();
+  const { quiet } = useTodoQuiet();
   const writes = useTodoWrites();
   const notifications = useNotificationState();
   const [editing, setEditing] = useState<TodoItem | 'new' | null>(null);
+  const [reading, setReading] = useState<number | null>(null);
   const [viewing, setViewing] = useState<TodoItem | null>(null);
   const skeleton = useSkeleton(todo.isPending);
 
@@ -53,20 +56,21 @@ export default function Todo() {
   const cards = useMemo(() => (items ? todoList(items, now, seen) : []), [items, now, seen]);
   const fresh = items ? newCount(items, seen) : 0;
 
-  // Leaving marks everything listed as seen. A ref, so the mark uses the list as it was on leaving.
-  const listed = useRef(items);
-  useEffect(() => {
-    listed.current = items;
-  }, [items]);
-  useFocusEffect(
-    useCallback(
-      () => () => {
-        const last = listed.current;
-        if (last) saveSeen((current) => seenAfter(last, current)).catch(() => undefined);
-      },
-      [saveSeen],
-    ),
-  );
+  // The read-only sheet follows the list, so ticking from it shows the new state.
+  const readItem = reading === null ? undefined : cards.flatMap((card) => card.items).find((item) => item.id === reading);
+
+  // Opening is recorded as a sheet opens, never on close.
+  const opened = (item: TodoItem) => saveSeen((current) => openedBy(current, item.id)).catch(() => undefined);
+  const read = (item: TodoItem) => {
+    setReading(item.id);
+    opened(item);
+  };
+  const edit = (item: TodoItem) => {
+    setReading(null);
+    setViewing(null);
+    setEditing(item);
+    opened(item);
+  };
 
   const photoOf = (item: TodoItem) => (item.image ? photoUrl(credentials.baseUrl, item.image) : null);
   const detailOf = (item: TodoItem) => [item.label ?? OTHER, dueText(item, now)].filter(Boolean).join(' · ');
@@ -74,7 +78,7 @@ export default function Todo() {
 
   return (
     <View className="flex-1 bg-bg">
-      <BehindSheet sheetOpen={editing !== null || viewing !== null}>
+      <BehindSheet sheetOpen={editing !== null || viewing !== null || readItem !== undefined}>
         <ScrollView
           testID="todo"
           className="flex-1"
@@ -83,7 +87,7 @@ export default function Todo() {
           <BackLink />
           <ScreenTitle>To-do</ScreenTitle>
           <Text className="-mt-2.5 px-[22px] pb-3.5 text-sm font-bold text-muted">
-            {fresh > 0 ? `${fresh} new since you last looked` : 'Shared with everyone who uses this Baby Buddy'}
+            {fresh > 0 ? `${fresh} new` : 'Shared with everyone who uses this Baby Buddy'}
           </Text>
           <View className="gap-3 px-4">
             {todo.isError && (
@@ -95,10 +99,11 @@ export default function Todo() {
                 <Card
                   key={card.label}
                   card={card}
+                  quiet={quiet}
                   now={now}
                   photoOf={photoOf}
                   onTick={(item) => writes.setDone(item, item.done === null)}
-                  onEdit={setEditing}
+                  onOpen={read}
                   onPhoto={setViewing}
                 />
               ))}
@@ -110,15 +115,28 @@ export default function Todo() {
           </View>
         </ScrollView>
       </BehindSheet>
+      {readItem && (
+        <TodoView
+          item={readItem}
+          photo={photoOf(readItem)}
+          quiet={quiet}
+          now={now}
+          onTick={() => writes.setDone(readItem, readItem.done === null)}
+          onEdit={() => edit(readItem)}
+          onPhoto={() => setViewing(readItem)}
+          onUnread={() => {
+            setReading(null);
+            saveSeen((current) => unreadBy(current, readItem.id)).catch(() => undefined);
+          }}
+          onClose={() => setReading(null)}
+        />
+      )}
       {viewing && photoOf(viewing) && (
         <PhotoViewer
           uri={photoOf(viewing)!}
           text={viewing.text}
           detail={detailOf(viewing)}
-          onEdit={() => {
-            setEditing(viewing);
-            setViewing(null);
-          }}
+          onEdit={() => edit(viewing)}
           onClose={() => setViewing(null)}
         />
       )}
@@ -128,11 +146,12 @@ export default function Todo() {
           item={editingItem}
           photo={editingItem ? photoOf(editingItem) : null}
           labels={labels.data === undefined ? ['Buy', 'Appointments'] : labels.data}
+          quiet={quiet}
           now={now}
           onSave={async (save) => {
             const saved = await writes.save(save, editingItem ?? undefined);
             // A dated item rings a reminder on Android: ask for notifications once there's one to ring.
-            if (saved && save.due && hasNotifications && notifications.state === 'off') await notifications.turnOn();
+            if (saved && save.due && !save.quiet && hasNotifications && notifications.state === 'off') await notifications.turnOn();
             return saved;
           }}
           onClose={() => setEditing(null)}
@@ -144,17 +163,19 @@ export default function Todo() {
 
 function Card({
   card,
+  quiet,
   now,
   photoOf,
   onTick,
-  onEdit,
+  onOpen,
   onPhoto,
 }: {
   card: TodoCard;
+  quiet: readonly number[];
   now: Date;
   photoOf: (item: TodoItem) => string | null;
   onTick: (item: ListedItem) => void;
-  onEdit: (item: TodoItem) => void;
+  onOpen: (item: TodoItem) => void;
   onPhoto: (item: TodoItem) => void;
 }) {
   return (
@@ -172,11 +193,12 @@ function Card({
           <Row
             key={item.id}
             item={item}
+            quiet={quiet}
             now={now}
             photo={photoOf(item)}
             last={index === card.items.length - 1}
             onTick={() => onTick(item)}
-            onEdit={() => onEdit(item)}
+            onOpen={() => onOpen(item)}
             onPhoto={() => onPhoto(item)}
           />
         ))
@@ -187,24 +209,26 @@ function Card({
 
 function Row({
   item,
+  quiet,
   now,
   photo,
   last,
   onTick,
-  onEdit,
+  onOpen,
   onPhoto,
 }: {
   item: ListedItem;
+  quiet: readonly number[];
   now: Date;
   photo: string | null;
   last: boolean;
   onTick: () => void;
-  onEdit: () => void;
+  onOpen: () => void;
   onPhoto: () => void;
 }) {
   const done = item.done !== null;
   const when = dueText(item, now);
-  const bell = hasNotifications && reminderAt(item, now) !== null;
+  const bell = hasNotifications && reminderAt(item, now, quiet) !== null;
   return (
     <View testID={`todo-${item.id}`} className={`flex-row items-center gap-1 ${last ? '' : 'border-b border-line'}`}>
       <Pressable
@@ -222,8 +246,8 @@ function Row({
       </Pressable>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={['Edit', item.text, item.isNew ? 'new' : null, when].filter(Boolean).join(', ')}
-        onPress={onEdit}
+        accessibilityLabel={['Open', item.text, item.isNew ? 'new' : null, when].filter(Boolean).join(', ')}
+        onPress={onOpen}
         className="min-h-[60px] flex-1 justify-center py-2 active:opacity-70"
       >
         <View className="flex-row flex-wrap items-center gap-x-2">

@@ -4,6 +4,8 @@ import { File, Paths } from 'expo-file-system';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 
+import { awayOnPurpose } from '@/features/return/trip';
+
 import { fitLongEdge, PHOTO_QUALITY, photoName } from './photo-model';
 
 export type PhotoSource = 'camera' | 'library';
@@ -17,7 +19,13 @@ export const PHOTO_SOURCES: readonly PhotoSource[] = ['camera', 'library'];
  * A photo from the camera or the library (Android's photo picker, no permission), downscaled to 1600 px
  * on the long edge as a JPEG under a random name. Null when cancelled or the camera isn't allowed.
  */
-export async function pickPhoto(source: PhotoSource): Promise<PickedPhoto | null> {
+export function pickPhoto(source: PhotoSource): Promise<PickedPhoto | null> {
+  // Android's camera prompt, the camera and the picker take the app away, maybe for minutes: every return
+  // until this settles keeps the sheet (features/return).
+  return awayOnPurpose(() => pick(source));
+}
+
+async function pick(source: PhotoSource): Promise<PickedPhoto | null> {
   const options: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], quality: 1 };
   if (source === 'camera' && !(await ImagePicker.requestCameraPermissionsAsync()).granted) return null;
   const result = source === 'camera' ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);

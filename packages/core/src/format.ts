@@ -3,6 +3,12 @@ export function clockText(time: Date): string {
   return `${String(time.getHours()).padStart(2, '0')}:${String(time.getMinutes()).padStart(2, '0')}`;
 }
 
+/** The local date, `2026-10-25` (Baby Buddy's date fields and `<input type="date">` values). */
+export function localDay(time: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${time.getFullYear()}-${pad(time.getMonth() + 1)}-${pad(time.getDate())}`;
+}
+
 const MINUTE_MS = 60_000;
 
 /** The design's lengths: `2h 9m`, `39m`, whole minutes rounded down. */

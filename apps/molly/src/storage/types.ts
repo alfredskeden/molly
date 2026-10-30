@@ -45,7 +45,9 @@ export type ThemePreference = (typeof THEME_PREFERENCES)[number];
  * reminder): read them through `childPrefs` from `@molly/core`, which fills what's missing with defaults.
  * `guideRegion` is whose advice the Development guide follows, `guideNoteSeen` whether its first-open note
  * was read. `feedTimer` is Time feeds: on, Feed starts a timer; off (the default), a tap saves a finished feed.
- * `todoSeen` is what this device has seen of the to-do list, for "New" (null until the list first loads).
+ * `todoSeen` is what this device has seen of the to-do list, for "New" (null until the list first loads):
+ * the first-load mark and the items saved, opened and marked unread here. `todoQuiet` is the to-do note
+ * ids this device won't remind about ("Remind me" off in the edit sheet, Android); the other phone still does.
  */
 export type Settings = {
   childId: number | null;
@@ -60,6 +62,7 @@ export type Settings = {
   guideNoteSeen: boolean;
   feedTimer: boolean;
   todoSeen: TodoSeen | null;
+  todoQuiet: number[];
 };
 
 export const SETTINGS_KEY = 'molly.settings';
@@ -77,6 +80,7 @@ export const DEFAULT_SETTINGS: Settings = {
   guideNoteSeen: false,
   feedTimer: false,
   todoSeen: null,
+  todoQuiet: [],
 };
 
 export function parseSettings(stored: string | null): Settings {
@@ -96,13 +100,14 @@ export function parseSettings(stored: string | null): Settings {
     guideRegion: isGuideRegion(value.guideRegion) ? value.guideRegion : DEFAULT_SETTINGS.guideRegion,
     guideNoteSeen: typeof value.guideNoteSeen === 'boolean' ? value.guideNoteSeen : DEFAULT_SETTINGS.guideNoteSeen,
     feedTimer: typeof value.feedTimer === 'boolean' ? value.feedTimer : DEFAULT_SETTINGS.feedTimer,
-    todoSeen: isTodoSeen(value.todoSeen) ? value.todoSeen : DEFAULT_SETTINGS.todoSeen,
+    todoSeen: parseTodoSeen(value.todoSeen),
+    todoQuiet: isIds(value.todoQuiet) ? value.todoQuiet : DEFAULT_SETTINGS.todoQuiet,
   };
 }
 
 /**
  * The theme, the notification choices, the guide's region and note and Time feeds belong to the device, not the account: kept.
- * The children's preferences and the to-do "seen" mark go with the account: their ids belong to one Baby Buddy.
+ * The children's preferences, the to-do "seen" mark and quiet reminders go with the account: their ids belong to one Baby Buddy.
  */
 export function settingsAfterSignOut(settings: Settings): Settings {
   const { theme, notifications, notificationPrompted, haptics, guideRegion, guideNoteSeen, feedTimer } = settings;
@@ -191,13 +196,15 @@ function isBottleDefaults(value: unknown): value is BottleDefaults {
   );
 }
 
-function isTodoSeen(value: unknown): value is TodoSeen {
-  return (
-    isRecord(value) &&
-    typeof value.mark === 'number' &&
-    Array.isArray(value.saved) &&
-    value.saved.every((id) => typeof id === 'number')
-  );
+const isIds = (value: unknown): value is number[] => Array.isArray(value) && value.every((id) => typeof id === 'number');
+
+/** A stored `{ mark, saved }` from before items could be opened reads with nothing opened or unread. */
+function parseTodoSeen(value: unknown): TodoSeen | null {
+  if (!isRecord(value) || typeof value.mark !== 'number' || !isIds(value.saved)) return null;
+  const opened = value.opened ?? [];
+  const unread = value.unread ?? [];
+  if (!isIds(opened) || !isIds(unread)) return null;
+  return { mark: value.mark, saved: value.saved, opened, unread };
 }
 
 function isThemePreference(value: unknown): value is ThemePreference {

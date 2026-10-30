@@ -45,3 +45,9 @@ How Molly was built, one folder per plan. Each has `MAIN.md` (the steps, with `[
 | [implan-early-wake](implan-early-wake/MAIN.md) | A morning wake near "Day starts" starts the day even with a later learned wake; learned times on the child screen | Open items left |
 | [implan-night-ends-at-wake](implan-night-ends-at-wake/MAIN.md) | Past nights end where the next day starts (the next morning wake), no overlap or gap with the day, issue #23 | Open items left |
 | [implan-todo](implan-todo/MAIN.md) | Shared to-do list on Baby Buddy notes: labels as tags, dates, photos, Android reminders, issue #22 | Open items left |
+| [implan-on-time-wake](implan-on-time-wake/MAIN.md) | A wake within 30 min of the usual wake starts the day at once; back asleep within the threshold undoes it, issue #29 | Done |
+| [implan-todo-keyboard](implan-todo-keyboard/MAIN.md) | Scroll sheets shrink with the keyboard and keep the first tap, issue #28 | Done |
+| [implan-todo-read-only](implan-todo-read-only/MAIN.md) | Items open read-only first; New until opened on this phone; Mark unread, issue #30 | Done |
+| [implan-todo-pickers](implan-todo-pickers/MAIN.md) | Due date and time from the system picker (browser fields on web), steppers kept for nudges, issue #34 | Done (TalkBack listen open) |
+| [implan-todo-quiet](implan-todo-quiet/MAIN.md) | Turn off one item's reminder on this phone ("Remind me" switch, `settings.todoQuiet`), issue #36 | Done |
+| [implan-live-on-return](implan-live-on-return/MAIN.md) | Back to the live ring after a minute away from any screen on Android (drafts dropped with "Changes not saved", trips Molly started and the Tap log stay), issue #40 | Done (developer checks open) |
