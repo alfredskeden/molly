@@ -2,7 +2,7 @@
   "expo": {
     "name": "Molly",
     "slug": "molly",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "molly",
@@ -16,7 +16,7 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "se.skedeback.molly",
-      "versionCode": 5
+      "versionCode": 6
     },
     "web": {
       "output": "single",
