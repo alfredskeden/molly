@@ -134,3 +134,9 @@ The dashboard is well inside the ~20 ms budget. Recent days with 4 weeks loaded 
 | 4–5 months | 74 · 1 · 0 | 75 · 0 · 0 | 60 · 15 · 0 | 75 · 0 · 0 |
 | 10 months | 72 · 3 · 0 | 75 · 0 · 0 | 75 · 0 · 0 | 75 · 0 · 0 |
 | 18 months | 75 · 0 · 0 | 75 · 0 · 0 | 75 · 0 · 0 | 75 · 0 · 0 |
+
+### Cleanup sweep (wrap-up, `implan-cleanup`, `git diff develop..HEAD`)
+
+- Remove: nothing. The old `findIndex(isBedtime)` was replaced in place (`bedtimeIn`); `isBedtime`, `bedtimeCut`, `bedtimeWithin`, `byClock` and `nightRule` are all still used (grep). No user-facing copy describes the 90-minute rule (grep of `apps/molly/src` and `docs/`), so no strings changed. No debug logging or TODOs in the diff; the step-6 timing scripts were throwaway and never committed.
+- Refactor: done in step 1 (`asleepFrom` shared, the bedtime search pulled out of `dayOn`).
+- Spotted, not in scope: Recent days with 4+ weeks loaded costs 26–43 ms on a laptop for babies under ~6 months (Cost, above); sharing `pastDays` between judgements on the same day would cut it if it shows on a phone.
