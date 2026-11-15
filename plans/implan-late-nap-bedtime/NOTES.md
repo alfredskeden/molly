@@ -123,3 +123,14 @@ The dashboard is well inside the ~20 ms budget. Recent days with 4 weeks loaded 
 - **Skips count up to the judged start**: `withPlan` passes `dayPlan` only the skips tapped at or before the sleep's start, since "shown" is what the plan showed then. A skip tapped during or after the sleep doesn't make it bedtime.
 - **The undo walks the day's sleeps** (`after`, from the wake to the next day's wake range), not every sleep: a stretch that would need a sleep starting after the next morning's range to reach `long` has already run long.
 - **One fixture moved** in `day-window.test.ts` ("keeps the live night running to the usual wake"): its 22:40–23:30 "night" was followed by 2½ h up at 02:00, so rule 5 undoes it. The sleep now runs to 01:30, which keeps what the test is about (the live night runs to the usual wake). That is the allowed reason (a short bedtime followed by `awake` minutes up).
+
+### Replay (`pnpm replay:fixtures`, default 07:00–19:00 setting)
+
+`right · wrong · none`, 3 seeds of 28 days. Only the "new bedtime" column moved, and only for the 2-month profile: 71 · 3 · 1 before, 74 · 0 · 1 after (the undo takes back short evening sleeps the generator's young babies wake from). The replay scores with the plain rule (`replay.ts`, no `withPlan`), so this is rule 5's effect alone. Not tuned.
+
+| Profile | old wake | new wake | old bedtime | new bedtime (before → after) |
+| --- | --- | --- | --- | --- |
+| 2 months | 73 · 2 · 0 | 73 · 1 · 1 | 25 · 50 · 0 | 71 · 3 · 1 → 74 · 0 · 1 |
+| 4–5 months | 74 · 1 · 0 | 75 · 0 · 0 | 60 · 15 · 0 | 75 · 0 · 0 |
+| 10 months | 72 · 3 · 0 | 75 · 0 · 0 | 75 · 0 · 0 | 75 · 0 · 0 |
+| 18 months | 75 · 0 · 0 | 75 · 0 · 0 | 75 · 0 · 0 | 75 · 0 · 0 |
