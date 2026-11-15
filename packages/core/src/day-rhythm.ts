@@ -64,8 +64,12 @@ export const DAY_TUNING: DayTuning = {
  */
 export type Shown = 'nap' | 'skipped' | null;
 
-/** What the day plan showed next at `at`, from the sleeps that started before it. */
-export type ShownAt = (before: Sleep[], at: Date) => Shown;
+/**
+ * What the day plan showed next at `at`, from the sleeps that started before it. With `onlySkip` the
+ * caller only tells `'skipped'` apart from the rest (the sleep isn't bedtime by the plain rule, and a
+ * shown nap wouldn't change that), so the answer may be null without planning when no skip applies.
+ */
+export type ShownAt = (before: Sleep[], at: Date, onlySkip: boolean) => Shown;
 
 /**
  * The child's day as Molly has learned it: the usual `wake` and `bedtime` as minutes past midnight

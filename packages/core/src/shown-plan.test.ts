@@ -94,7 +94,7 @@ describe('what the plan showed', () => {
 
   it('is a nap for the plan’s next nap', () => {
     // When
-    const shown = plannedAt(sleeps, on(20, 21)).shown!(sleeps, on(20, 20, 30));
+    const shown = plannedAt(sleeps, on(20, 21)).shown!(sleeps, on(20, 20, 30), false);
 
     // Then
     expect(shown).toBe('nap');
@@ -107,7 +107,7 @@ describe('what the plan showed', () => {
     const rhythm = plannedAt(sleeps, now, [skip]);
 
     // When
-    const shown = rhythm.shown!(sleeps, on(20, 18, 30));
+    const shown = rhythm.shown!(sleeps, on(20, 18, 30), false);
     const window = windowAt(rhythm, sleeps, now, at(20, 18, 30));
 
     // Then
@@ -120,7 +120,7 @@ describe('what the plan showed', () => {
     const skip = { at: on(20, 18, 40), start: on(20, 19, 55), end: on(20, 20, 35) };
 
     // When
-    const shown = plannedAt(sleeps, on(20, 19), [skip]).shown!(sleeps, on(20, 18, 30));
+    const shown = plannedAt(sleeps, on(20, 19), [skip]).shown!(sleeps, on(20, 18, 30), false);
 
     // Then
     expect(shown).toBe('nap');
@@ -131,7 +131,7 @@ describe('what the plan showed', () => {
     const third = [...sleeps, sleep({ start: at(20, 19, 0), end: at(20, 19, 40) })];
 
     // When
-    const shown = plannedAt(third, on(20, 21, 30)).shown!(third, on(20, 21, 0));
+    const shown = plannedAt(third, on(20, 21, 30)).shown!(third, on(20, 21, 0), false);
 
     // Then
     expect(shown).toBeNull();
@@ -148,7 +148,7 @@ describe('what the plan showed', () => {
     const rhythm = withPlan(plainAt(sleeps, start, birthDate), birthDate, []);
 
     // When
-    const shown = rhythm.shown!(sleeps, start);
+    const shown = rhythm.shown!(sleeps, start, false);
 
     // Then
     expect(shown).toBeNull();
@@ -159,10 +159,29 @@ describe('what the plan showed', () => {
     const withCatnap = [...sleeps, sleep({ start: at(20, 19, 50), end: at(20, 20, 0) })];
 
     // When
-    const shown = plannedAt(withCatnap, on(20, 21)).shown!(withCatnap, on(20, 20, 30));
+    const shown = plannedAt(withCatnap, on(20, 21)).shown!(withCatnap, on(20, 20, 30), false);
 
     // Then
     expect(shown).toBe('nap');
+  });
+
+  it('answers nothing without planning when only a skip could matter and none was tapped', () => {
+    // When
+    const shown = plannedAt(sleeps, on(20, 21)).shown!(sleeps, on(20, 20, 30), true);
+
+    // Then
+    expect(shown).toBeNull();
+  });
+
+  it('still finds a skip when only a skip could matter', () => {
+    // Given
+    const skip = { at: on(20, 18, 0), start: on(20, 19, 55), end: on(20, 20, 35) };
+
+    // When
+    const shown = plannedAt(sleeps, on(20, 19), [skip]).shown!(sleeps, on(20, 18, 30), true);
+
+    // Then
+    expect(shown).toBe('skipped');
   });
 
   it('never asks the rhythm’s own plan inside a judgement', () => {
@@ -177,7 +196,7 @@ describe('what the plan showed', () => {
     };
 
     // When
-    withPlan(counting, fiveMonths, []).shown!(sleeps, on(20, 20, 30));
+    withPlan(counting, fiveMonths, []).shown!(sleeps, on(20, 20, 30), false);
 
     // Then
     expect(asked).toBe(0);

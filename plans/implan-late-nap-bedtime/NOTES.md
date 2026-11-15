@@ -96,3 +96,30 @@ None.
 ## Decided after planning (2026-11-16)
 
 - **The saved flag under rules 3 and 4 stays as saved.** A short sleep stopped while it still counts as bedtime is saved `nap: false` and never patched; once the baby has been up `awake` minutes, `isNight` (ring, Recent days, needs, development stats) calls it a nap. The issue's "the 20:30 sleep is a nap" means that verdict, not the saved flag.
+
+## Found while implementing (2026-11-16)
+
+### Cost (step 6)
+
+Measured in Node (tsx, Apple silicon) on the made-up profiles of `packages/core/test/day-fixtures.ts`, seed 1, mean of 5 runs, each run building a fresh rhythm (so the memo starts empty, as on a new render). "Render" is one dashboard render's core calls (`dayRhythm`, `dayPlan`, `dayWindow`, `windowsBefore(…, 1)`, `isNight`); "28 d" is `windowsBefore(…, 28)` (Recent days with 4 weeks loaded).
+
+| Profile | render plain | render planned | 28 d plain | 28 d planned |
+| --- | --- | --- | --- | --- |
+| 2 months | 4.6 ms | 7.7 ms | 8.6 ms | 42.6 ms |
+| 4–5 months | 2.7 ms | 4.7 ms | 5.6 ms | 26.1 ms |
+| 10 months | 1.8 ms | 2.9 ms | 3.5 ms | 15.5 ms |
+| 18 months | 1.0 ms | 1.7 ms | 2.2 ms | 7.1 ms |
+
+Without any memo the planned numbers were 44.6 / 20.2 / 9.7 / 4.2 ms per render and 316 / 161 / 70 / 21 ms for 28 days, so three things went in, all inside `withPlan` or its contract, none changing an answer:
+
+- **Memo** per `(start, exact sleeps before it)` for as long as the rhythm lives (one render, or one `daysRows` memo on Recent days).
+- **`onlySkip`** (third argument of `ShownAt`): `dayOn` says when the sleep isn't bedtime by the plain rule, where only `'skipped'` could change the verdict (a shown nap can't make a sleep bedtime that the plain rule doesn't). Without a skip tapped in the 6 h before (`staleAfter`: the plan has no anchor further back), the judge answers null without planning. Most daytime naps take this path.
+- **Trim**: the planner only gets the sleeps from 16 days before the judged start (`historyDays` + the night before + a day of margin); older ones can't change its answer. With 84 days loaded this took the 2-month profile from 330 ms to 231 ms (plain: 53 ms), and keeps each judgement's cost flat as more weeks load.
+
+The dashboard is well inside the ~20 ms budget. Recent days with 4 weeks loaded is over it for babies under ~6 months (26–43 ms on a laptop, once per data change since `daysRows` is memoised). Left as is and reported; the next step if it shows on a phone would be sharing `pastDays` between judgements on the same day (each judgement's `dayPlan` recomputes the same 14 past days).
+
+### Other decisions
+
+- **Skips count up to the judged start**: `withPlan` passes `dayPlan` only the skips tapped at or before the sleep's start, since "shown" is what the plan showed then. A skip tapped during or after the sleep doesn't make it bedtime.
+- **The undo walks the day's sleeps** (`after`, from the wake to the next day's wake range), not every sleep: a stretch that would need a sleep starting after the next morning's range to reach `long` has already run long.
+- **One fixture moved** in `day-window.test.ts` ("keeps the live night running to the usual wake"): its 22:40–23:30 "night" was followed by 2½ h up at 02:00, so rule 5 undoes it. The sleep now runs to 01:30, which keeps what the test is about (the live night runs to the usual wake). That is the allowed reason (a short bedtime followed by `awake` minutes up).

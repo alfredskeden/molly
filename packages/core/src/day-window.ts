@@ -155,8 +155,10 @@ function dayOn(sleeps: Sleep[], rhythm: DayRhythm, day: Date, days: number, now:
 function bedtimeIn(sleeps: Sleep[], after: Sleep[], usual: Date, rhythm: DayRhythm, now: Date): number {
   return after.findIndex((entry, index) => {
     const start = new Date(entry.start);
-    const shown = rhythm.shown?.(sleeps.filter((other) => Date.parse(other.start) < start.getTime()), start) ?? null;
-    return isBedtime(entry, usual, shown, rhythm, now) && !undone(after, index, rhythm, now);
+    const plain = isBedtime(entry, usual, null, rhythm, now);
+    const before = () => sleeps.filter((other) => Date.parse(other.start) < start.getTime());
+    const shown = rhythm.shown ? rhythm.shown(before(), start, !plain) : null;
+    return (shown === null ? plain : isBedtime(entry, usual, shown, rhythm, now)) && !undone(after, index, rhythm, now);
   });
 }
 

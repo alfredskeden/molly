@@ -113,7 +113,7 @@ TDD in `packages/core` (Vitest, Given / When / Then comments, zero → one → m
   - At 21:30 after the planned 20:30–21:05 nap: `nextSleep` is not null (bedtime next), `dayPlan` non-empty.
   - While the planned nap runs at 21:00: `dayPlan` shows the sleeps after it (as `implan-plan-while-asleep`).
   - Plain rhythm: every existing `next-sleep` / `day-plan` / `likely-detail` / `nap-reminder` / `needs` test unchanged.
-- [ ] **6. Cost check.** A Vitest timing guard is flaky; instead a one-off measurement in the REFACTOR step: 28 days of fixture sleeps, `windowsBefore(…, 28)` and one dashboard render's calls (`dayWindow`, `dayPlan`, `windowsBefore(…, 1)`, `isNight`) with a planned rhythm, timed in Node. Record the numbers in `NOTES.md`. Memoise inside `withPlan` only if over ~20 ms (see Design).
+- [x] **6. Cost check.** A Vitest timing guard is flaky; instead a one-off measurement in the REFACTOR step: 28 days of fixture sleeps, `windowsBefore(…, 28)` and one dashboard render's calls (`dayWindow`, `dayPlan`, `windowsBefore(…, 1)`, `isNight`) with a planned rhythm, timed in Node. Record the numbers in `NOTES.md`. Memoise inside `withPlan` only if over ~20 ms (see Design).
 - [ ] **7. Wire the app** (table above). App unit tests first where logic is testable:
   - `apps/molly/src/widget/model.test.ts`: a snapshot whose running sleep started at a planned nap near bedtime has `nightFrom` = start + `long`, not the start; a skipped nap → `nightFrom` = start. `napReminderRing` unchanged for the existing cases.
   - `apps/molly/src/actions/trackers.test.ts` (or where `byRhythm` is tested): `byRhythm` with a planned rhythm saves a stopped planned nap as a nap.
