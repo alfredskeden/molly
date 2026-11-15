@@ -5,6 +5,7 @@ import { dayPlan, type Skip } from './day-plan';
 import { dayRhythm, type DayRhythm } from './day-rhythm';
 import { dayWindow, isNight } from './day-window';
 import { DEFAULT_NAP_WINDOW } from './nap';
+import { nextSleep, sleepContext } from './next-sleep';
 import { withPlan } from './shown-plan';
 
 const none = { sleep: [], feeding: [], change: [], medication: [] };
@@ -180,5 +181,61 @@ describe('what the plan showed', () => {
 
     // Then
     expect(asked).toBe(0);
+  });
+});
+
+describe('the plan with the rhythm that carries it', () => {
+  it('stays after a late nap it showed: bedtime is next', () => {
+    // Given
+    const sleeps = [...usual, ...today, sleep({ start: at(20, 20, 30), end: at(20, 21, 5) })];
+    const now = on(20, 21, 30);
+    const rhythm = plannedAt(sleeps, now);
+
+    // When
+    const next = nextSleep(sleeps, null, fiveMonths, rhythm, now);
+    const plan = dayPlan(sleeps, null, fiveMonths, rhythm, [], now);
+
+    // Then
+    expect(next).toMatchObject({ kind: 'bedtime' });
+    expect(plan).not.toEqual([]);
+  });
+
+  it('shows the sleeps after a late nap while it runs', () => {
+    // Given
+    const sleeps = [...usual, ...today];
+    const now = on(20, 21, 0);
+
+    // When
+    const plan = dayPlan(sleeps, sleepTimer(at(20, 20, 30)), fiveMonths, plannedAt(sleeps, now), [], now);
+
+    // Then
+    expect(plan[0]).toMatchObject({ kind: 'bedtime' });
+  });
+
+  it('learns from past days split by the plain rule', () => {
+    // Given
+    // Yesterday ran late too: a nap the plan showed at 20:30, back asleep 25 min after it for the night.
+    const yesterday = [
+      sleep({ start: at(18, 21, 45), end: at(19, 7, 0) }),
+      sleep({ start: at(19, 10, 0), end: at(19, 11, 0) }),
+      sleep({ start: at(19, 15, 30), end: at(19, 17, 45) }),
+      sleep({ start: at(19, 20, 30), end: at(19, 21, 5) }),
+      sleep({ start: at(19, 21, 30), end: at(20, 7, 0) }),
+    ];
+    const history = usual.filter((entry) => Date.parse(entry.start) < on(18, 21, 45).getTime());
+    const sleeps = [...history, ...yesterday, ...today.slice(1)];
+    const now = on(20, 18, 0);
+    const planned = plannedAt(sleeps, now);
+    const plain = plainAt(sleeps, now);
+    const verdicts = (rhythm: DayRhythm) => sleepContext(sleeps, null, fiveMonths, rhythm, now)!.pastDays[0]!.bedtime?.start;
+
+    // When
+    const [withPlan, without] = [verdicts(planned), verdicts(plain)];
+    const judgedNow = isNight({ start: on(19, 20, 30), end: on(19, 21, 5) }, sleeps, planned, now);
+
+    // Then
+    expect(judgedNow).toBe(false);
+    expect(without).toBe(at(19, 20, 30));
+    expect(withPlan).toBe(without);
   });
 });

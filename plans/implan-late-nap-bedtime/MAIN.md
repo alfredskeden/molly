@@ -109,7 +109,7 @@ TDD in `packages/core` (Vitest, Given / When / Then comments, zero → one → m
   - No plan: no birth date, age outside 6 weeks–36 months, more than 6 h awake, 45 min after the window → `null`.
   - Catnap: a 10-min catnap at 19:50 before a 20:30 sleep doesn't anchor the plan (it is in `before`, the planner skips it).
   - No recursion: the rhythm `dayPlan` receives inside `withPlan` has `shown === null` (test via a past day whose verdict differs with and without the plan: the past day's naps in `sleepContext(...).pastDays` are the plain verdict).
-- [ ] **5. `next-sleep.ts` keeps the plan visible.** `awakeContext`: `pastDays` from `withoutPlan(rhythm)`; today's `dayWindow` and `sleepContext`'s running `isNight` with the given rhythm. Tests (`next-sleep.test.ts` / `day-plan.test.ts`, planned rhythm from step 4's fixture):
+- [x] **5. `next-sleep.ts` keeps the plan visible.** `awakeContext`: `pastDays` from `withoutPlan(rhythm)`; today's `dayWindow` and `sleepContext`'s running `isNight` with the given rhythm. Tests (`next-sleep.test.ts` / `day-plan.test.ts`, planned rhythm from step 4's fixture):
   - At 21:30 after the planned 20:30–21:05 nap: `nextSleep` is not null (bedtime next), `dayPlan` non-empty.
   - While the planned nap runs at 21:00: `dayPlan` shows the sleeps after it (as `implan-plan-while-asleep`).
   - Plain rhythm: every existing `next-sleep` / `day-plan` / `likely-detail` / `nap-reminder` / `needs` test unchanged.
