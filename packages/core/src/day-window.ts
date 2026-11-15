@@ -132,7 +132,8 @@ type Found = { midnight: Date; range: Interval; wake: Date | null; naps: Sleep[]
  * the usual wake and "Day starts" (`wakeRange`) after which the baby stayed awake the band's
  * threshold (`firstWake`), or, within `onTime` of the usual wake, at once unless the baby was back
  * asleep within that threshold; an end that fails is a night waking. Then every sleep from
- * the wake to the next day's range, in order, split at the bedtime (`isBedtime`).
+ * the wake to the next day's range, in order, split at the bedtime (`bedtimeIn`: the first sleep that
+ * is the night by what the plan showed at its start, unless it was short and the baby then stayed up).
  */
 function dayOn(sleeps: Sleep[], rhythm: DayRhythm, day: Date, days: number, now: Date): Found {
   const midnight = minutesPast(day, days, 0);
@@ -205,9 +206,10 @@ function isBedtime(entry: Sleep, usual: Date, shown: Shown, rhythm: DayRhythm, n
 
 /**
  * Whether a sleep (finished, or running with `end` now) is the night, by the child's rhythm and the
- * sleeps around it as known at `now`: before its day's morning wake, or from that day's bedtime on.
- * Without a wake to place it by (no history), the setting by the clock (`isNightSleep`). The saved
- * flag follows it, decided once at stop or log.
+ * sleeps around it as known at `now`: before its day's morning wake, or from that day's bedtime on
+ * (with the plan when the rhythm carries it, `withPlan`). Without a wake to place it by (no history),
+ * the setting by the clock (`isNightSleep`). The saved flag follows it, decided once at stop or log,
+ * so a short bedtime later undone stays saved as the night.
  */
 export function isNight(sleep: { start: Date; end: Date }, sleeps: Sleep[], rhythm: DayRhythm, now: Date): boolean {
   const entries = withSleep(sleeps, sleep);
@@ -222,7 +224,8 @@ export function isNight(sleep: { start: Date; end: Date }, sleeps: Sleep[], rhyt
 /**
  * From when stopping the sleep running since `start` saves a night sleep (`isNight` with the stop as its
  * end), as known at `now`: its start if it already would, else once it has run the band's `long` if it
- * would then, else null (a nap whenever it stops). What a tap without the sleeps at hand goes by.
+ * would then (a late nap the plan showed), else null (a nap whenever it stops). What a tap without the
+ * sleeps at hand goes by.
  */
 export function nightFrom(start: Date, sleeps: Sleep[], rhythm: DayRhythm, now: Date): Date | null {
   const end = now > start ? now : start;

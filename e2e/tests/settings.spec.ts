@@ -259,11 +259,13 @@ test("a child's day and night is used for the next sleep and moves the ring's da
     method: 'POST',
     body: JSON.stringify({ child: testEnv.childId, start: at(16, 30).toISOString(), end: at(17, 0).toISOString(), nap: true }),
   });
-  await page.clock.install({ time: at(18, 20) });
+  // 30 min after the sleep: within the age's awake minutes, so a short bedtime isn't undone yet.
+  await page.clock.install({ time: at(17, 30) });
   await signInAs(page, testEnv.parentB);
   await expect(page.getByText(/^Today · /).filter({ visible: true })).toBeVisible();
 
-  // When: the day ends at 17:00 now (the usual bedtime until one is learned), so the 16:30 sleep, within 90 min of it, was bedtime
+  // When: the day ends at 17:00 now (the usual bedtime until one is learned), so the 16:30 sleep, within 90 min of
+  // it and with no nap planned at its start, was bedtime
   await openChildSettings(page, 'Test');
   for (let i = 0; i < 8; i++) await button(page, 'Day ends 15 minutes earlier').click();
   await saveChanges(page);

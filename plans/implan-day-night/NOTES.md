@@ -5,7 +5,7 @@
 - Inferred only; no explicit wake / bedtime actions.
 - Scope: morning wake and bedtime, plus the nap flag. Calendar-midnight views stay.
 - Morning: anchor learned from the child (median of 14 days, clamped 05:00–11:00, setting until 3 wakes); range and awake threshold by age, threshold capped at ⅔ of the child's usual first wake window. A wake within 30 min of the usual wake starts the day without the threshold (issue #29, `plans/implan-on-time-wake/`).
-- Bedtime: night if it starts ≥ usual bedtime − 90 min, or starts ≥ usual bedtime − 3 h and runs long (age-based). Card stays Today while a sleep runs until one holds.
+- Bedtime: night if it starts ≥ usual bedtime − 90 min, or starts ≥ usual bedtime − 3 h and runs long (age-based). Card stays Today while a sleep runs until one holds. Since #48: unless the day plan showed a nap at its start (then only the "runs long" branch), a skipped nap makes the next sleep bedtime, and a short bedtime is undone once the baby has been up the age's `awake` minutes (`plans/implan-late-nap-bedtime/`).
 - Nap flag decided at stop / log with the new rule; never patched.
 - "Day starts / Day ends" setting stays, reworded as starting values.
 

@@ -26,9 +26,12 @@ export type DayTuning = {
   wakeRange: { from: number; to: number };
   /** Clock range a usual bedtime is learned in, and clamped to; past 24:00 is after midnight. */
   bedtimeRange: { from: number; to: number };
-  /** A sleep starting this close before the usual bedtime, or later, is the night. */
+  /**
+   * A sleep starting this close before the usual bedtime, or later, is bedtime, unless the day plan
+   * showed a nap at its start; it is undone if short and followed by the band's `awake` minutes up.
+   */
   bedtimeCut: number;
-  /** From this long before the usual bedtime, a sleep that runs the band's `long` is the night. */
+  /** From this long before the usual bedtime, a sleep that runs the band's `long` is the night, a planned nap too. */
   eveningFrom: number;
   /** The awake threshold is at most this share of the child's usual first wake window. */
   awakeShare: number;
