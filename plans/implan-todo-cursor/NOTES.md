@@ -4,7 +4,7 @@
 
 - Screen behaviour: no TDD, no unit tests (no core logic). Android is checked by hand on the emulator (`emulator-5554` only, never the developer's phone); the web gets a Playwright check in `e2e/tests/todo.spec.ts`.
 - Fix in the shared place the cause lives in (`Sheet` or one sheet text field), never per field.
-- Confirm the cause with throwaway builds before changing code (MAIN step 2); the hypotheses are from reading only.
+- ~~Confirm the cause with throwaway builds before changing code~~: dropped 2026-11-16 (see Decided after planning); the hypotheses are from reading only and the fix covers 1 and 2 together.
 - No `MENTAL_MODEL.md`: one component tree, a handful of hypotheses.
 
 ## Versions (`apps/molly/package.json`)
@@ -45,7 +45,7 @@ Line numbers on `develop` at `414159d`.
 
 - `molly` AVD (1080×2424), installed release `se.skedeback.molly` 1.3.0 (installed 2026-10-29, after the to-do sheet and #28). Test Baby Buddy up and seeded.
 - Onboarding "Baby Buddy address" (`Field`, prefilled `http://10.0.2.2:4778`): a tap mid-text then typing `X` gave `http://X10.0.2.2:4778`. Cursor placement works there: a controlled `TextInput` in a `handled` `ScrollView` under the same root is fine.
-- The to-do sheet itself was not reached: the app was on "Molly can't sign in" (the test Baby Buddy had been recreated, so the old key was gone), and typing the test key into the emulator was left for MAIN step 1.
+- The to-do sheet itself was not reached: the app was on "Molly can't sign in" (the test Baby Buddy had been recreated, so the old key was gone), and typing the test key into the emulator was not done; reproduction was then dropped.
 
 ## Upstream reading
 
@@ -60,8 +60,7 @@ Nothing found that matches this exact setup (Fabric Android, field inside Reanim
 ## Cleanup sweep (planning)
 
 - **Refactor (before the fix, MAIN step 3):** five free-text `TextInput`s repeat placeholder colour + `rounded-chip border bg-bg px-3.5 font-sans font-bold text-ink`: `TodoSheet.tsx` 134 and 172, `AddSheet.tsx` 269 (`NoteInput`), `FoodField.tsx` 27, `MeasurementSheet.tsx` 195, plus `Field` in `ui.tsx` 240. One `TextBox` in `ui.tsx` gives the fix one home if the cause is in the field (hypothesis 3) and keeps sheet fields alike. `NoteInput` would become a one-line use of it (or go).
-- **Remove (after the fix, MAIN step 5):** the step 2 diagnostics (`onSelectionChange` logging, the no-`scroll` / no-`capped` / `autoCorrect` trials). They're never committed; the step checks the diff.
-- **Keep:** the root `onTouch*` Tap log lines in `_layout.tsx` are the tool for step 1, not scaffolding of this issue. `keyboardShouldPersistTaps="handled"` stays (#28's first-tap fix). The hidden digit inputs keep `caretHidden` / `contextMenuHidden`.
+- **Keep:** the root `onTouch*` Tap log lines in `_layout.tsx` are the tool for the developer's spot check, not scaffolding of this issue. `keyboardShouldPersistTaps="handled"` stays (#28's first-tap fix). The hidden digit inputs keep `caretHidden` / `contextMenuHidden`.
 - **Docs:** `Sheet`'s doc comment says "Taps in it count while the keyboard is open"; add the cursor rule there once known. `plans/implan-todo-keyboard/MAIN.md` describes the animated cap as current; if step 4 changes it, add a line there pointing here.
 - **Spotted, not in scope:** none.
 
