@@ -93,7 +93,7 @@ TDD in `packages/core` (Vitest, Given / When / Then comments, zero → one → m
   - Boundary: stretch exactly `long` → kept; `long` − 1 min → undone.
   - Under 3 months (`awake` 75, `long` 3 h): one undo case with the band's own numbers.
   - Existing bedtime tests (`the day window at bedtime`, `bedtime by the child's rhythm`, `when stopping a running sleep starts to save the night`, `a bedtime after midnight`, `a past night ends where the next day starts`, `a night with no bedtime logged`) stay green. A changed expectation is allowed only where a short bedtime was followed by `awake` minutes up; any other change: stop and bring it to the developer.
-- [ ] **3. Rules 1–3 through `rhythm.shown`** (stub judges):
+- [x] **3. Rules 1–3 through `rhythm.shown`** (stub judges):
   - Planned nap running (shown `'nap'`): timer since 20:30, at 21:00 → day from 07:00; `isNight({20:30, 21:00})` → false; `nightFrom(20:30, …, 21:00)` → 22:30.
   - The day goes on: 20:30–21:05, at 21:30 → day from 07:00.
   - The real bedtime after it: 20:30–21:05 and 23:20–07:00 (shown `'nap'` at 20:30, `null` at 23:20), at 02:00 → night from 23:20; `windowsBefore` ends that day at 23:20.

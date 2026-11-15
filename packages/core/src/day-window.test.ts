@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { change, feeding, sleep } from '../test/fixtures';
 import { dayPlan } from './day-plan';
-import { dayRhythm } from './day-rhythm';
+import { dayRhythm, type DayRhythm, type Shown } from './day-rhythm';
 import { dayWindow, isNight, nightFrom, previousWindow, windowsBefore } from './day-window';
 import { DEFAULT_NAP_WINDOW, isNightSleep } from './nap';
 import { nextSleep } from './next-sleep';
@@ -1595,5 +1595,169 @@ describe('a short sleep near bedtime followed by a long time up', () => {
       { kind: 'night', start: on(20, 20, 30) },
       { kind: 'day', start: on(20, 7, 0) },
     ]);
+  });
+});
+
+describe('a sleep near bedtime that the plan showed as a nap', () => {
+  // Usually up at 07:00 and asleep for the night at 21:45 (the 3–6 month band: 60 min awake, 2 h long).
+  const usual = usualDays([21, 45], [7, 0], [[[9, 0], [10, 0]], [[13, 0], [14, 30]], [[17, 0], [17, 30]]]);
+  const thisMorning = sleep({ start: at(19, 21, 45), end: at(20, 7, 0) });
+  /** The rhythm with a stub plan: `shown` at the given start, nothing at any other. */
+  const plannedAt = (sleeps: ReturnType<typeof sleep>[], now: Date, start: Date, shown: Shown): DayRhythm => ({
+    ...dayRhythm(sleeps, fiveMonths, napWindow, now),
+    shown: (_, at) => (at.getTime() === start.getTime() ? shown : null),
+  });
+  const napAt = (sleeps: ReturnType<typeof sleep>[], now: Date) => plannedAt(sleeps, now, on(20, 20, 30), 'nap');
+  const windowAt = (rhythm: DayRhythm, sleeps: ReturnType<typeof sleep>[], now: Date, running: string | null = null) =>
+    dayWindow({ ...none, sleep: sleeps }, running ? sleepTimer(running) : noTimer, rhythm, now);
+
+  it('keeps the day while it runs, and stopping it saves a nap until it has run 2 h', () => {
+    // Given
+    const sleeps = [...usual, thisMorning];
+    const now = on(20, 21, 0);
+    const rhythm = napAt(sleeps, now);
+
+    // When
+    const window = windowAt(rhythm, sleeps, now, at(20, 20, 30));
+
+    // Then
+    expect(window).toMatchObject({ kind: 'day', start: on(20, 7, 0) });
+    expect(isNight({ start: on(20, 20, 30), end: now }, sleeps, rhythm, now)).toBe(false);
+    expect(nightFrom(on(20, 20, 30), sleeps, rhythm, now)).toEqual(on(20, 22, 30));
+  });
+
+  it('keeps the day going after it', () => {
+    // Given
+    const sleeps = [...usual, thisMorning, sleep({ start: at(20, 20, 30), end: at(20, 21, 5) })];
+    const now = on(20, 21, 30);
+
+    // When
+    const window = windowAt(napAt(sleeps, now), sleeps, now);
+
+    // Then
+    expect(window).toMatchObject({ kind: 'day', start: on(20, 7, 0) });
+  });
+
+  it('starts the night at the real bedtime after it', () => {
+    // Given
+    const sleeps = [...usual, thisMorning, sleep({ start: at(20, 20, 30), end: at(20, 21, 5) }), sleep({ start: at(20, 23, 20), end: at(21, 7, 0) })];
+
+    // When
+    const window = windowAt(napAt(sleeps, on(21, 2)), sleeps, on(21, 2));
+    const pages = windowsBefore({ ...none, sleep: sleeps }, napAt(sleeps, on(21, 12)), on(21, 12));
+
+    // Then
+    expect(window).toMatchObject({ kind: 'night', start: on(20, 23, 20) });
+    expect(pages[1]).toMatchObject({ kind: 'day', start: on(20, 7, 0), end: on(20, 23, 20) });
+  });
+
+  it.each([
+    ['1 min short of 2 h', on(20, 22, 29), { kind: 'day', start: on(20, 7, 0) }],
+    ['2 h', on(20, 22, 30), { kind: 'night', start: on(20, 20, 30) }],
+  ])('is the night from its start once it has run 2 h: %s', (_, now, expected) => {
+    // Given
+    const sleeps = [...usual, thisMorning];
+
+    // When
+    const window = windowAt(napAt(sleeps, now), sleeps, now, at(20, 20, 30));
+
+    // Then
+    expect(window).toMatchObject(expected);
+  });
+
+  it('stays a nap when it starts more than 3 h before the usual bedtime, however long it runs', () => {
+    // Given
+    const sleeps = [...usual, thisMorning, sleep({ start: at(20, 18, 40), end: at(20, 21, 10) })];
+    const now = on(20, 21, 30);
+
+    // When
+    const night = isNight({ start: on(20, 18, 40), end: on(20, 21, 10) }, sleeps, plannedAt(sleeps, now, on(20, 18, 40), 'nap'), now);
+
+    // Then
+    expect(night).toBe(false);
+  });
+
+  it('passes the judge the sleeps that started before the judged one, and its start', () => {
+    // Given
+    const catnap = sleep({ start: at(20, 19, 50), end: at(20, 20, 0) });
+    const late = sleep({ start: at(20, 20, 30), end: at(20, 21, 5) });
+    const sleeps = [...usual, thisMorning, catnap, late];
+    const asked: { before: number[]; at: Date }[] = [];
+    const rhythm: DayRhythm = {
+      ...dayRhythm(sleeps, fiveMonths, napWindow, on(20, 21, 30)),
+      shown: (before, at) => {
+        asked.push({ before: before.map((entry) => entry.id), at });
+        return 'nap';
+      },
+    };
+
+    // When
+    windowAt(rhythm, sleeps, on(20, 21, 30));
+
+    // Then
+    const judged = asked.find((call) => call.at.getTime() === on(20, 20, 30).getTime());
+    expect(judged?.before).toEqual(expect.arrayContaining([thisMorning.id, catnap.id]));
+    expect(judged?.before).not.toContain(late.id);
+  });
+});
+
+describe('the sleep after a skipped nap', () => {
+  // Usually up at 07:00 and asleep for the night at 21:45 (the 3–6 month band: 60 min awake, 2 h long).
+  const usual = usualDays([21, 45], [7, 0], [[[9, 0], [10, 0]], [[13, 0], [14, 30]], [[17, 0], [17, 30]]]);
+  const thisMorning = sleep({ start: at(19, 21, 45), end: at(20, 7, 0) });
+  const skippedAt = (sleeps: ReturnType<typeof sleep>[], now: Date): DayRhythm => ({
+    ...dayRhythm(sleeps, fiveMonths, napWindow, now),
+    shown: (_, at) => (at.getTime() === on(20, 18, 30).getTime() ? 'skipped' : null),
+  });
+
+  it('is the night from its start, wherever it starts', () => {
+    // Given
+    const sleeps = [...usual, thisMorning];
+    const now = on(20, 18, 45);
+    const rhythm = skippedAt(sleeps, now);
+
+    // When
+    const window = dayWindow({ ...none, sleep: sleeps }, sleepTimer(at(20, 18, 30)), rhythm, now);
+
+    // Then
+    expect(window).toMatchObject({ kind: 'night', start: on(20, 18, 30) });
+    expect(isNight({ start: on(20, 18, 30), end: now }, sleeps, rhythm, now)).toBe(true);
+  });
+
+  it.each([
+    ['59 min up', on(20, 19, 49), { kind: 'night', start: on(20, 18, 30) }],
+    ['70 min up', on(20, 20, 0), { kind: 'day', start: on(20, 7, 0) }],
+  ])('is undone when short and the baby is then up the awake minutes: %s', (_, now, expected) => {
+    // Given
+    const sleeps = [...usual, thisMorning, sleep({ start: at(20, 18, 30), end: at(20, 18, 50) })];
+
+    // When
+    const window = dayWindow({ ...none, sleep: sleeps }, noTimer, skippedAt(sleeps, now), now);
+
+    // Then
+    expect(window).toMatchObject(expected);
+  });
+});
+
+describe('a plan that shows nothing', () => {
+  const usual = usualDays([21, 45], [7, 0], [[[9, 0], [10, 0]], [[13, 0], [14, 30]], [[17, 0], [17, 30]]]);
+  const thisMorning = sleep({ start: at(19, 21, 45), end: at(20, 7, 0) });
+  const doze = sleep({ start: at(20, 20, 30), end: at(20, 21, 5) });
+
+  it.each([
+    ['too soon to tell', [doze], on(20, 21, 35)],
+    ['up for good', [doze], on(20, 23, 0)],
+    ['the real bedtime after an undo', [doze, sleep({ start: at(20, 23, 20), end: at(21, 7, 0) })], on(21, 2)],
+    ['a quick waking', [sleep({ start: at(20, 21, 0), end: at(20, 21, 50) }), sleep({ start: at(20, 22, 10), end: at(21, 7, 0) })], on(21, 2)],
+  ])('judges as the plain rule: %s', (_, tonight, now) => {
+    // Given
+    const sleeps = [...usual, thisMorning, ...tonight];
+    const plain = dayRhythm(sleeps, fiveMonths, napWindow, now);
+
+    // When
+    const windows = [plain, { ...plain, shown: () => null }].map((rhythm) => dayWindow({ ...none, sleep: sleeps }, noTimer, rhythm, now));
+
+    // Then
+    expect(windows[1]).toEqual(windows[0]);
   });
 });
