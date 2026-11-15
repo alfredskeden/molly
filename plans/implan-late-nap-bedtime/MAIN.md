@@ -102,7 +102,7 @@ TDD in `packages/core` (Vitest, Given / When / Then comments, zero → one → m
   - Skip (shown `'skipped'`): timer since 18:30, at 18:45 → night from 18:30, `isNight` true; 18:30–18:50, at 20:00 → day from 07:00 (undo); 18:30–18:50 at 19:40 → still night.
   - The judge is asked with the sleeps that started before the judged one (a catnap before it included) and at its start: assert on a recording stub.
   - `shown` returning `null` behaves exactly as step 2 (one parametrised check over step 2's cases).
-- [ ] **4. `withPlan` with the real planner** (`shown-plan.test.ts`, new):
+- [x] **4. `withPlan` with the real planner** (`shown-plan.test.ts`, new):
   - Fixture where `dayPlan` at 20:30 shows nap 3 next (seed usual days with three naps, the third ending late enough that nap 3's window starts before 20:45 = bedtime − `bedtimeWithin`; check the fixture with `dayPlan` in the Given). Then the issue's first Rule end to end: day while it runs, day after, night from 23:20 at 02:00.
   - A `molly-skip` skip of nap 3 tapped at 18:00 → `'skipped'`; next sleep 18:30 → night from 18:30.
   - The plan shows bedtime without a skip → `null` (rule 4).
