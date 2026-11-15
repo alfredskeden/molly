@@ -1,6 +1,6 @@
 import type { Sleep, Timer } from '@molly/api';
 
-import { firstWake, minutesPast, onTimeOn, type DayRhythm } from './day-rhythm';
+import { asleepFrom, firstWake, minutesPast, onTimeOn, type DayRhythm } from './day-rhythm';
 import type { EntriesByKind } from './latest';
 import { atClock, isNightSleep, minutesOf, type NapWindow } from './nap';
 
@@ -143,9 +143,27 @@ function dayOn(sleeps: Sleep[], rhythm: DayRhythm, day: Date, days: number, now:
   const after = sleeps
     .filter((entry) => Date.parse(entry.start) > wake.getTime() && Date.parse(entry.start) < nextMorning.getTime())
     .sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
-  const usual = minutesPast(midnight, 0, rhythm.bedtime);
-  const bed = after.findIndex((entry) => isBedtime(entry, usual, rhythm, now));
+  const bed = bedtimeIn(after, minutesPast(midnight, 0, rhythm.bedtime), rhythm, now);
   return { midnight, range, wake, naps: bed < 0 ? after : after.slice(0, bed), bedtime: after[bed] ?? null };
+}
+
+/** The index of the bedtime among a day's sleeps after its wake (sorted by start), -1 for none. */
+function bedtimeIn(after: Sleep[], usual: Date, rhythm: DayRhythm, now: Date): number {
+  return after.findIndex((entry, index) => isBedtime(entry, usual, rhythm, now) && !undone(after, index, rhythm, now));
+}
+
+/**
+ * Whether the bedtime at `index` (sleeps sorted by start) is taken back: its stretch (`asleepFrom`)
+ * ran less than the band's `long`, and the baby was then up the band's `awake` minutes (the next sleep
+ * started that much later, or none has and that much time has passed by `now`).
+ */
+function undone(sleeps: Sleep[], index: number, rhythm: DayRhythm, now: Date): boolean {
+  const { awake, long } = rhythm.band;
+  const end = asleepFrom(sleeps, index, awake, now);
+  if (end - Date.parse(sleeps[index]!.start) >= long * MINUTE_MS) return false;
+  const next = sleeps.slice(index + 1).find((entry) => Date.parse(entry.start) >= end);
+  const up = Math.min(next ? Date.parse(next.start) : Infinity, now.getTime()) - end;
+  return up >= awake * MINUTE_MS;
 }
 
 /**

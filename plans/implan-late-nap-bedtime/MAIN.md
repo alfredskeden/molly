@@ -78,11 +78,11 @@ The app wraps the rhythm where it builds it: `withPlan(dayRhythm(sleeps, birthDa
 
 TDD in `packages/core` (Vitest, Given / When / Then comments, zero → one → many, then boundaries). Fixtures are made up (the issue's example times), never real logs. Unless said: 5-month child (`fiveMonths`, 3–6 month band: `awake` 60, `long` 2 h; keep the learned first wake window ≥ 90 min or unlearned so `awake` isn't capped below 60), learned wake 07:00, learned bedtime 21:45 (`usualDays([21, 45], [7, 0], …)` in `day-window.test.ts`), woke for the day at 07:00. New group(s) in `day-window.test.ts`; the planned-rule groups use a stub `shown` on the rhythm (`{ ...rhythmAt(...), shown: () => 'nap' }`) so they test `dayOn`, not the planner.
 
-- [ ] **1. Refactor first, no behaviour change.**
+- [x] **1. Refactor first, no behaviour change.**
   - Export `asleepFrom` from `day-rhythm.ts` (doc comment unchanged in meaning).
   - Add `Shown`, `ShownAt`, `DayRhythm.shown` (`dayRhythm` sets `null`) and `withoutPlan`. No test builds a `DayRhythm` literal (they spread `dayRhythm(...)`, which carries `shown: null`), so nothing else changes.
   - Split `dayOn`'s bedtime search into a function that walks the sleeps (`bedtimeIn(after, wake, usual, rhythm, now)`) so steps 2–3 change one place. Whole core suite green, unchanged.
-- [ ] **2. Rule 5, the undo (rules 4 and 5, no plan).** RED one at a time, from the issue's third Rule (no `shown`):
+- [x] **2. Rule 5, the undo (rules 4 and 5, no plan).** RED one at a time, from the issue's third Rule (no `shown`):
   - Up for good: 20:30–21:05, nothing since, at 23:00 → `dayWindow` day from 07:00; `isNight` for 20:30–21:05 → false.
   - Too soon to tell (outline): at 21:30 and 22:04 → night from 20:30; at 22:05 → day from 07:00 (boundary: up exactly `awake`).
   - Still the night while it runs: timer since 20:30, at 21:00 → night from 20:30.

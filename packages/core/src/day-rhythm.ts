@@ -59,10 +59,21 @@ export const DAY_TUNING: DayTuning = {
 };
 
 /**
+ * What the day plan showed next at a sleep's start: a nap, bedtime after a skipped nap
+ * (`'skipped'`), or neither (bedtime without a skip, or no plan: null).
+ */
+export type Shown = 'nap' | 'skipped' | null;
+
+/** What the day plan showed next at `at`, from the sleeps that started before it. */
+export type ShownAt = (before: Sleep[], at: Date) => Shown;
+
+/**
  * The child's day as Molly has learned it: the usual `wake` and `bedtime` as minutes past midnight
  * (a bedtime past 24:00 is after midnight), the usual first wake window (null until learned), the age
  * band with its awake threshold capped by that window, and the setting (`napWindow`) for the clock
- * fallback. `wakeLearned` / `bedtimeLearned` are false while the setting stands in.
+ * fallback. `wakeLearned` / `bedtimeLearned` are false while the setting stands in. `shown` asks the
+ * day plan what it showed at a sleep's start (`withPlan` in `shown-plan.ts` sets it); null, as
+ * `dayRhythm` leaves it, judges by the plain rule.
  */
 export type DayRhythm = {
   wake: number;
@@ -73,7 +84,13 @@ export type DayRhythm = {
   band: AgeBand;
   napWindow: NapWindow;
   tuning: DayTuning;
+  shown: ShownAt | null;
 };
+
+/** The rhythm without the plan: every sleep judged by the plain rule. */
+export function withoutPlan(rhythm: DayRhythm): DayRhythm {
+  return rhythm.shown ? { ...rhythm, shown: null } : rhythm;
+}
 
 /** The age band for a birth date (`unknownAgeMonths` without one). */
 export function ageBand(birthDate: string | null, now: Date, tuning: DayTuning = DAY_TUNING): AgeBand {
@@ -121,6 +138,7 @@ export function dayRhythm(
     band: firstWindow === null ? age : { ...age, awake: Math.min(age.awake, Math.round(firstWindow * tuning.awakeShare)) },
     napWindow,
     tuning,
+    shown: null,
   };
 }
 
@@ -184,8 +202,12 @@ function firstLongSleep(sleeps: Sleep[], from: Date, to: Date, band: AgeBand, no
   return index < 0 ? null : new Date(sleeps[index]!.start);
 }
 
-/** When the baby was last up for `awake` minutes or more after the sleep at `index` started (sorted by start). */
-function asleepFrom(sleeps: Sleep[], index: number, awake: number, now: Date): number {
+/**
+ * When the baby was last up for `awake` minutes or more after the sleep at `index` started (sorted by
+ * start): the end of its stretch, a running sleep up to now. Learning's long sleep and the day's
+ * bedtime undo share it.
+ */
+export function asleepFrom(sleeps: Sleep[], index: number, awake: number, now: Date): number {
   let end = Math.min(Date.parse(sleeps[index]!.end), now.getTime());
   for (const next of sleeps.slice(index + 1)) {
     if (Date.parse(next.start) - end >= awake * MINUTE_MS) break;

@@ -1190,7 +1190,8 @@ describe('a past night ends where the next day starts', () => {
 
   it('keeps the live night running to the usual wake', () => {
     // Given
-    const tonight = sleep({ start: at(20, 22, 40), end: at(20, 23, 30) });
+    // Asleep since bedtime, up briefly at 01:30: a short bedtime followed by an hour up would be undone.
+    const tonight = sleep({ start: at(20, 22, 40), end: at(21, 1, 30) });
     const entries = { ...none, sleep: [...usual, lastNight([6, 0]), tonight] };
 
     // When
@@ -1474,5 +1475,125 @@ describe('a wake at the usual time', () => {
     expect(next).toMatchObject({ kind: 'nap' });
     expect(plan[0]).toMatchObject({ kind: 'nap' });
     expect(undone).toEqual([null, []]);
+  });
+});
+
+describe('a short sleep near bedtime followed by a long time up', () => {
+  // Usually up at 07:00 and asleep for the night at 21:45 (the 3–6 month band: 60 min awake, 2 h long).
+  const usual = usualDays([21, 45], [7, 0], [[[9, 0], [10, 0]], [[13, 0], [14, 30]], [[17, 0], [17, 30]]]);
+  const thisMorning = sleep({ start: at(19, 21, 45), end: at(20, 7, 0) });
+  const rhythmAt = (sleeps: ReturnType<typeof sleep>[], now: Date) => dayRhythm(sleeps, fiveMonths, napWindow, now);
+  const windowAt = (sleeps: ReturnType<typeof sleep>[], now: Date, running: string | null = null) =>
+    dayWindow({ ...none, sleep: sleeps }, running ? sleepTimer(running) : noTimer, rhythmAt(sleeps, now), now);
+  const doze = sleep({ start: at(20, 20, 30), end: at(20, 21, 5) });
+
+  it('is undone once the baby has been up for good: the day goes on and the sleep is a nap', () => {
+    // Given
+    const sleeps = [...usual, thisMorning, doze];
+    const now = on(20, 23, 0);
+
+    // When
+    const window = windowAt(sleeps, now);
+
+    // Then
+    expect(window).toMatchObject({ kind: 'day', start: on(20, 7, 0) });
+    expect(isNight({ start: on(20, 20, 30), end: on(20, 21, 5) }, sleeps, rhythmAt(sleeps, now), now)).toBe(false);
+  });
+
+  it.each([
+    ['30 min up', on(20, 21, 35), 'night'],
+    ['59 min up', on(20, 22, 4), 'night'],
+    ['60 min up', on(20, 22, 5), 'day'],
+  ])('is still the night until the baby has been up the band’s awake minutes: %s', (_, now, kind) => {
+    // Given
+    const sleeps = [...usual, thisMorning, doze];
+
+    // When
+    const window = windowAt(sleeps, now);
+
+    // Then
+    expect(window).toMatchObject({ kind, start: kind === 'night' ? on(20, 20, 30) : on(20, 7, 0) });
+  });
+
+  it('is the night while it runs', () => {
+    // Given
+    const sleeps = [...usual, thisMorning];
+
+    // When
+    const window = windowAt(sleeps, on(20, 21, 0), at(20, 20, 30));
+
+    // Then
+    expect(window).toMatchObject({ kind: 'night', start: on(20, 20, 30) });
+  });
+
+  it('adds up short sleeps the baby was back asleep from within the awake minutes', () => {
+    // Given
+    const first = sleep({ start: at(20, 21, 0), end: at(20, 21, 40) });
+    const second = sleep({ start: at(20, 21, 55), end: at(20, 23, 30) });
+    const sleeps = [...usual, thisMorning, first, second];
+
+    // When
+    const window = windowAt(sleeps, on(21, 1, 0));
+
+    // Then
+    expect(window).toMatchObject({ kind: 'night', start: on(20, 21, 0) });
+  });
+
+  it('keeps a first stretch that ran long', () => {
+    // Given
+    const sleeps = [...usual, thisMorning, sleep({ start: at(20, 21, 0), end: at(21, 2, 0) })];
+
+    // When
+    const window = windowAt(sleeps, on(21, 3, 30));
+
+    // Then
+    expect(window).toMatchObject({ kind: 'night', start: on(20, 21, 0) });
+  });
+
+  it('judges the next sleep after an undo: the night starts at the real bedtime', () => {
+    // Given
+    const bedtime = sleep({ start: at(20, 23, 20), end: at(21, 7, 0) });
+    const sleeps = [...usual, thisMorning, doze, bedtime];
+
+    // When
+    const window = windowAt(sleeps, on(21, 2, 0));
+    const pages = windowsBefore({ ...none, sleep: sleeps }, rhythmAt(sleeps, on(21, 12)), on(21, 12));
+
+    // Then
+    expect(window).toMatchObject({ kind: 'night', start: on(20, 23, 20) });
+    expect(pages.slice(0, 2)).toMatchObject([
+      { kind: 'night', start: on(20, 23, 20), end: on(21, 7, 0) },
+      { kind: 'day', start: on(20, 7, 0), end: on(20, 23, 20) },
+    ]);
+  });
+
+  it.each([
+    ['exactly 2 h is kept', at(20, 22, 30), 'night'],
+    ['1 min short of 2 h is undone', at(20, 22, 29), 'day'],
+  ])('measures the stretch against the band’s long: %s', (_, end, kind) => {
+    // Given
+    const sleeps = [...usual, thisMorning, sleep({ start: at(20, 20, 30), end })];
+
+    // When
+    const window = windowAt(sleeps, on(20, 23, 45));
+
+    // Then
+    expect(window).toMatchObject({ kind });
+  });
+
+  it('uses the band’s own numbers under 3 months: 75 min awake', () => {
+    // Given
+    const sleeps = [...usual, thisMorning, doze];
+    const rhythm = (now: Date) => dayRhythm(sleeps, '2026-07-20', napWindow, now);
+    const [soon, later] = [on(20, 22, 19), on(20, 22, 20)];
+
+    // When
+    const windows = [soon, later].map((now) => dayWindow({ ...none, sleep: sleeps }, noTimer, rhythm(now), now));
+
+    // Then
+    expect(windows).toMatchObject([
+      { kind: 'night', start: on(20, 20, 30) },
+      { kind: 'day', start: on(20, 7, 0) },
+    ]);
   });
 });
