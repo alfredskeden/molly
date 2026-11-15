@@ -91,4 +91,8 @@ App and scripts (each builds its own rhythm):
 
 ## Open
 
-1. **The saved flag under rules 3 and 4.** A short sleep near bedtime with no planned nap (rule 4), or right after a skip (rule 3), is stopped while it is still bedtime, so it is saved `nap: false`; once the baby has been up `awake` minutes the ring and Recent days call it a nap, but the flag is never patched. Is that acceptable (the issue's "the 20:30 sleep is a nap" read as the verdict `isNight`, which Recent days, needs and the development stats use, not the saved flag)? The alternative is a later patch, which CLAUDE.md rules out.
+None.
+
+## Decided after planning (2026-11-16)
+
+- **The saved flag under rules 3 and 4 stays as saved.** A short sleep stopped while it still counts as bedtime is saved `nap: false` and never patched; once the baby has been up `awake` minutes, `isNight` (ring, Recent days, needs, development stats) calls it a nap. The issue's "the 20:30 sleep is a nap" means that verdict, not the saved flag.
