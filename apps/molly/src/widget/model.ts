@@ -18,6 +18,7 @@ import {
   vitaminDCycle,
   vitaminDCycleFrom,
   vitaminDStatus,
+  withPlan,
   shownChildren,
   type BottleDefaults,
   type ChildrenPrefs,
@@ -385,8 +386,9 @@ async function fetchSnapshotAndChildren(
   const running = (timer: typeof sleepTimer) => timer && { start: timer.start, byMe: timer.user === userId };
   const found = children.find((candidate) => candidate.id === child);
   const birthDate = found?.birth_date ?? null;
-  const rhythm = dayRhythm(sleeps, birthDate, napWindow, now);
   const skips = notes.flatMap((note) => parseSkip(note) ?? []);
+  // Judged by what the plan showed, so the cached `nightFrom` keeps a late nap a nap.
+  const rhythm = withPlan(dayRhythm(sleeps, birthDate, napWindow, now), birthDate, skips);
   // What the hero shows: the day plan's first sleep that isn't skipped. None while a sleep runs.
   const plan = sleepTimer ? [] : dayPlan(sleeps, null, birthDate, rhythm, skips, now);
   const night = sleepTimer && nightFrom(new Date(sleepTimer.start), sleeps, rhythm, now);
@@ -564,7 +566,8 @@ export async function remindedCache(
       client.listChildren(),
     ]);
     const birthDate = children.find((found) => found.id === child)?.birth_date ?? null;
-    const rhythm = dayRhythm(sleeps, birthDate, napWindow, now);
+    // No skips fetched here: a skipped nap's next sleep goes by the plain rule.
+    const rhythm = withPlan(dayRhythm(sleeps, birthDate, napWindow, now), birthDate, []);
     const window = dayWindow({ sleep: sleeps, feeding: [], change: [], medication: [] }, null, rhythm, now);
     const cycle = vitaminDCycle(window, rhythm, now);
     const { due, last } = vitaminDStatus(cycle, medication);
@@ -612,7 +615,7 @@ type NapReminderData = {
 export function napReminderRing(reminder: NapReminder, data: NapReminderData): NapRingAt | null {
   const { sleeps, running, birthDate, napWindow, skips, allowed, now } = data;
   const timer = running && { id: 0, child: 0, name: TIMER_NAMES.sleep, start: running.start, duration: '', user: 0 };
-  const rhythm = dayRhythm(sleeps, birthDate, napWindow, now);
+  const rhythm = withPlan(dayRhythm(sleeps, birthDate, napWindow, now), birthDate, skips);
   const plan = dayPlan(sleeps, timer, birthDate, rhythm, skips, now);
   const bedtime = plan.at(-1)?.kind === 'bedtime' ? plan.at(-1) : undefined;
   const window = dayWindow({ sleep: sleeps, feeding: [], change: [], medication: [] }, timer, rhythm, now, bedtime);

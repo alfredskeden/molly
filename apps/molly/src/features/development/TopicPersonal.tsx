@@ -10,6 +10,7 @@ import {
   typicalSleep,
   vitaminDCycle,
   vitaminDLine,
+  withPlan,
   type GuidePage,
   type GuideRegion,
   type TopicId,
@@ -54,7 +55,8 @@ function OwnSleep({ child, now }: { child: Child; now: Date }) {
   const entries = useGuideEntries(child.id);
   const { prefsOf } = useChildrenOnScreen();
   if (!entries.data) return entries.isError ? <Text className="text-sm font-bold text-muted">{"Couldn't load the sleeps from Baby Buddy."}</Text> : null;
-  const rhythm = dayRhythm(entries.data.sleep, child.birth_date, prefsOf(child.id).napWindow, now);
+  // No skips fetched here: a skipped nap's next sleep goes by the plain rule.
+  const rhythm = withPlan(dayRhythm(entries.data.sleep, child.birth_date, prefsOf(child.id).napWindow, now), child.birth_date, []);
   const comparison = sleepComparison(entries.data.sleep, rhythm, now);
   return (
     <Text className="text-sm font-extrabold text-sleep-ink">
@@ -112,7 +114,7 @@ function VitaminD({ child, region, now }: Props) {
   const entries = useGuideEntries(child.id);
   const { prefsOf } = useChildrenOnScreen();
   const sleep = entries.data?.sleep ?? [];
-  const rhythm = dayRhythm(sleep, child.birth_date, prefsOf(child.id).napWindow, now);
+  const rhythm = withPlan(dayRhythm(sleep, child.birth_date, prefsOf(child.id).napWindow, now), child.birth_date, []);
   const cycle = vitaminDCycle(dayWindow({ sleep, feeding: [], change: [], medication: [] }, null, rhythm, now), rhythm, now);
   const line = vitaminDLine(region, child.birth_date, cycle, entries.data?.medication ?? [], now);
   if (!line) return null;

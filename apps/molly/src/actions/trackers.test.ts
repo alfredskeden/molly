@@ -1,5 +1,5 @@
 import { BabyBuddyError, type Sleep } from '@molly/api';
-import { dayRhythm } from '@molly/core';
+import { dayRhythm, withPlan } from '@molly/core';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -119,6 +119,35 @@ describe('stopping sleep', () => {
 
     // Then
     expect(client.stopSleep).toHaveBeenCalledWith({ timer: runningSleep.id, nap: true });
+  });
+
+  it('saves a nap the plan showed near bedtime as a nap, where the plain rule saves the night', async () => {
+    // Given
+    // Ten days up at 07:00, naps at 09:00, 13:00 and 17:00, asleep at 21:45; today's naps ran late, so the
+    // plan shows nap 3 at 19:55–20:35.
+    const usual = Array.from({ length: 10 }, (_, index) => 10 + index).flatMap((day) => [
+      logged(on(day - 1, 21, 45), on(day, 7, 0)),
+      logged(on(day, 9, 0), on(day, 10, 0)),
+      logged(on(day, 13, 0), on(day, 14, 30)),
+      logged(on(day, 17, 0), on(day, 17, 30)),
+    ]);
+    const today = [logged(on(19, 21, 45), on(20, 7, 0)), logged(on(20, 10, 0), on(20, 11, 0)), logged(on(20, 15, 30), on(20, 17, 45))];
+    const sleeps = [...usual, ...today];
+    const to = on(20, 21, 5);
+    const timer = { ...runningSleep, start: on(20, 20, 30).toISOString() };
+    const plain = dayRhythm(sleeps, '2026-04-20', napWindow, to);
+    const saved = async (rhythm: typeof plain) => {
+      const stop = vi.fn(async (_stop: unknown) => savedSleep);
+      await stopSleep(fakeClient({ findTimer: vi.fn(async () => timer), stopSleep: stop }), { child: CHILD, night: byRhythm(sleeps, rhythm, to), now: to });
+      return stop.mock.calls[0]![0];
+    };
+
+    // When
+    const [planned, without] = [await saved(withPlan(plain, '2026-04-20', [])), await saved(plain)];
+
+    // Then
+    expect(planned).toEqual({ timer: runningSleep.id, nap: true });
+    expect(without).toEqual({ timer: runningSleep.id, nap: false });
   });
 
   it('saves by the clock when no recent sleeps are at hand', async () => {
