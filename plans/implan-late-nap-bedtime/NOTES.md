@@ -140,3 +140,8 @@ The dashboard is well inside the ~20 ms budget. Recent days with 4 weeks loaded 
 - Remove: nothing. The old `findIndex(isBedtime)` was replaced in place (`bedtimeIn`); `isBedtime`, `bedtimeCut`, `bedtimeWithin`, `byClock` and `nightRule` are all still used (grep). No user-facing copy describes the 90-minute rule (grep of `apps/molly/src` and `docs/`), so no strings changed. No debug logging or TODOs in the diff; the step-6 timing scripts were throwaway and never committed.
 - Refactor: done in step 1 (`asleepFrom` shared, the bedtime search pulled out of `dayOn`).
 - Spotted, not in scope: Recent days with 4+ weeks loaded costs 26–43 ms on a laptop for babies under ~6 months (Cost, above); sharing `pastDays` between judgements on the same day would cut it if it shows on a phone.
+
+### E2E (step 8)
+
+- `pnpm e2e`: 259 passed (4.0 min) on the shared test Baby Buddy.
+- `day-plan.spec.ts` "a sleep of 15 minutes or more after the skip ends it" moved. After "Skip nap 3" at 15:00, the 15:10–15:30 sleep is now bedtime (rule 3, "wherever it starts"), and at 15:40 the baby had been up 10 min, under the test child's `awake` (45), so it's still the night and the window row is hidden. That is the issue's accepted limit for rule 3. The clock now moves 90 min (to 16:30, up 60 min: undone), and the test still checks that the sleep ended the skip. **For the developer:** this is the one changed expectation that isn't purely rule 5. A parent who skips the last nap and then sees the baby take a 20-min catnap anyway gets "Tonight" for about an hour (`awake` after it). That's as decided in #48, but it's worth checking on the phone.

@@ -247,10 +247,12 @@ test('a sleep of 15 minutes or more after the skip ends it', async ({ page }) =>
   await expect(row(page)).toContainText('Bedtime likely18:03–18:53');
 
   // When
+  // After a skipped nap the next sleep is bedtime (#48) until the baby has been up the age's awake minutes after it.
   await sleep([15, 10], [15, 30], true);
-  await page.clock.fastForward('40:00');
+  await page.clock.fastForward('01:30:00');
 
   // Then
+  await expect(row(page)).toBeVisible();
   await expect(row(page)).not.toContainText('18:03–18:53');
 });
 

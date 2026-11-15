@@ -121,7 +121,7 @@ TDD in `packages/core` (Vitest, Given / When / Then comments, zero → one → m
   - `rows.ts`, `TopicPersonal.tsx`, `remindedCache`, `napReminderRing`, `fetchSnapshot`: wrap.
   - `NEEDS_TUNING.rhythmVersion` 3 → 4 (`packages/core/src/needs.ts:15`): the window split changed, persisted Life Sim rhythms must be refetched.
   - `scripts/replay-naps.ts` `--reflag`: wrap with `[]`; `replay.ts`: say in its doc comment that scoring uses the plain rule on purpose.
-- [ ] **8. Playwright.**
+- [x] **8. Playwright.**
   - `e2e/tests/settings.spec.ts` "a child's day and night…" (`:249`): the test child (born 2026-04-27, 6–12 month band, `awake` 45 at today's date) is up 80 min after the 16:30–17:00 sleep at 18:20, so rule 5 undoes it. Move the clock to 17:30 (inside `awake`), and check the plan at 16:30 isn't a nap (only last night is seeded, so no usual naps; with "Day ends" 17:00 it should be bedtime → rule 4). Keep the assertion that the setting moved the usual bedtime ("Bedtime 16:30"). Fix the comment at `:266`.
   - New in `e2e/tests/day-night.spec.ts`: seeded usual days where the plan shows a late nap; add a sleep near the usual bedtime that's short → "Today" stays, saved `nap: true`.
   - Existing `today-window` ("after bedtime…", 19:25–22:30: a 3 h stretch, kept), `ring`, `recent-days`, `day-plan`, `next-sleep`, `day-night` specs green; change an assertion only for the step-2 reason.
@@ -130,7 +130,7 @@ TDD in `packages/core` (Vitest, Given / When / Then comments, zero → one → m
   - `CLAUDE.md` "Day and night": the bedtime sentence → the rule table in one sentence (planned nap stays a nap unless it runs long; a skip makes the next sleep bedtime; otherwise within 90 min, undone when short and followed by `awake` up), and that the rhythm carries the plan (`withPlan`) with past days plain. "Next-sleep prediction": "Past days are split into naps and bedtime by the day rhythm" → "by the plain day rule (no plan)".
   - `plans/implan-day-night/NOTES.md` line 8 ("Bedtime: night if it starts ≥ usual bedtime − 90 min…"): add "since #48: unless the plan showed a nap, and undone when short; `plans/implan-late-nap-bedtime/`". `plans/implan-day-night/TEST_STRATEGY.md:34` stays true (quick waking keeps the night).
   - `plans/README.md` row → status when done.
-- [ ] **10. Wrap-up.** `implan-cleanup` wrap-up sweep over the diff; `pnpm check` and `pnpm e2e` green; `pnpm replay:fixtures` before/after recorded in `NOTES.md` (a moved score is reported, not tuned); PR into `develop` (`gh pr create --base develop`); issue #48 rewritten in Gherkin with anything that changed during the work. The developer's `pnpm replay:naps` sanity run and Pixel checks are theirs (TEST_STRATEGY.md).
+- [x] **10. Wrap-up.** `implan-cleanup` wrap-up sweep over the diff; `pnpm check` and `pnpm e2e` green; `pnpm replay:fixtures` before/after recorded in `NOTES.md` (a moved score is reported, not tuned); PR into `develop` (`gh pr create --base develop`); issue #48 rewritten in Gherkin with anything that changed during the work. The developer's `pnpm replay:naps` sanity run and Pixel checks are theirs (TEST_STRATEGY.md).
 
 ## Not in this plan
 
