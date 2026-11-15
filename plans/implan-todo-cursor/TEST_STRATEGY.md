@@ -1,12 +1,12 @@
 # Test strategy: done when every box is ticked
 
-No core logic changes, so no unit tests. Android behaviour is checked by hand on the emulator (`emulator-5554`, `molly` AVD; never a physical phone), signed in to the test Baby Buddy (`pnpm bb:up && pnpm bb:seed`, address `http://10.0.2.2:4778`). The web gets a Playwright check and the existing suite as its regression net.
+No core logic changes, so no unit tests. Gating: `pnpm check`, the new Playwright test and `pnpm e2e`. The Android sections below are the developer's spot check after merge (decided 2026-11-16), not a blocker; when run, it's on the emulator (`emulator-5554`, `molly` AVD; never a physical phone), signed in to the test Baby Buddy (`pnpm bb:up && pnpm bb:seed`, address `http://10.0.2.2:4778`). The web gets a Playwright check and the existing suite as its regression net.
 
 ## Definition of done (issue #46)
 
-- [ ] Tap, handle drag and long-press selection work in the to-do item text and New label fields on Android.
+- [ ] Tap, handle drag and long-press selection work in the to-do item text and New label fields on Android (fix in place; developer's spot check).
 - [ ] The sheet doesn't drag or close while moving the cursor.
-- [ ] Other sheet text fields checked; any with the same problem fixed.
+- [ ] Other sheet text fields get the same fix through `Sheet` and `TextBox`.
 - [ ] Web still works.
 - [ ] `pnpm check` passes.
 
@@ -48,8 +48,7 @@ Same three checks (tap mid-text, drag the handle, long-press a word) in each:
 
 ## Wrap-up
 
-- [ ] No diagnostics left from MAIN step 2 (`git diff develop -- apps/molly/src` shows only the fix and the shared field).
-- [ ] If `TextBox` was added: every free-text sheet field uses it, `rg "placeholderTextColor=\{palette.muted\}" apps/molly/src` finds it only in `ui.tsx` (plus fields deliberately left out, listed in `NOTES.md`).
-- [ ] `Sheet`'s doc comment (and `CLAUDE.md` if a rule came out of it) updated.
+- [ ] Every free-text sheet field uses it, `rg "placeholderTextColor=\{palette.muted\}" apps/molly/src` finds it only in `ui.tsx` (plus fields deliberately left out, listed in `NOTES.md`).
+- [ ] `Sheet`'s doc comment and `CLAUDE.md` Architecture updated.
 - [ ] `pnpm check` green.
 - [ ] `plans/README.md` row marked Done (or Open items left).

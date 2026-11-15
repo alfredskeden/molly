@@ -67,5 +67,10 @@ Nothing found that matches this exact setup (Fabric Android, field inside Reanim
 
 ## Open
 
-- If the fix needs the scroll sheet's height cap to stop following the keyboard frame by frame (hypothesis 1), the sheet would resize in one step when the keyboard finishes opening instead of gliding with it. Is that acceptable, or should it keep gliding (harder: animate only a transform and mask the bottom)?
-- If only turning off autocorrect / suggestions fixes it (hypothesis 3): accept losing keyboard suggestions in to-do text and notes?
+None.
+
+## Decided after planning (2026-11-16)
+
+- **No reproduction, no cause hunt.** The developer: it should just work. The fix removes hypotheses 1 and 2 together instead of confirming one first; the Android checklist is theirs after merge.
+- **The scroll sheet resizes in one step** when the keyboard has finished opening (and closing) instead of gliding with it frame by frame.
+- **Autocorrect and suggestions stay on** in free-text fields.
