@@ -32,6 +32,23 @@
 - **Docs that will lie:** `plans/implan-recent-days-order/NOTES.md:11` ("a night's start date + 1"); `CLAUDE.md` "Day and night" bullet gains the rule (step 8).
 - **Spotted, not in scope:** none.
 
+## Done (implementation)
+
+- `windowDay(window)` in `packages/core/src/ring.ts`, noon cut as `NIGHT_EVENING_CUT_HOUR = 12`. `windowTitle` counts `daysBetween` on two `windowDay`s and takes the weekday from it; `windowDate` takes an optional `kind` (a day without it, so `windowDate({ start: now })` and `recentDays`' `{ start: morning }` read as before); `before()` builds a day at the night's `windowDay` and a night at noon of the evening before (a stand-in at 00:00 would now read as the evening before that: the "Friday night" pager test caught it).
+- The `daysBetween` refactor listed under step 1 landed in step 3: it changes titles, so it went in with the title tests RED first.
+- Step 2 (tiling) passed with no code change in all four fixtures plus a fifth: usual 20:00 bedtime, up all evening, asleep at 00:30 (the issue's case). `windowsBefore` makes the 00:30 sleep the bedtime there (`clock: false`). The tests were checked against an empty expectation to be sure they aren't vacuous.
+- `recentDays`: `morningOf` = `windowDay` + 1 for a night. The two-week invariant test runs under a live day, a live night from the evening and a live night from 00:30.
+- Playwright: two new tests in `recent-days.spec.ts`. To make the 00:30 sleep the bedtime with nothing learned, the day before is seeded with a morning wake and a nap (`seedDaysBefore(-1)`); with no wake that day the night is a clock night from "Day ends" instead. The Tonight card's spoken total counts finished sleeps only (`slept less than a minute` while the timer runs), as noted in `implan-recent-days-order`, so the test matches the card by its title and label only. The dashboard test runs at 12:00 under the live day (under a live night the cap switches to the day, not last night).
+- `pnpm check` green. `pnpm e2e`: 258 passed, 2 failed in `pending.spec.ts` (the editor's Saving… / Deleting…), which fail the same on `develop` without this change: they seed a diaper 30 min before the real clock and, run just after midnight, can't find it on the ring. Emulator check not done in this run (another agent held the emulator); left for the developer with the phone check.
+
+## Cleanup sweep (wrap-up)
+
+- **Remove:** nothing; no code path is replaced, only the day rule.
+- **Docs fixed:** `plans/implan-recent-days-order/NOTES.md:11` and `MENTAL_MODEL.md:29` (the "start date + 1" card rule), `CLAUDE.md` "Day and night".
+- Other date arithmetic in the app (`index.tsx:146` `startOfDay`, query `since` ranges, `weeks.ts`) works on instants or `now`, not on a window's day: unchanged.
+
+- **Spotted, not in scope:** `e2e/tests/pending.spec.ts` (`openDiaper`, `ago(30)` on the real clock) fails between 00:00 and about 00:30 local; it could pin the browser clock like the other specs.
+
 ## Open
 
 - None.

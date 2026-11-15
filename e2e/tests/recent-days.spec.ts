@@ -278,3 +278,39 @@ test('at night the sheet is Tonight and counts only tonight', async ({ page }) =
     sheet.getByLabel('Tonight: 3h 5m slept, 1 sleep, 1 feed, 0 diapers, about 60 millilitres', { exact: true }),
   ).toBeVisible();
 });
+
+/** The day before up at 06:50 with a nap, then up all evening: asleep at 00:30, up at 07:55. */
+async function seedBedtimeAfterMidnight() {
+  await seedDaysBefore(-1);
+  await post('sleep/', { start: iso(0, 30), end: iso(7, 55), nap: false });
+}
+
+test('a bedtime after midnight is on that morning\'s card, under the live night\'s own Tonight card', async ({ page }) => {
+  // Given
+  await seedBedtimeAfterMidnight();
+  await post('timers/', { name: 'molly:sleep', start: iso(21, 10) });
+  await openAt(page, 23, 0);
+
+  // When
+  await page.goto('/recent-days');
+
+  // Then
+  await expect(button(page, /^Tonight, Tonight: /)).toBeVisible();
+  await expect(button(page, /^Today, Night: slept 7 hours 25 minutes, /)).toBeVisible();
+  await expect(button(page, /^Today, Day: /)).toBeVisible();
+});
+
+test('a bedtime after midnight is Last night on the dashboard, dated its evening', async ({ page }) => {
+  // Given
+  await seedBedtimeAfterMidnight();
+  await openAt(page, 12, 0);
+
+  // When
+  await button(page, 'Switch to last night').click();
+
+  // Then
+  await expect(page.getByRole('heading', { name: 'Last night', exact: true })).toBeVisible();
+  await expect(page.getByText(dateOf(-1), { exact: true }).filter({ visible: true })).toBeVisible();
+  await expect(button(page, 'Next: Today')).toBeVisible();
+  await expect(button(page, 'Previous: Yesterday')).toBeVisible();
+});
