@@ -1,20 +1,19 @@
 import { clockText, labelFor, shortDate, type TodoItem } from '@molly/core';
 import { Image } from 'expo-image';
 import { useState, type ReactNode } from 'react';
-import { Keyboard, Platform, TextInput, View } from 'react-native';
+import { Keyboard, Platform, View } from 'react-native';
 
 import { DateField } from '@/components/DateField';
 import { Pressable } from '@/components/pressable';
 import { Sheet } from '@/components/sheet';
 import { TimeField } from '@/components/TimeField';
-import { FIXED_SCALE, Segment, Spinner, StepButton, Text, ToggleRow } from '@/components/ui';
+import { FIXED_SCALE, Segment, Spinner, StepButton, Text, TextBox, ToggleRow } from '@/components/ui';
 import { useUnsavedOnReturn } from '@/features/return/ReturnProvider';
 import { HAPTICS } from '@/haptics/model';
 import { useHaptic } from '@/haptics/use-haptic';
 import { hasNotifications } from '@/notification/sync';
 import { Glyph } from '@/theme/Glyph';
 import type { OutlinedSymbol } from '@/theme/symbols';
-import { useTheme } from '@/theme/theme';
 
 import { PHOTO_SOURCES, pickPhoto, type PhotoSource, type PickedPhoto } from './photo';
 import {
@@ -86,7 +85,6 @@ export function TodoSheet({
   const [picking, setPicking] = useState<'date' | 'time' | null>(null);
   const [opened] = useState(draft);
   useUnsavedOnReturn(todoChanged(opened, draft, { photo: photoDraft.kind, added }));
-  const { palette } = useTheme();
   const haptic = useHaptic();
   const set = (changes: Partial<TodoDraftState>) => setDraft((current) => ({ ...current, ...changes }));
 
@@ -131,15 +129,14 @@ export function TodoSheet({
   return (
     <Sheet label={item ? 'Edit item' : 'New item'} title={item ? 'Edit item' : 'New item'} onScrimPress={onClose} scroll>
       <View className="gap-4">
-        <TextInput
+        <TextBox
           accessibilityLabel="What needs doing"
           autoFocus={!item}
           value={draft.text}
           onChangeText={(text) => set({ text })}
           placeholder="e.g. Diapers size 3"
-          placeholderTextColor={palette.muted}
           returnKeyType="done"
-          className="min-h-[52px] rounded-chip border border-line bg-bg px-3.5 font-sans text-title font-bold text-ink"
+          className="min-h-[52px] text-title"
         />
 
         <View className="gap-1.5">
@@ -169,16 +166,15 @@ export function TodoSheet({
           </View>
           {naming !== null && (
             <View className="flex-row items-center gap-2">
-              <TextInput
+              <TextBox
                 accessibilityLabel="New label"
                 autoFocus
                 value={naming}
                 onChangeText={setNaming}
                 onSubmitEditing={addLabel}
                 placeholder="e.g. Pharmacy"
-                placeholderTextColor={palette.muted}
                 returnKeyType="done"
-                className="h-12 min-w-0 flex-1 rounded-chip border border-line bg-bg px-3.5 font-sans text-label font-bold text-ink"
+                className="h-12 min-w-0 flex-1 text-label"
               />
               <Pressable accessibilityRole="button" onPress={addLabel} className="h-12 justify-center rounded-chip bg-bg px-4 active:opacity-70">
                 <Text className="text-label font-extrabold">Add</Text>
