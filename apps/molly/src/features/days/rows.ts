@@ -1,5 +1,5 @@
 import type { Timer } from '@molly/api';
-import { dayRhythm, parseSkip, windowsBefore, type DayRhythm, type DayWindow, type EntriesByKind, type NapWindow, type Skip } from '@molly/core';
+import { dayRhythm, parseSkip, windowsBefore, withPlan, type DayRhythm, type DayWindow, type EntriesByKind, type NapWindow, type Skip } from '@molly/core';
 
 import { mergeDays, type DaysPage } from './queries';
 import { WINDOW_DAYS } from './weeks';
@@ -21,7 +21,8 @@ function logged(entries: EntriesByKind, window: DayWindow): boolean {
 /**
  * The Days screen's rows, newest first: every finished day and night that starts in a loaded week
  * (the live one is the dashboard's), up to the oldest with anything logged. Days and nights by the child's
- * rhythm (`rhythm`), learned from the loaded sleeps.
+ * rhythm (`rhythm`), learned from the loaded sleeps, and by what the plan showed (`withPlan`, with every loaded
+ * week's skips).
  */
 export function daysRows(pages: DaysPage[], birthDate: string | null, napWindow: NapWindow, running: Timer | null, now: Date): DaysRows {
   const { entries, skips: notes } = mergeDays(pages);
@@ -29,7 +30,7 @@ export function daysRows(pages: DaysPage[], birthDate: string | null, napWindow:
     const skip = parseSkip(note);
     return skip ? [skip] : [];
   });
-  const rhythm = dayRhythm(entries.sleep, birthDate, napWindow, now);
+  const rhythm = withPlan(dayRhythm(entries.sleep, birthDate, napWindow, now), birthDate, skips);
   const oldest = pages.at(-1);
   if (!oldest) return { rows: [], entries, skips, rhythm };
   const windows = windowsBefore(entries, rhythm, now, pages.length * WINDOW_DAYS, running).filter(

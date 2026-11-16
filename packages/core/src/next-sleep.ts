@@ -1,6 +1,6 @@
 import type { Sleep, Timer } from '@molly/api';
 
-import { minutesPast, type DayRhythm } from './day-rhythm';
+import { minutesPast, withoutPlan, type DayRhythm } from './day-rhythm';
 import { dayWindow, isNight, pastDays as daysBefore, type PastDay } from './day-window';
 import { median } from './median';
 import { sleepGuide, wakeForSlot, type SleepGuide, type Slot, type WakeRange } from './sleep-guide';
@@ -118,6 +118,10 @@ export function nextSleep(
  * usual length (`usualNapLength`, `napLength` without past naps), or now once it runs longer, so the
  * plan holds still through a normal nap and slides with the clock after. Checks that look back
  * (logging gap, night, age) are made at its start.
+ *
+ * Today (its day window, the running sleep's night check) is judged with the rhythm as given, so a
+ * rhythm carrying the plan (`withPlan`) keeps a late nap it showed a nap; `pastDays` always by the
+ * plain rule (`withoutPlan`).
  */
 export type SleepContext = {
   anchor: Date;
@@ -184,7 +188,8 @@ function awakeContext(
     .filter((entry) => new Date(entry.start) > today.wake && new Date(entry.end) <= anchor)
     .map((entry) => minutesFrom(new Date(entry.start), new Date(entry.end)));
   const isLong = (entry: Sleep) => long.includes(entry);
-  const pastDays = daysBefore(sleeps, rhythm, now, tuning.historyDays).map((day) => ({ ...day, naps: day.naps.filter(isLong) }));
+  // Past days by the plain rule: only today consults the plan, so the plan never feeds on itself.
+  const pastDays = daysBefore(sleeps, withoutPlan(rhythm), now, tuning.historyDays).map((day) => ({ ...day, naps: day.naps.filter(isLong) }));
   return {
     anchor,
     slot: naps.length + 1,

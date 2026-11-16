@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { change, feeding, medication, sleep as sleepEntry } from '../test/fixtures';
-import { arcPath, sleepStroke, centreText, editorSubtitle, hourTicks, markTap, placeMarks, ringAngle, ringGhosts, ringPoint, sleepLabels, startLabel, windowDate, pastBoxes, pastBoxesSpoken, ringPager, windowRow, windowStats, windowTitle } from './ring';
+import { arcPath, sleepStroke, centreText, editorSubtitle, hourTicks, markTap, placeMarks, ringAngle, ringGhosts, ringPoint, sleepLabels, startLabel, windowDate, pastBoxes, pastBoxesSpoken, ringPager, windowRow, windowDay, windowStats, windowTitle } from './ring';
 
 /** Thursday 24 September 2026, local time. */
 const at = (clock: string, day = 24) => {
@@ -535,6 +535,90 @@ describe("the editor's subtitle", () => {
   });
 });
 
+describe("a window's calendar day", () => {
+  const midnight = (year: number, month: number, date: number) => new Date(year, month, date);
+
+  it('is its start date for a day', () => {
+    // When
+    const date = windowDay({ kind: 'day', start: at('07:13', 13) });
+
+    // Then
+    expect(date).toEqual(midnight(2026, 8, 13));
+  });
+
+  it('is its start date for a night that starts in the evening', () => {
+    // When
+    const date = windowDay({ kind: 'night', start: at('19:05', 13) });
+
+    // Then
+    expect(date).toEqual(midnight(2026, 8, 13));
+  });
+
+  it('is its start date for a night that starts just before midnight', () => {
+    // When
+    const date = windowDay({ kind: 'night', start: at('23:40', 13) });
+
+    // Then
+    expect(date).toEqual(midnight(2026, 8, 13));
+  });
+
+  it('is the date before for a night that starts after midnight', () => {
+    // When
+    const date = windowDay({ kind: 'night', start: at('00:30', 13) });
+
+    // Then
+    expect(date).toEqual(midnight(2026, 8, 12));
+  });
+
+  it('is the date before for a night that starts in the early morning', () => {
+    // When
+    const date = windowDay({ kind: 'night', start: at('05:10', 13) });
+
+    // Then
+    expect(date).toEqual(midnight(2026, 8, 12));
+  });
+
+  it('is the date before for a night that starts a minute before noon', () => {
+    // When
+    const date = windowDay({ kind: 'night', start: at('11:59', 13) });
+
+    // Then
+    expect(date).toEqual(midnight(2026, 8, 12));
+  });
+
+  it('is its start date for a night that starts at noon', () => {
+    // When
+    const date = windowDay({ kind: 'night', start: at('12:00', 13) });
+
+    // Then
+    expect(date).toEqual(midnight(2026, 8, 13));
+  });
+
+  it('is the last day of February for a night after midnight on 1 March', () => {
+    // When
+    const date = windowDay({ kind: 'night', start: new Date(2026, 2, 1, 0, 30) });
+
+    // Then
+    expect(date).toEqual(midnight(2026, 1, 28));
+  });
+
+  it("is New Year's Eve for a night after midnight on 1 January", () => {
+    // When
+    const date = windowDay({ kind: 'night', start: new Date(2027, 0, 1, 0, 30) });
+
+    // Then
+    expect(date).toEqual(midnight(2026, 11, 31));
+  });
+
+  it('is the date before for a night after midnight on the night the clocks go back', () => {
+    // When
+    const date = windowDay({ kind: 'night', start: new Date(2026, 9, 25, 0, 30) });
+
+    // Then
+    expect(date).toEqual(midnight(2026, 9, 24));
+  });
+});
+
 describe("a window's title", () => {
   const today = { kind: 'day' as const, start: at('07:13'), end: at('19:00') };
   const tonight = { kind: 'night' as const, start: at('19:05'), end: at('07:00', 25) };
@@ -603,6 +687,53 @@ describe("a window's title", () => {
     // Then
     expect(title).toBe('Wednesday night');
   });
+
+  describe('for a night that starts after midnight', () => {
+    // Sunday 13 September: last night's bedtime was 00:30, after Saturday's evening.
+    const sunday = { kind: 'day' as const, start: at('07:55', 13) };
+    const afterMidnight = { kind: 'night' as const, start: at('00:30', 13) };
+    const lateTonight = { kind: 'night' as const, start: at('00:30', 14) };
+
+    it('is Last night under the live day that followed it', () => {
+      // When
+      const title = windowTitle(afterMidnight, sunday);
+
+      // Then
+      expect(title).toBe('Last night');
+    });
+
+    it('is Tonight for the live night', () => {
+      // When
+      const title = windowTitle(lateTonight, lateTonight);
+
+      // Then
+      expect(title).toBe('Tonight');
+    });
+
+    it('keeps the day before it Today under it while live', () => {
+      // When
+      const title = windowTitle(sunday, lateTonight);
+
+      // Then
+      expect(title).toBe('Today');
+    });
+
+    it("is its evening's weekday night under a live night", () => {
+      // When
+      const title = windowTitle(afterMidnight, lateTonight);
+
+      // Then
+      expect(title).toBe('Saturday night');
+    });
+
+    it("is its evening's weekday night when older", () => {
+      // When
+      const title = windowTitle({ kind: 'night', start: at('00:30', 11) }, sunday);
+
+      // Then
+      expect(title).toBe('Thursday night');
+    });
+  });
 });
 
 describe("a window's date", () => {
@@ -612,6 +743,30 @@ describe("a window's date", () => {
 
     // Then
     expect(date).toBe('Thu 24 Sep');
+  });
+
+  it('is the evening before for a night that starts after midnight', () => {
+    // When
+    const date = windowDate({ kind: 'night', start: at('00:30', 13) });
+
+    // Then
+    expect(date).toBe('Sat 12 Sep');
+  });
+
+  it('is the date it starts on for a night from the evening', () => {
+    // When
+    const date = windowDate({ kind: 'night', start: at('19:05', 13) });
+
+    // Then
+    expect(date).toBe('Sun 13 Sep');
+  });
+
+  it('is the date it starts on for a day', () => {
+    // When
+    const date = windowDate({ kind: 'day', start: at('07:55', 13) });
+
+    // Then
+    expect(date).toBe('Sun 13 Sep');
   });
 });
 
@@ -905,6 +1060,29 @@ describe('the pager over a past ring', () => {
 
     // Then
     expect(titles).toEqual(['Yesterday', 'Tuesday night', 'Tuesday']);
+  });
+
+  describe('from a night that starts after midnight', () => {
+    // Live Sunday 13 September, after a bedtime at 00:30.
+    const sunday = { kind: 'day' as const, start: at('07:55', 13), end: at('21:00', 13) };
+    const afterMidnight = { kind: 'night' as const, start: at('00:30', 13), end: at('07:55', 13) };
+    const saturday = { kind: 'day' as const, start: at('07:00', 12), end: at('00:30', 13) };
+
+    it('offers the day before it, not loaded yet, as Yesterday', () => {
+      // When
+      const pager = ringPager({ windows: [sunday, afterMidnight], index: 1, loadedFrom: at('00:00', 13), olderMayExist: true });
+
+      // Then
+      expect(pager.previous).toMatchObject({ window: null, title: 'Yesterday', load: true });
+    });
+
+    it("offers the night before that day, not loaded yet, as its evening's night", () => {
+      // When
+      const pager = ringPager({ windows: [sunday, afterMidnight, saturday], index: 2, loadedFrom: at('00:00', 12), olderMayExist: true });
+
+      // Then
+      expect(pager.previous).toMatchObject({ window: null, title: 'Friday night', load: true });
+    });
   });
 });
 

@@ -23,6 +23,7 @@ import { isNight } from '../packages/core/src/day-window';
 import { clockText } from '../packages/core/src/format';
 import { atClock, DEFAULT_NAP_WINDOW } from '../packages/core/src/nap';
 import { NEXT_SLEEP_TUNING, type NextSleepTuning } from '../packages/core/src/next-sleep';
+import { withPlan } from '../packages/core/src/shown-plan';
 import {
   knownAt,
   replay,
@@ -64,7 +65,8 @@ const sleeps = flags.includes('--reflag')
   ? logged.map((entry) => {
       const end = new Date(entry.end);
       const known = knownAt(logged, end);
-      const rhythm = dayRhythm(known, birthDate, napWindow, end, dayTuning);
+      // As the app judges it: by what the plan showed (no skips in the data).
+      const rhythm = withPlan(dayRhythm(known, birthDate, napWindow, end, dayTuning), birthDate, []);
       return { ...entry, nap: !isNight({ start: new Date(entry.start), end }, known, rhythm, end) };
     })
   : logged;

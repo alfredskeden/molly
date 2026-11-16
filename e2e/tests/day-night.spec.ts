@@ -65,6 +65,26 @@ test('an evening catnap well before the usual bedtime saves as a nap', async ({ 
   expect(await latest('sleep')).toMatchObject({ nap: true });
 });
 
+test('a short sleep near the usual bedtime that the plan showed as a nap saves as a nap, and the day goes on', async ({ page }) => {
+  // Given
+  // Usually three naps and asleep at 21:45; yesterday's naps ran late (to 17:45), so the plan shows a third nap
+  // around 20:30, within 90 min of the usual bedtime.
+  await seedUsualDays([21, 45], [7, 0], [[[9, 0], [10, 0]], [[13, 0], [14, 30]], [[17, 0], [17, 30]]]);
+  await post('sleep/', { start: yesterday(21, 45, -1).toISOString(), end: yesterday(7, 0).toISOString(), nap: false });
+  await post('sleep/', { start: yesterday(10, 0).toISOString(), end: yesterday(11, 0).toISOString(), nap: true });
+  await post('sleep/', { start: yesterday(15, 30).toISOString(), end: yesterday(17, 45).toISOString(), nap: true });
+  await clockAt(page, yesterday(21, 20));
+  await signInAs(page, testEnv.parentB);
+  await expect(page.getByText('Day started 07:00', { exact: true })).toBeVisible();
+
+  // When
+  await addSleep(page, yesterday(20, 30), yesterday(21, 5));
+
+  // Then
+  expect(await latest('sleep')).toMatchObject({ nap: true });
+  await expect(page.getByText('Day started 07:00', { exact: true })).toBeVisible();
+});
+
 test('a sleep after an early wake saves as a nap, and the day starts at the wake', async ({ page }) => {
   // Given
   // Usually up at 08:10; a setting whose day starts at 08:30, so by the clock the 08:15 sleep would be the night.
