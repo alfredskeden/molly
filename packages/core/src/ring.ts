@@ -306,19 +306,39 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 
 type Titled = { kind: 'day' | 'night'; start: Date };
 
-/** Whole calendar days from `from`'s date to `to`'s. */
-function daysBetween(from: Date, to: Date): number {
-  const date = (time: Date) => Date.UTC(time.getFullYear(), time.getMonth(), time.getDate());
+/**
+ * Nights start between late afternoon and early morning (a bedtime, or the day's end), never near noon,
+ * so a night starting before this hour began on the evening before.
+ */
+const NIGHT_EVENING_CUT_HOUR = 12;
+
+/**
+ * A window's calendar day, at local midnight: a day's start date; a night's evening, its start date, or the
+ * date before when it starts after midnight (before noon). Calendar fields, so it holds on clock-change days.
+ */
+export function windowDay(window: Titled): Date {
+  const { start } = window;
+  const back = window.kind === 'night' && start.getHours() < NIGHT_EVENING_CUT_HOUR ? 1 : 0;
+  return new Date(start.getFullYear(), start.getMonth(), start.getDate() - back);
+}
+
+/** Whole calendar days from `from`'s calendar day to `to`'s (`windowDay`). */
+function daysBetween(from: Titled, to: Titled): number {
+  const date = (window: Titled) => {
+    const day = windowDay(window);
+    return Date.UTC(day.getFullYear(), day.getMonth(), day.getDate());
+  };
   return Math.round((date(to) - date(from)) / 86_400_000);
 }
 
 /**
  * `Today`, `Yesterday` or the weekday for a day; `Tonight`, `Last night` or `Tuesday night` for a night.
- * Counted from the live window's calendar day, so the day just ended under a live night is still Today.
+ * Counted in calendar days (`windowDay`, a night's evening) from the live window's, so the day just ended
+ * under a live night is still Today, and a night that started after midnight is its evening's night.
  */
 export function windowTitle(window: Titled, live: Titled): string {
-  const back = daysBetween(window.start, live.start);
-  const weekday = WEEKDAYS[window.start.getDay()]!;
+  const back = daysBetween(window, live);
+  const weekday = WEEKDAYS[windowDay(window).getDay()]!;
   if (window.kind === 'day') return back === 0 ? 'Today' : back === 1 ? 'Yesterday' : weekday;
   if (window.start.getTime() === live.start.getTime()) return 'Tonight';
   return live.kind === 'day' && back === 1 ? 'Last night' : `${weekday} night`;
@@ -351,17 +371,20 @@ export function ringPager<W extends Titled>(input: { windows: W[]; index: number
   };
 }
 
-/** The window before one not worked out yet, as far as its title goes: the night before a day starts the day before. */
+/**
+ * The window before one not worked out yet, as far as its title goes (`windowDay`): the day before a night is
+ * on the night's evening, the night before a day on the evening before.
+ */
 function before(window: Titled): Titled {
-  const { start } = window;
-  if (window.kind === 'night') return { kind: 'day', start };
-  return { kind: 'night', start: new Date(start.getFullYear(), start.getMonth(), start.getDate() - 1) };
+  const day = windowDay(window);
+  if (window.kind === 'night') return { kind: 'day', start: day };
+  return { kind: 'night', start: new Date(day.getFullYear(), day.getMonth(), day.getDate() - 1, NIGHT_EVENING_CUT_HOUR) };
 }
 
-/** The header's date for a window: the day it starts on, `Thu 24 Sep`. */
-export function windowDate(window: { start: Date }): string {
-  const { start } = window;
-  return `${WEEKDAYS[start.getDay()]!.slice(0, 3)} ${start.getDate()} ${MONTHS[start.getMonth()]}`;
+/** The header's date for a window (a day without `kind`): the day it starts on, a night's evening, `Thu 24 Sep`. */
+export function windowDate(window: { kind?: Titled['kind']; start: Date }): string {
+  const day = windowDay({ kind: window.kind ?? 'day', start: window.start });
+  return `${WEEKDAYS[day.getDay()]!.slice(0, 3)} ${day.getDate()} ${MONTHS[day.getMonth()]}`;
 }
 
 /** Beside the cap: `Day started 07:13` or `Bedtime 19:05`, or nothing when neither was logged (`clock`). */

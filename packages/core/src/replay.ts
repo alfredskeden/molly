@@ -14,7 +14,11 @@ export function knownAt(sleeps: Sleep[], now: Date): Sleep[] {
 const MINUTE_MS = 60 * 1000;
 const DAY_MS = 24 * 60 * MINUTE_MS;
 
-/** Night sleep or nap by the child's rhythm (`isNight`), knowing every sleep; the saved flag isn't read. */
+/**
+ * Night sleep or nap by the child's rhythm (`isNight`), knowing every sleep; the saved flag isn't read. By the
+ * plain rule on purpose (no `withPlan`): the replay scores the prediction against what happened, and judging
+ * what happened by the prediction would score it against itself.
+ */
 function isNight(entry: Sleep, sleeps: Sleep[], rhythm: DayRhythm): boolean {
   return isNightIn({ start: new Date(entry.start), end: new Date(entry.end) }, sleeps, rhythm, afterAll(sleeps));
 }

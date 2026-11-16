@@ -4,7 +4,7 @@ import { TextInput, View } from 'react-native';
 
 import { Pressable } from '@/components/pressable';
 import { Sheet } from '@/components/sheet';
-import { FIXED_SCALE, Segment, Spinner, Text } from '@/components/ui';
+import { FIXED_SCALE, Segment, Spinner, Text, TextBox } from '@/components/ui';
 import { amountInput, startAmount } from '@/features/feed/amount-input';
 import { BottleAmount } from '@/features/feed/BottleAmount';
 import { FoodField } from '@/features/feed/FoodField';
@@ -182,11 +182,12 @@ export function AddSheet({
       {draft.kind === 'med' && (
         <View className="gap-1.5">
           <Text className="px-1 text-sm font-extrabold text-muted">{other ? 'What was given' : 'Note (optional)'}</Text>
-          <NoteInput
-            label={other ? 'What was given' : 'Note (optional)'}
+          <TextBox
+            accessibilityLabel={other ? 'What was given' : 'Note (optional)'}
             value={draft.note}
             placeholder={other ? 'e.g. Paracetamol 2.5 ml' : 'e.g. given with the morning feed'}
-            onChange={(note) => set({ note })}
+            onChangeText={(note) => set({ note })}
+            className="h-[52px] text-title"
           />
         </View>
       )}
@@ -260,20 +261,6 @@ function TimeRow({
       />
       {after}
     </View>
-  );
-}
-
-function NoteInput({ label, value, placeholder, onChange }: { label: string; value: string; placeholder: string; onChange: (text: string) => void }) {
-  const { palette } = useTheme();
-  return (
-    <TextInput
-      accessibilityLabel={label}
-      value={value}
-      placeholder={placeholder}
-      placeholderTextColor={palette.muted}
-      onChangeText={onChange}
-      className="h-[52px] rounded-chip border border-line bg-bg px-3.5 font-sans text-title font-bold text-ink"
-    />
   );
 }
 
