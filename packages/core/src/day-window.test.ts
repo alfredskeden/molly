@@ -6,7 +6,7 @@ import { dayRhythm, type DayRhythm, type Shown } from './day-rhythm';
 import { dayWindow, isNight, nightFrom, previousWindow, windowsBefore } from './day-window';
 import { DEFAULT_NAP_WINDOW, isNightSleep } from './nap';
 import { nextSleep } from './next-sleep';
-import { windowStats } from './ring';
+import { windowDay, windowStats } from './ring';
 
 const none = { sleep: [], feeding: [], change: [], medication: [] };
 const noTimer = null;
@@ -1759,5 +1759,143 @@ describe('a plan that shows nothing', () => {
 
     // Then
     expect(windows[1]).toEqual(windows[0]);
+  });
+});
+
+describe("a past night's calendar day agrees with the tiling", () => {
+  const dateOf = (time: Date) => new Date(time.getFullYear(), time.getMonth(), time.getDate());
+  const dayAfter = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
+  const nightsOf = (pages: ReturnType<typeof windowsBefore>) => pages.filter((page) => page.kind === 'night');
+  /** Per night: [the morning after its evening, its end's date]. */
+  const mornings = (pages: ReturnType<typeof windowsBefore>) =>
+    nightsOf(pages).map((night) => [dayAfter(windowDay(night)), dateOf(night.end)]);
+  /** Per night with a logged wake before it: [its evening, its wake's date]. */
+  const evenings = (pages: ReturnType<typeof windowsBefore>) =>
+    nightsOf(pages)
+      .filter((night) => !night.clock)
+      .map((night) => [windowDay(night), dateOf(night.wake)]);
+  const agree = (pairs: Date[][]) => pairs.map(([left]) => [left, left]);
+
+  describe('over a normal week', () => {
+    // Usually asleep at 22:40 and up at 07:30.
+    const sleeps = usualDays([22, 40], [7, 30], [[[9, 30], [10, 30]], [[14, 0], [15, 0]]]);
+    const pages = windowsBefore({ ...none, sleep: sleeps }, dayRhythm(sleeps, fiveMonths, napWindow, on(20, 12)), on(20, 12));
+
+    it("puts every night's morning on its end's date", () => {
+      // When
+      const pairs = mornings(pages);
+
+      // Then
+      expect(pairs).toEqual(agree(pairs));
+    });
+
+    it("puts every night's evening on its wake's date", () => {
+      // When
+      const pairs = evenings(pages);
+
+      // Then
+      expect(pairs).toEqual(agree(pairs));
+    });
+  });
+
+  describe('with a bedtime after midnight', () => {
+    // Usually asleep at 20:00 and up at 07:00; up all evening on the 19th, asleep at 00:30.
+    const usual = usualDays([20, 0], [7, 0], [[[9, 30], [10, 30]], [[14, 0], [15, 0]]]).filter((entry) => entry.start !== at(19, 20, 0));
+    const late = sleep({ start: at(20, 0, 30), end: at(20, 7, 55) });
+    const sleeps = [...usual, late];
+    const pages = windowsBefore({ ...none, sleep: sleeps }, dayRhythm(sleeps, fiveMonths, napWindow, on(20, 12)), on(20, 12));
+
+    it('makes the 00:30 sleep the night before the live day', () => {
+      // Then
+      expect(pages[0]).toMatchObject({ kind: 'night', start: on(20, 0, 30), clock: false });
+    });
+
+    it("puts every night's morning on its end's date", () => {
+      // When
+      const pairs = mornings(pages);
+
+      // Then
+      expect(pairs).toEqual(agree(pairs));
+    });
+
+    it("puts every night's evening on its wake's date", () => {
+      // When
+      const pairs = evenings(pages);
+
+      // Then
+      expect(pairs).toEqual(agree(pairs));
+    });
+  });
+
+  describe('with a usual bedtime after midnight', () => {
+    // Usually up at 09:00 and asleep at 23:50; 00:20 on the 21st.
+    const usual = usualDays([23, 50], [9, 0], [[[11, 0], [12, 0]], [[15, 0], [16, 0]], [[19, 0], [19, 45]]]);
+    const sleeps = [...usual, sleep({ start: at(19, 23, 50), end: at(20, 9, 0) }), sleep({ start: at(21, 0, 20), end: at(21, 9, 0) })];
+    const pages = windowsBefore({ ...none, sleep: sleeps }, dayRhythm(sleeps, fiveMonths, napWindow, on(21, 12)), on(21, 12));
+
+    it("puts every night's morning on its end's date", () => {
+      // When
+      const pairs = mornings(pages);
+
+      // Then
+      expect(pairs).toEqual(agree(pairs));
+    });
+
+    it("puts every night's evening on its wake's date", () => {
+      // When
+      const pairs = evenings(pages);
+
+      // Then
+      expect(pairs).toEqual(agree(pairs));
+    });
+  });
+
+  describe('with nights that have no bedtime logged', () => {
+    // Usually up at 07:00 and asleep at 21:00, with no bedtime logged on the 19th.
+    const sleeps = usualDays([21, 0], [7, 0], [[[9, 30], [10, 30]], [[14, 0], [15, 0]]]).filter((entry) => entry.start !== at(19, 21, 0));
+    const rhythm = dayRhythm(sleeps, fiveMonths, napWindow, on(20, 12));
+
+    it("puts every night's morning on its end's date", () => {
+      // When
+      const pairs = mornings(windowsBefore({ ...none, sleep: sleeps }, rhythm, on(20, 12)));
+
+      // Then
+      expect(pairs).toEqual(agree(pairs));
+    });
+
+    it("puts every night's morning on its end's date with nothing logged at all", () => {
+      // When
+      const pairs = mornings(windowsBefore(none, setting, on(20, 12)));
+
+      // Then
+      expect(pairs).toEqual(agree(pairs));
+    });
+  });
+
+  describe('across the clock change', () => {
+    // Europe/Stockholm falls back from 03:00 to 02:00 on 25 October 2026: up at 07:00, asleep at 20:00 local.
+    const october = (day: number, hours: number, minutes = 0) => new Date(2026, 9, day, hours, minutes);
+    const sleeps = Array.from({ length: 14 }, (_, index) => 13 + index).flatMap((day) => [
+      sleep({ start: october(day - 1, 20, 0).toISOString(), end: october(day, 7, 0).toISOString() }),
+      sleep({ start: october(day, 9, 0).toISOString(), end: october(day, 10, 0).toISOString() }),
+    ]);
+    const now = october(26, 12);
+    const pages = windowsBefore({ ...none, sleep: sleeps }, dayRhythm(sleeps, fiveMonths, napWindow, now), now);
+
+    it("puts every night's morning on its end's date", () => {
+      // When
+      const pairs = mornings(pages);
+
+      // Then
+      expect(pairs).toEqual(agree(pairs));
+    });
+
+    it("puts every night's evening on its wake's date", () => {
+      // When
+      const pairs = evenings(pages);
+
+      // Then
+      expect(pairs).toEqual(agree(pairs));
+    });
   });
 });

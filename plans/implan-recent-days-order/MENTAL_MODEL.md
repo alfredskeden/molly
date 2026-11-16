@@ -26,7 +26,7 @@ The night moves from the evening's card to the next morning's card.
 flowchart TD
   W[Window] --> K{kind?}
   K -->|day| D["card of its start date<br/>→ right slot"]
-  K -->|night| N["card of the morning it ends on<br/>(start date + 1)<br/>→ left slot"]
+  K -->|night| N["card of the morning after its evening<br/>(windowDay + 1)<br/>→ left slot"]
 ```
 
 ## What the list looks like

@@ -1,4 +1,4 @@
-import { todaysTotals, windowDate, windowTitle, type DayWindow, type EntriesByKind } from '@molly/core';
+import { todaysTotals, windowDate, windowDay, windowTitle, type DayWindow, type EntriesByKind } from '@molly/core';
 
 export type RecentSlot = { window: DayWindow; live: boolean; label: string };
 
@@ -17,9 +17,14 @@ export type RecentDay = {
 const dateKey = (time: Date) =>
   `${time.getFullYear()}-${String(time.getMonth() + 1).padStart(2, '0')}-${String(time.getDate()).padStart(2, '0')}`;
 
-/** The calendar date a window's card is for: a day's own, a night's next (its `end` is a guess while live). */
-const morningOf = (window: DayWindow) =>
-  new Date(window.start.getFullYear(), window.start.getMonth(), window.start.getDate() + (window.kind === 'night' ? 1 : 0));
+/**
+ * The calendar date a window's card is for: a day's own, a night's the morning after its evening (`windowDay`,
+ * so a bedtime after midnight is still the night before; its `end` is a guess while live).
+ */
+const morningOf = (window: DayWindow) => {
+  const day = windowDay(window);
+  return new Date(day.getFullYear(), day.getMonth(), day.getDate() + (window.kind === 'night' ? 1 : 0));
+};
 
 /**
  * Recent days' cards (design `1k`), newest first: one per morning, holding the night the baby woke from and
