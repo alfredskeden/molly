@@ -5,10 +5,10 @@ No core logic changes, so no unit tests. Gating: `pnpm check`, the new Playwrigh
 ## Definition of done (issue #46)
 
 - [ ] Tap, handle drag and long-press selection work in the to-do item text and New label fields on Android (fix in place; developer's spot check).
-- [ ] The sheet doesn't drag or close while moving the cursor.
-- [ ] Other sheet text fields get the same fix through `Sheet` and `TextBox`.
-- [ ] Web still works.
-- [ ] `pnpm check` passes.
+- [x] The sheet doesn't drag or close while moving the cursor.
+- [x] Other sheet text fields get the same fix through `Sheet` and `TextBox`.
+- [x] Web still works.
+- [x] `pnpm check` passes.
 
 ## Android emulator, to-do sheet (the issue's scenarios)
 
@@ -42,13 +42,13 @@ Same three checks (tap mid-text, drag the handle, long-press a word) in each:
 
 ## Web
 
-- [ ] New Playwright test in `e2e/tests/todo.spec.ts`: click between `diapers` and `size` in the Edit item text (assert `selectionStart` is that offset, not the end), type `newborn `, value is `Buy diapers newborn size 3`, Save shows it in the list.
-- [ ] New label: `Pharmcy` → cursor after `Pharm` → `a` → `Pharmacy`.
-- [ ] `pnpm e2e` green (or only failures that fail the same on `develop`, listed in `NOTES.md`).
+- [x] New Playwright test in `e2e/tests/todo.spec.ts`: click between `diapers` and `size` in the Edit item text (assert `selectionStart` is that offset, not the end), type `newborn `, value is `Buy diapers newborn size 3`, Save shows it in the list.
+- [x] New label: `Pharmcy` → cursor after `Pharm` → `a` → `Pharmacy`.
+- [x] `pnpm e2e` green (or only failures that fail the same on `develop`, listed in `NOTES.md`).
 
 ## Wrap-up
 
-- [ ] Every free-text sheet field uses it, `rg "placeholderTextColor=\{palette.muted\}" apps/molly/src` finds it only in `ui.tsx` (plus fields deliberately left out, listed in `NOTES.md`).
-- [ ] `Sheet`'s doc comment and `CLAUDE.md` Architecture updated.
-- [ ] `pnpm check` green.
-- [ ] `plans/README.md` row marked Done (or Open items left).
+- [x] Every free-text sheet field uses it, `rg "placeholderTextColor=\{palette.muted\}" apps/molly/src` finds it only in `ui.tsx` (plus fields deliberately left out, listed in `NOTES.md`).
+- [x] `Sheet`'s doc comment and `CLAUDE.md` Architecture updated.
+- [x] `pnpm check` green.
+- [x] `plans/README.md` row marked Done (or Open items left).

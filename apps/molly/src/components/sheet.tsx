@@ -1,7 +1,7 @@
 import { useEffect, type ReactNode } from 'react';
-import { BackHandler, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
+import { BackHandler, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Gesture, GestureDetector, ScrollView } from 'react-native-gesture-handler';
+import { useKeyboardHandler, useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
 import Animated, {
   Easing,
   Extrapolation,
@@ -47,8 +47,14 @@ function rubberband(overshoot: number, dimension: number) {
 
 /**
  * A bottom sheet over a scrim that lifts above the keyboard. A `scroll` sheet is at most 82 % of the window and,
- * while the keyboard is up, shrinks so its top stays below the status bar: the header stays put and the content
- * scrolls, with a focused field kept above the keyboard. Taps in it count while the keyboard is open.
+ * once the keyboard has finished opening, shrinks in one step so its top stays below the status bar: the header
+ * stays put and the content scrolls, with a focused field kept above the keyboard. Taps in it count while the
+ * keyboard is open.
+ *
+ * Text fields in it behave like any Android field (tap or drag the handle to move the cursor, long-press to
+ * select): only a transform follows the keyboard frame by frame, never a layout prop (a layout commit under a
+ * focused field can put its cursor back at the end), and the content scrolls in gesture-handler's `ScrollView`, so
+ * the header's drag and the scroll are coordinated and never take a field's touches. Free-text fields use `TextBox`.
  */
 export function Sheet({
   label,
@@ -74,6 +80,28 @@ export function Sheet({
   const drag = useSharedValue(0);
   const dragStart = useSharedValue(0);
   const sheetHeight = useSharedValue(height);
+  // The keyboard's height once it has stopped moving (px, 0 when closed), and whether it is moving now. The cap
+  // follows the first, so the sheet's layout changes once per keyboard move instead of every frame.
+  const settled = useSharedValue(0);
+  const moving = useSharedValue(false);
+  useKeyboardHandler(
+    {
+      onStart: () => {
+        'worklet';
+        moving.set(true);
+      },
+      onEnd: (event) => {
+        'worklet';
+        settled.set(Math.max(0, event.height));
+        moving.set(false);
+      },
+    },
+    [],
+  );
+  // A sheet that opens with the keyboard already up starts from where it is.
+  useEffect(() => {
+    settled.set(Math.max(0, -keyboard.get()));
+  }, [keyboard, settled]);
   const reduced = useReducedMotion();
   const ornaments = useOrnaments();
   // Android's back closes the sheet, as the scrim does, instead of leaving the screen under it.
@@ -116,9 +144,10 @@ export function Sheet({
   const lifted = useAnimatedStyle(() => ({
     transform: [{ translateY: -Math.max(0, -keyboard.get() - insets.bottom) }],
   }));
-  // A scroll sheet's cap: lifted by the same amount, its top never goes above the status bar.
+  // A scroll sheet's cap: lifted by the settled keyboard, its top never goes above the status bar. It changes in
+  // one step when the keyboard stops, never with it frame by frame (see the doc comment).
   const capped = useAnimatedStyle(() => ({
-    maxHeight: Math.min(height * 0.82, height - insets.top - Math.max(0, -keyboard.get() - insets.bottom)),
+    maxHeight: Math.min(height * 0.82, height - insets.top - Math.max(0, settled.get() - insets.bottom)),
   }));
   const dragged = useAnimatedStyle(() => ({ transform: [{ translateY: drag.get() }] }));
   const scrimFade = useAnimatedStyle(() => ({
@@ -157,7 +186,12 @@ export function Sheet({
       </Animated.View>
       <Animated.View entering={reduced ? undefined : ENTER} exiting={reduced ? undefined : EXIT} style={styles.bottom}>
         <Animated.View style={lifted}>
-          <Animated.View style={scroll ? [dragged, capped] : dragged} onLayout={(event) => sheetHeight.set(event.nativeEvent.layout.height)}>
+          <Animated.View
+            style={scroll ? [dragged, capped] : dragged}
+            onLayout={(event) => {
+              if (!moving.get()) sheetHeight.set(event.nativeEvent.layout.height);
+            }}
+          >
             <View
               accessibilityLabel={label}
               className="rounded-t-sheet bg-surface"
@@ -169,12 +203,9 @@ export function Sheet({
                     <View className="gap-3.5 px-4 pt-2.5">{header}</View>
                   </GestureDetector>
                   {/* Not KeyboardAwareScrollView: the sheet already sits above the keyboard, and that one adds the
-                      keyboard's height again. Android's own scroll view brings a focused field into view. */}
-                  <ScrollView
-                    keyboardShouldPersistTaps="handled"
-                    contentContainerStyle={{ paddingBottom: bottom }}
-                    className="px-4 pt-1.5"
-                  >
+                      keyboard's height again. Android's own scroll view brings a focused field into view.
+                      Gesture-handler's ScrollView takes `style` only: NativeWind's `className` doesn't reach through it. */}
+                  <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: bottom }} style={styles.scroll}>
                     {children}
                   </ScrollView>
                 </>
@@ -198,6 +229,8 @@ const styles = StyleSheet.create({
   bottom: { position: 'absolute', bottom: 0, left: 0, right: 0 },
   // The body shrinks to the cap so the scroll view inside gets a bounded height.
   shrink: { flexShrink: 1 },
+  // px-4 pt-1.5
+  scroll: { paddingHorizontal: 16, paddingTop: 6 },
 });
 
 /**

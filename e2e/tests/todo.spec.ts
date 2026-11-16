@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 
 import { signInAs } from './session';
 import { adminFetch, testEnv } from './test-env';
@@ -241,6 +241,59 @@ test('a new label made while adding gets its card after Save and is listed by Ba
   await expect(card(page, 'Pharmacy').getByText('Vitamin drops')).toBeVisible();
   const tags = (await adminFetch('tags/?limit=1000')) as Page_<{ name: string }>;
   expect(tags.results.map((tag) => tag.name)).toContain('To-do: Pharmacy');
+});
+
+/** Clicks in a text field just before its `offset`th character, measured in the field's own font. */
+async function clickAt(field: Locator, offset: number) {
+  const x = await field.evaluate((input: HTMLInputElement, at: number) => {
+    const style = getComputedStyle(input);
+    const context = document.createElement('canvas').getContext('2d')!;
+    context.font = style.font;
+    return parseFloat(style.borderLeftWidth) + parseFloat(style.paddingLeft) + context.measureText(input.value.slice(0, at)).width;
+  }, offset);
+  const box = (await field.boundingBox())!;
+  await field.click({ position: { x, y: box.height / 2 } });
+}
+
+const caret = (field: Locator) => field.evaluate((input: HTMLInputElement) => input.selectionStart);
+
+test("a click in an item's text puts the cursor there, and what's typed goes in there and is saved", async ({ page }) => {
+  // Given
+  await seed('Buy diapers size 3', ['molly-todo', 'To-do: Buy']);
+  await openList(page);
+  await openItem(page, 'Buy diapers size 3');
+  await button(page, 'Edit').click();
+  const text = page.getByLabel('What needs doing');
+  await expect(text).toHaveValue('Buy diapers size 3');
+
+  // When
+  await clickAt(text, 'Buy diapers '.length);
+  expect(await caret(text)).toBe('Buy diapers '.length);
+  await page.keyboard.type('newborn ');
+
+  // Then
+  await expect(text).toHaveValue('Buy diapers newborn size 3');
+  await button(page, 'Save').click();
+  await expect(card(page, 'Buy').getByText('Buy diapers newborn size 3')).toBeVisible();
+  await expect.poll(async () => (await todoNotes()).map((note) => note.note)).toEqual(['Buy diapers newborn size 3']);
+});
+
+test('a click in the New label field puts the cursor there, so a missed letter can be typed in', async ({ page }) => {
+  // Given
+  await openList(page);
+  await add(page, 'Vitamin drops');
+  await button(page, 'New label').click();
+  const label = page.getByLabel('New label');
+  await label.fill('Pharmcy');
+
+  // When
+  await clickAt(label, 'Pharm'.length);
+  await page.keyboard.type('a');
+
+  // Then
+  await expect(label).toHaveValue('Pharmacy');
+  await button(page, 'Add').click();
+  await expect(page.getByRole('radio', { name: 'Pharmacy' })).toHaveAttribute('aria-checked', 'true');
 });
 
 test('an item without a label goes under Other, after the family labels', async ({ page }) => {
