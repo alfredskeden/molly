@@ -7,6 +7,9 @@ import { cardSpan, cardStats, recentDays } from './recent';
 const at = (day: number, hours: number, minutes = 0) => new Date(2026, 8, day, hours, minutes);
 const day = (date: number): DayWindow => ({ kind: 'day', start: at(date, 7), end: at(date, 19), wake: at(date, 7), clock: false });
 const night = (date: number): DayWindow => ({ kind: 'night', start: at(date, 19), end: at(date + 1, 7), wake: at(date, 7), clock: false });
+/** A night from any start to any end, its wake the start's (unused by the cards). */
+const nightAt = (start: Date, end: Date, clock = false): DayWindow => ({ kind: 'night', start, end, wake: start, clock });
+const dayAt = (start: Date, end: Date): DayWindow => ({ kind: 'day', start, end, wake: start, clock: false });
 const HOUR = 60 * 60 * 1000;
 const none = { sleep: [], feeding: [], change: [], medication: [] };
 const sleep = (start: Date, end: Date) => ({ id: 1, child: 1, start: start.toISOString(), end: end.toISOString(), nap: false }) as Sleep;
@@ -77,6 +80,106 @@ describe('the Recent days cards', () => {
 
     // Then
     expect(days.map((card) => card.date)).toEqual(['Fri 25 Sep', 'Thu 24 Sep']);
+  });
+});
+
+describe('the Recent days cards with a bedtime after midnight', () => {
+  // Saturday 12 and Sunday 13 September: usually asleep at 20:00, but up until 00:30 on Saturday.
+  const lastNight = nightAt(at(13, 0, 30), at(13, 7, 55));
+  const sunday = dayAt(at(13, 7, 55), at(13, 21, 10));
+
+  it("put a bedtime after midnight on that morning's card", () => {
+    // Given
+    const liveDay = dayAt(at(13, 7, 55), at(13, 23, 30));
+
+    // When
+    const days = recentDays(liveDay, [lastNight]);
+
+    // Then
+    expect(days).toEqual([
+      {
+        key: '2026-09-13',
+        title: 'Today',
+        date: 'Sun 13 Sep',
+        night: { window: lastNight, live: false, label: 'Night' },
+        day: { window: liveDay, live: true, label: 'Today so far' },
+      },
+    ]);
+  });
+
+  it('keep the live night on its own Tonight card', () => {
+    // Given
+    const tonight = nightAt(at(13, 21, 10), at(14, 7, 0));
+
+    // When
+    const days = recentDays(tonight, [sunday, lastNight]);
+
+    // Then
+    expect(days).toEqual([
+      { key: '2026-09-14', title: 'Tonight', date: 'Mon 14 Sep', night: { window: tonight, live: true, label: 'Tonight' } },
+      {
+        key: '2026-09-13',
+        title: 'Today',
+        date: 'Sun 13 Sep',
+        night: { window: lastNight, live: false, label: 'Night' },
+        day: { window: sunday, live: false, label: 'Day' },
+      },
+    ]);
+  });
+
+  it('keep a live night that started after midnight on its own Tonight card', () => {
+    // Given
+    const tonight = nightAt(at(14, 0, 30), at(14, 7, 0));
+
+    // When
+    const days = recentDays(tonight, [sunday, lastNight]);
+
+    // Then
+    expect(days.map((card) => [card.title, card.date, card.night?.window, card.day?.window])).toEqual([
+      ['Tonight', 'Mon 14 Sep', tonight, undefined],
+      ['Today', 'Sun 13 Sep', lastNight, sunday],
+    ]);
+  });
+
+  it('leave a night that starts before midnight on the morning it ended', () => {
+    // Given
+    const saturdayNight = nightAt(at(12, 20, 15), at(13, 6, 50));
+    const liveDay = dayAt(at(13, 6, 50), at(13, 20, 0));
+
+    // When
+    const days = recentDays(liveDay, [saturdayNight]);
+
+    // Then
+    expect(days.map((card) => [card.key, card.night?.window, card.day?.window])).toEqual([['2026-09-13', saturdayNight, liveDay]]);
+  });
+
+  describe('over two weeks of mixed nights', () => {
+    // Mornings 31 August to 13 September, the night before each one by turns: from 20:00, from 00:30, by the
+    // clock from 19:00 (no bedtime), and missing.
+    const mornings = Array.from({ length: 14 }, (_, index) => 13 - index);
+    const nightBefore = (morning: number, index: number): DayWindow[] =>
+      [
+        [nightAt(at(morning - 1, 20, 0), at(morning, 7, 0))],
+        [nightAt(at(morning, 0, 30), at(morning, 7, 0))],
+        [nightAt(at(morning - 1, 19, 0), at(morning, 7, 0), true)],
+        [],
+      ][index % 4]!;
+    const daysAndNights = mornings.flatMap((morning, index) => [dayAt(at(morning, 7, 0), at(morning, 20, 0)), ...nightBefore(morning, index)]);
+    const byStart = (windows: DayWindow[]) => [...windows].sort((a, b) => a.start.getTime() - b.start.getTime());
+    const slotsOf = (days: ReturnType<typeof recentDays>) =>
+      days.flatMap((card) => [card.night, card.day]).flatMap((slot) => (slot ? [slot.window] : []));
+
+    it.each([
+      ['a live day', daysAndNights[0]!, daysAndNights.slice(1)],
+      ['a live night from the evening', nightAt(at(13, 20, 0), at(14, 7, 0)), daysAndNights],
+      ['a live night from after midnight', nightAt(at(14, 0, 30), at(14, 7, 0)), daysAndNights],
+    ])('hold every window exactly once under %s', (_, live, past) => {
+      // When
+      const days = recentDays(live, past);
+
+      // Then
+      expect(byStart(slotsOf(days))).toEqual(byStart([live, ...past]));
+    });
   });
 });
 

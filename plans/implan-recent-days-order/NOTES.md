@@ -8,7 +8,7 @@
 
 ## Done
 
-- `RecentDay` holds `night?` / `day?` slots (`RecentSlot`) instead of a `windows` array; the card is keyed by the morning (`morningOf`: a night's start date + 1). `DayCard` draws `Slot`s, an empty half where one is missing.
+- `RecentDay` holds `night?` / `day?` slots (`RecentSlot`) instead of a `windows` array; the card is keyed by the morning (`morningOf`: the morning after a night's evening, `windowDay` + 1; was a night's start date + 1 until `implan-night-after-midnight`, issue #47). `DayCard` draws `Slot`s, an empty half where one is missing.
 - Web look (Classic day, 412 px): night left, day right, rings line up; the evening's Tonight card with its empty right half reads fine. Emulator, night scheme and largest font still to check.
 - Seen on the web, not changed here: the live Tonight ring's total reads `0m` while the sleep runs (`summary` counts finished sleeps only), same as before.
 - A night whose bedtime falls after midnight would land on the card a day too late (start + 1); no such night in practice.
