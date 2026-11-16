@@ -234,6 +234,56 @@ describe('the widget snapshot', () => {
     expect(snapshot.sleepTimer).toMatchObject({ start: evening.start, nightFrom: on(20, 21, 0).toISOString() });
   });
 
+  describe('for a sleep started near bedtime on a day running late', () => {
+    const on = (day: number, hours: number, minutes = 0) => new Date(2026, 8, day, hours, minutes);
+    const entry = (from: Date, to: Date) => ({ ...savedSleep, start: from.toISOString(), end: to.toISOString() });
+    // Ten days up at 07:00, naps at 09:00, 13:00 and 17:00, asleep at 21:45; today's naps ran late (to 17:45),
+    // so the plan shows nap 3 at 19:55–20:35.
+    const sleeps = [
+      ...Array.from({ length: 10 }, (_, index) => 10 + index).flatMap((day) => [
+        entry(on(day - 1, 21, 45), on(day, 7, 0)),
+        entry(on(day, 9, 0), on(day, 10, 0)),
+        entry(on(day, 13, 0), on(day, 14, 30)),
+        entry(on(day, 17, 0), on(day, 17, 30)),
+      ]),
+      entry(on(19, 21, 45), on(20, 7, 0)),
+      entry(on(20, 10, 0), on(20, 11, 0)),
+      entry(on(20, 15, 30), on(20, 17, 45)),
+    ];
+    const clientWith = (start: Date, notes: { time: string; note: string }[]) => ({
+      findTimer: vi.fn(async ({ name }: { name: string }) => (name === 'molly:sleep' ? { ...runningSleep, start: start.toISOString() } : null)),
+      getLatestEntries: vi.fn(async () => ({ sleep: null, feeding: null, change: null })),
+      listEntries: vi.fn(async () => sleeps),
+      listChildren: vi.fn(async () => [{ id: CHILD, first_name: 'Molly', birth_date: '2026-04-20' }]),
+      listNotes: vi.fn(async () => notes),
+      getRecentBottles: async () => [],
+      getRecentFeedings: async () => [],
+    });
+
+    it('says stopping a nap the plan showed saves a night sleep only once it has run 2 h', async () => {
+      // Given
+      const client = clientWith(on(20, 20, 30), []);
+
+      // When
+      const snapshot = await fetchSnapshot(client as never, { child: CHILD, userId: 2, napWindow, now: on(20, 20, 40) });
+
+      // Then
+      expect(snapshot.sleepTimer).toMatchObject({ nightFrom: on(20, 22, 30).toISOString() });
+    });
+
+    it('says the sleep after a skipped nap saves the night from its start', async () => {
+      // Given
+      const skip = { time: on(20, 18, 0).toISOString(), note: 'Skipped nap 19:55–20:35' };
+      const client = clientWith(on(20, 18, 30), [skip]);
+
+      // When
+      const snapshot = await fetchSnapshot(client as never, { child: CHILD, userId: 2, napWindow, now: on(20, 18, 40) });
+
+      // Then
+      expect(snapshot.sleepTimer).toMatchObject({ nightFrom: on(20, 18, 30).toISOString() });
+    });
+  });
+
   it('says a sleep started 10 min after a wake at the usual time saves the night from its start', async () => {
     // Given
     const on = (day: number, hours: number, minutes = 0) => new Date(2026, 8, day, hours, minutes);

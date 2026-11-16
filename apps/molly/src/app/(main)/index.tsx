@@ -37,6 +37,7 @@ import {
   windowRow,
   windowStats,
   windowTitle,
+  withPlan,
   type CentreText,
   type DayRhythm,
   type DayWindow,
@@ -496,13 +497,25 @@ export default function Dashboard() {
   const loaded = entries.data;
   const last = loaded && lastOfEach(loaded);
   const birthDate = child?.birth_date ?? null;
-  // The child's usual wake and bedtime, learned from the sleeps on hand: what decides day, night and the nap flag.
-  const rhythm = dayRhythm(loaded?.sleep ?? [], birthDate, napWindow, now);
-  const night = byRhythm(loaded?.sleep ?? [], rhythm);
+  // Windows older than the past fetch's two midnights come from Recent days' weeks.
+  const viewStart = viewKey ? Number(viewKey.slice(viewKey.indexOf('-') + 1)) : null;
+  // The oldest time the screen needs: the window on screen, or the one asked for.
+  // The window before a time starts within a day of it.
+  const reach = Math.min(viewStart ?? Infinity, wantAt ? wantAt.time - (wantAt.before ? DAY_MS : 0) : Infinity);
+  const pastFrom = startOfDay(now, -PAST_DAYS).getTime();
+  // Also on any past ring: whether `‹` has anything older to go to is only known from the weeks before.
+  const days = useDays(reach < pastFrom || showingPrevious);
   const skips = (skipNotes.data ?? []).flatMap((note) => {
     const skip = parseSkip(note);
     return skip ? [{ ...skip, note }] : [];
   });
+  // Every skip at hand, once each: the past fetch's two midnights, and the loaded weeks' for older windows.
+  const skipNotesAtHand = [...(days.data ? mergeDays(days.data.pages).skips : []), ...(skipNotes.data ?? [])];
+  const allSkips = [...new Map(skipNotesAtHand.map((note) => [note.id, note])).values()].flatMap((note) => parseSkip(note) ?? []);
+  // The child's usual wake and bedtime, learned from the sleeps on hand, and what the plan showed at each sleep's
+  // start: what decides day, night and the nap flag.
+  const rhythm = withPlan(dayRhythm(loaded?.sleep ?? [], birthDate, napWindow, now), birthDate, allSkips);
+  const night = byRhythm(loaded?.sleep ?? [], rhythm);
   const planWith = (withSkips: Skip[]) =>
     loaded && birthDate
       ? dayPlan(loaded.sleep, sleepRunning, birthDate, rhythm, withSkips, now)
@@ -523,14 +536,6 @@ export default function Dashboard() {
     now,
   });
   const past = loaded && pastEntries.data ? mergeEntries(pastEntries.data, loaded) : null;
-  // Windows older than the past fetch's two midnights come from Recent days' weeks.
-  const viewStart = viewKey ? Number(viewKey.slice(viewKey.indexOf('-') + 1)) : null;
-  // The oldest time the screen needs: the window on screen, or the one asked for.
-  // The window before a time starts within a day of it.
-  const reach = Math.min(viewStart ?? Infinity, wantAt ? wantAt.time - (wantAt.before ? DAY_MS : 0) : Infinity);
-  const pastFrom = startOfDay(now, -PAST_DAYS).getTime();
-  // Also on any past ring: whether `‹` has anything older to go to is only known from the weeks before.
-  const days = useDays(reach < pastFrom || showingPrevious);
   const everything = past && (days.data ? mergeEntries(mergeDays(days.data.pages).entries, past) : past);
   const oldestWeek = days.data?.pages.at(-1);
   // Every entry since then is loaded; a window starting earlier would be missing some.

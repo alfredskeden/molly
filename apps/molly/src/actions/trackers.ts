@@ -141,7 +141,8 @@ export function byClock(napWindow: NapWindow): NightRule {
 
 /**
  * By the child's rhythm and the recent sleeps at hand (`isNight`), known as of `now` or the sleep's end if
- * later. With no sleeps at hand it comes out by the clock.
+ * later. A rhythm carrying the plan (`withPlan`, as the dashboard's) saves a late nap the plan showed as a nap.
+ * With no sleeps at hand it comes out by the clock.
  */
 export function byRhythm(sleeps: Sleep[], rhythm: DayRhythm, now: Date = new Date()): NightRule {
   return (sleep) => isNight(sleep, sleeps, rhythm, sleep.end > now ? sleep.end : now);
