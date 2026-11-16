@@ -1,11 +1,10 @@
-import { TextInput, View } from 'react-native';
+import { View } from 'react-native';
 
 import { Pressable } from '@/components/pressable';
-import { Text } from '@/components/ui';
+import { Text, TextBox } from '@/components/ui';
 import { HAPTICS } from '@/haptics/model';
 import { useHaptic } from '@/haptics/use-haptic';
 import { Glyph } from '@/theme/Glyph';
-import { useTheme } from '@/theme/theme';
 
 /**
  * What a meal was: the Solids panel's field (focused as it opens), the editor's and Add entry's. `label` is
@@ -22,20 +21,17 @@ export function FoodField({
   onChange: (text: string) => void;
   autoFocus?: boolean;
 }) {
-  const { palette } = useTheme();
   return (
-    <TextInput
+    <TextBox
       testID="food"
       accessibilityLabel={label}
       value={value}
       placeholder="e.g. Carrot purée"
-      placeholderTextColor={palette.muted}
       onChangeText={onChange}
       autoFocus={autoFocus}
       autoCapitalize="sentences"
       returnKeyType="done"
-      underlineColorAndroid="transparent"
-      className="h-[60px] rounded-chip border-2 border-feed-mid bg-bg px-3.5 font-sans text-title font-bold text-ink"
+      className="h-[60px] border-2 border-feed-mid text-title"
     />
   );
 }

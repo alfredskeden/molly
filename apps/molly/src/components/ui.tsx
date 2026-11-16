@@ -232,19 +232,31 @@ function Label({ children }: { children: ReactNode }) {
   return <Text className="mb-2 px-1 text-caption font-extrabold text-muted">{children}</Text>;
 }
 
-export function Field({ label, ...input }: { label: string } & TextInputProps) {
+const HAS_BORDER = /(^|\s)border-/;
+
+/**
+ * A free-text field: the theme's placeholder colour, body face in bold ink, chip corners and a hairline border
+ * (pass `border-2 border-feed-mid` or similar to change it). `className` adds the height and the text size.
+ * Every free-text field in a sheet uses it. Autocorrect and suggestions stay on; keep `onChangeText` passing the
+ * text through unchanged and don't set `selection`, so Android leaves the cursor where the parent put it.
+ */
+export function TextBox({ className = '', ...input }: TextInputProps & { className?: string }) {
   const { palette } = useTheme();
+  return (
+    <TextInput
+      placeholderTextColor={palette.muted}
+      underlineColorAndroid="transparent"
+      className={`rounded-chip bg-bg px-3.5 font-sans font-bold text-ink ${HAS_BORDER.test(className) ? '' : 'border border-line '}${className}`}
+      {...input}
+    />
+  );
+}
+
+export function Field({ label, ...input }: { label: string } & TextInputProps) {
   return (
     <View className="mb-4">
       <Label>{label}</Label>
-      <TextInput
-        accessibilityLabel={label}
-        autoCapitalize="none"
-        autoCorrect={false}
-        placeholderTextColor={palette.muted}
-        className="min-h-[52px] rounded-chip border border-line bg-bg px-3.5 py-3 font-sans text-title font-bold text-ink"
-        {...input}
-      />
+      <TextBox accessibilityLabel={label} autoCapitalize="none" autoCorrect={false} className="min-h-[52px] py-3 text-title" {...input} />
     </View>
   );
 }

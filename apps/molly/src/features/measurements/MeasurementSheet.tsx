@@ -18,7 +18,7 @@ import { Platform, TextInput, View } from 'react-native';
 import { DateField } from '@/components/DateField';
 import { Pressable } from '@/components/pressable';
 import { Sheet } from '@/components/sheet';
-import { FIXED_SCALE, Segment, Spinner, Text } from '@/components/ui';
+import { FIXED_SCALE, Segment, Spinner, Text, TextBox } from '@/components/ui';
 import { useUnsavedOnReturn } from '@/features/return/ReturnProvider';
 import { HAPTICS } from '@/haptics/model';
 import { useHaptic } from '@/haptics/use-haptic';
@@ -192,14 +192,7 @@ export function MeasurementSheet({
         </View>
       )}
 
-      <TextInput
-        accessibilityLabel="Notes"
-        value={notes}
-        placeholder="Notes"
-        placeholderTextColor={palette.muted}
-        onChangeText={setNotes}
-        className="h-12 rounded-chip border border-line bg-bg px-3.5 font-sans text-base font-bold text-ink"
-      />
+      <TextBox accessibilityLabel="Notes" value={notes} placeholder="Notes" onChangeText={setNotes} className="h-12 text-base" />
 
       <Pressable
         accessibilityRole="button"
